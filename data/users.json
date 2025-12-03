@@ -1,0 +1,11 @@
+[
+  {
+    "id": "U-ADMIN",
+    "name": "Admin",
+    "phone": "",
+    "email": "admin@vagent.ai",
+    "role": "管理员",
+    "status": "正常",
+    "password_hash": "8220d6d66822f9f51873932fd90355fe368fd6695f0e1e9f461c55a914b22e79"
+  }
+]

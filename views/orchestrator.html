@@ -1,0 +1,85 @@
+<div class="space-y-6">
+    <!-- Header -->
+    <div class="flex items-center justify-between">
+        <div class="flex items-center gap-4">
+            <div class="relative">
+                <i class="fa-solid fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                <input type="text" placeholder="搜索编排器" class="pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-64">
+            </div>
+        </div>
+        <button onclick="openCreateOrchestratorModal()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 shadow-sm">
+            <i class="fa-solid fa-plus"></i>
+            新建编排器
+        </button>
+    </div>
+
+    <!-- Orchestrator List -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        <table class="w-full text-sm text-left">
+            <thead class="bg-gray-50 text-gray-500 font-medium border-b border-gray-100">
+                <tr>
+                    <th class="px-6 py-4">名称</th>
+                    <th class="px-6 py-4">关联智能体</th>
+                    <th class="px-6 py-4">状态</th>
+                    <th class="px-6 py-4">节点数</th>
+                    <th class="px-6 py-4">创建人</th>
+                    <th class="px-6 py-4">创建时间</th>
+                    <th class="px-6 py-4">最后更新</th>
+                    <th class="px-6 py-4 text-right">操作</th>
+                </tr>
+            </thead>
+            <tbody id="orchestrator-list-body" class="divide-y divide-gray-100">
+                <!-- Dynamic Content -->
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Create Orchestrator Modal -->
+    <div id="create-orch-modal" class="fixed inset-0 bg-gray-900/50 hidden z-50 flex items-center justify-center backdrop-blur-sm">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-md p-6 animate-fade-in-up">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-lg font-semibold text-gray-800">新建编排器</h3>
+                <button onclick="closeCreateOrchestratorModal()" class="text-gray-400 hover:text-gray-600">
+                    <i class="fa-solid fa-times"></i>
+                </button>
+            </div>
+            
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">编排器名称 <span class="text-red-500">*</span></label>
+                    <input type="text" id="orch-name-input" maxlength="50" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="请输入编排器名称（50字以内）">
+                    <div class="text-xs text-gray-400 text-right mt-1"><span id="orch-name-count">0</span>/50</div>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">描述</label>
+                    <textarea id="orch-desc-input" maxlength="200" rows="4" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none" placeholder="请输入描述（200字以内）"></textarea>
+                    <div class="text-xs text-gray-400 text-right mt-1"><span id="orch-desc-count">0</span>/200</div>
+                </div>
+            </div>
+            
+            <div class="mt-8 flex justify-end gap-3">
+                <button onclick="closeCreateOrchestratorModal()" class="px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">取消</button>
+                <button onclick="submitCreateOrchestrator()" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm transition-colors">确认创建</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div id="delete-orch-modal" class="fixed inset-0 bg-gray-900/50 hidden z-50 flex items-center justify-center backdrop-blur-sm">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-sm p-6 text-center animate-fade-in-up">
+            <div class="w-12 h-12 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4 text-xl">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+            </div>
+            <h3 class="text-lg font-semibold text-gray-900 mb-2">确认删除？</h3>
+            <p class="text-sm text-gray-500 mb-6">
+                您确定要删除编排器 <span id="del-orch-name" class="font-bold text-gray-800"></span> 吗？<br>
+                删除后将无法恢复，相关配置也将被移除。
+            </p>
+            <div class="flex gap-3 justify-center">
+                <button onclick="closeDeleteOrchestratorModal()" class="px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg transition-colors w-24">取消</button>
+                <button onclick="confirmDeleteOrchestrator()" class="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg shadow-sm transition-colors w-24">确认删除</button>
+            </div>
+        </div>
+    </div>
+</div>

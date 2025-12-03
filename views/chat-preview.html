@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 助手 - 全屏预览</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #e2e8f0;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #cbd5e1;
+        }
+        .message-bubble {
+            max-width: 85%;
+            word-wrap: break-word;
+        }
+        .typing-dot {
+            animation: typing 1.4s infinite ease-in-out both;
+        }
+        .typing-dot:nth-child(1) { animation-delay: -0.32s; }
+        .typing-dot:nth-child(2) { animation-delay: -0.16s; }
+        
+        @keyframes typing {
+            0%, 80%, 100% { transform: scale(0); }
+            40% { transform: scale(1); }
+        }
+    </style>
+</head>
+<body class="bg-white h-screen flex overflow-hidden text-gray-800 font-sans">
+
+    <!-- Sidebar (300px) -->
+    <aside class="w-[300px] bg-gray-50 border-r border-gray-200 flex flex-col flex-shrink-0 z-20 absolute md:relative transform -translate-x-full md:translate-x-0 transition-transform duration-300 shadow-xl md:shadow-none" id="sidebar">
+        <!-- Sidebar Header -->
+        <div class="p-4 border-b border-gray-100">
+            <button onclick="createNewSession()" class="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-lg transition-all shadow-sm group active:scale-95">
+                <i class="fa-solid fa-plus transition-transform group-hover:rotate-90"></i>
+                <span class="font-medium">新建会话</span>
+            </button>
+        </div>
+
+        <!-- Search -->
+        <div class="px-4 py-2">
+            <div class="relative">
+                <i class="fa-solid fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+                <input type="text" id="search-input" placeholder="搜索历史会话..." class="w-full bg-white border border-gray-200 pl-9 pr-3 py-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
+            </div>
+        </div>
+
+        <!-- Session List -->
+        <div class="flex-1 overflow-y-auto px-2 py-2 space-y-1" id="session-list">
+            <!-- Dynamic Sessions -->
+        </div>
+
+        <!-- Sidebar Footer -->
+        <div class="p-4 border-t border-gray-200 bg-gray-50/50">
+            <div class="flex items-center gap-3 cursor-pointer hover:bg-gray-100 p-2 rounded-lg transition-colors">
+                <div class="w-9 h-9 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm">
+                    U
+                </div>
+                <div class="flex-1 min-w-0">
+                    <p class="text-sm font-medium text-gray-900 truncate">User</p>
+                    <p class="text-xs text-gray-500 truncate">Pro Plan</p>
+                </div>
+                <button class="text-gray-400 hover:text-gray-600">
+                    <i class="fa-solid fa-gear"></i>
+                </button>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Mobile Overlay -->
+    <div id="mobile-overlay" class="fixed inset-0 bg-black/50 z-10 hidden md:hidden transition-opacity" onclick="toggleSidebar()"></div>
+
+    <!-- Main Content -->
+    <main class="flex-1 flex flex-col min-w-0 bg-white relative h-full">
+        <!-- Header -->
+        <header class="h-16 border-b border-gray-100 flex items-center justify-between px-4 sm:px-6 bg-white/90 backdrop-blur-sm sticky top-0 z-10">
+            <div class="flex items-center gap-3">
+                <button class="md:hidden text-gray-500 hover:text-gray-700 p-2 -ml-2 rounded-lg hover:bg-gray-100" onclick="toggleSidebar()">
+                    <i class="fa-solid fa-bars"></i>
+                </button>
+                <div class="flex flex-col">
+                    <h1 class="text-base font-bold text-gray-900 flex items-center gap-2 max-w-[200px] sm:max-w-md truncate" id="current-chat-title">
+                        智能助手
+                    </h1>
+                    <span class="text-xs text-green-500 flex items-center gap-1">
+                        <span class="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
+                        模型: GPT-4o
+                    </span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Messages Area -->
+        <div class="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6 scroll-smooth" id="messages-container">
+            <!-- Messages will be injected here -->
+        </div>
+
+        <!-- Input Area -->
+        <div class="p-4 sm:p-6 bg-white border-t border-gray-100">
+            <div class="max-w-[800px] mx-auto relative bg-gray-50 border border-gray-200 rounded-2xl shadow-sm focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500 transition-all duration-200 ease-in-out">
+                <textarea id="message-input" rows="1" class="w-full bg-transparent border-0 rounded-2xl px-4 py-3 pr-12 text-gray-900 placeholder-gray-400 focus:ring-0 resize-none max-h-32" placeholder="输入消息... (Enter 发送，Ctrl + Enter 换行)" style="min-height: 52px;"></textarea>
+                
+                <div class="absolute right-2 bottom-2 flex items-center gap-1">
+                    <button onclick="sendMessage()" class="bg-blue-600 hover:bg-blue-700 text-white w-8 h-8 rounded-lg flex items-center justify-center transition-all disabled:opacity-50 disabled:cursor-not-allowed transform active:scale-95" id="send-btn">
+                        <i class="fa-solid fa-arrow-up text-sm"></i>
+                    </button>
+                </div>
+            </div>
+            <p class="text-center text-xs text-gray-400 mt-2">内容由 AI 生成，可能会出现错误，请仔细甄别。</p>
+        </div>
+    </main>
+
+    <script>
+        // --- Data & State ---
+        let sessions = [
+            { 
+                id: 1, 
+                title: '关于 AI Agent 的讨论', 
+                lastActive: '10:30', 
+                messages: [
+                    { role: 'assistant', content: '你好！我是你的智能助手。我可以帮你解答问题、编写代码或提供建议。请问有什么可以帮你的吗？' },
+                    { role: 'user', content: '介绍一下 AI Agent' },
+                    { role: 'assistant', content: 'AI Agent（人工智能代理）是一个能够感知环境、进行推理并采取行动以实现特定目标的智能系统。它通常基于大型语言模型（LLM），并具备记忆、规划和工具使用等核心能力。' }
+                ]
+            },
+            { 
+                id: 2, 
+                title: 'Python 代码优化', 
+                lastActive: '昨天', 
+                messages: [
+                    { role: 'assistant', content: '你好！请提供你需要优化的 Python 代码片段。' },
+                    { role: 'user', content: 'def fib(n): return n if n < 2 else fib(n-1) + fib(n-2)' },
+                    { role: 'assistant', content: '这段斐波那契数列代码使用了递归，当 n 较大时效率极低。建议使用记忆化或迭代法优化：\n\n```python\ndef fib_optimized(n):\n    if n < 2: return n\n    a, b = 0, 1\n    for _ in range(n-1):\n        a, b = b, a + b\n    return b\n```' }
+                ]
+            },
+            { 
+                id: 3, 
+                title: '新项目构思', 
+                lastActive: '周一', 
+                messages: [
+                    { role: 'assistant', content: '好的，我们可以从头脑风暴开始。你想要构建什么样的项目？' }
+                ]
+            }
+        ];
+
+        let currentSessionId = 1;
+        let isTyping = false;
+
+        // --- Initialization ---
+        document.addEventListener('DOMContentLoaded', () => {
+            renderSessionList();
+            loadSession(currentSessionId);
+            
+            // Auto-resize textarea
+            const textarea = document.getElementById('message-input');
+            textarea.addEventListener('input', function() {
+                this.style.height = 'auto';
+                this.style.height = (this.scrollHeight) + 'px';
+                if(this.value === '') this.style.height = '52px';
+            });
+
+            // Shortcuts
+            textarea.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && !e.ctrlKey && !e.shiftKey && !e.isComposing) {
+                    e.preventDefault();
+                    sendMessage();
+                }
+            });
+            
+            // Search Filter
+            document.getElementById('search-input').addEventListener('input', (e) => {
+                renderSessionList(e.target.value);
+            });
+        });
+
+        // --- Core Functions ---
+
+        function getSession(id) {
+            return sessions.find(s => s.id === id);
+        }
+
+        function createNewSession() {
+            const newId = Date.now();
+            const newSession = {
+                id: newId,
+                title: '新会话',
+                lastActive: '刚刚',
+                messages: [
+                    { role: 'assistant', content: '你好！我是你的智能助手。请问有什么可以帮你的吗？' }
+                ]
+            };
+            sessions.unshift(newSession);
+            renderSessionList();
+            loadSession(newId);
+            
+            // Close sidebar on mobile
+            if (window.innerWidth < 768) {
+                toggleSidebar();
+            }
+        }
+
+        function deleteSession(id, event) {
+            event.stopPropagation();
+            if (!confirm('确定要删除这个会话吗？')) return;
+
+            sessions = sessions.filter(s => s.id !== id);
+            
+            if (sessions.length === 0) {
+                createNewSession(); // Always keep at least one
+            } else if (currentSessionId === id) {
+                loadSession(sessions[0].id);
+            }
+            renderSessionList();
+        }
+
+        function loadSession(id) {
+            currentSessionId = id;
+            const session = getSession(id);
+            if (!session) return;
+
+            // Update Header
+            document.getElementById('current-chat-title').textContent = session.title;
+            
+            // Render Messages
+            renderMessages(session.messages);
+            
+            // Update Active State in List
+            renderSessionList(document.getElementById('search-input').value);
+            
+            // Focus Input
+            document.getElementById('message-input').focus();
+        }
+
+        function renderSessionList(filter = '') {
+            const listContainer = document.getElementById('session-list');
+            listContainer.innerHTML = '';
+
+            const filteredSessions = sessions.filter(s => 
+                s.title.toLowerCase().includes(filter.toLowerCase())
+            );
+
+            filteredSessions.forEach(session => {
+                const isActive = session.id === currentSessionId;
+                const div = document.createElement('div');
+                div.className = `group flex items-center gap-3 px-3 py-3 rounded-lg cursor-pointer transition-all ${isActive ? 'bg-white shadow-sm border border-gray-100' : 'hover:bg-gray-100/80'}`;
+                div.onclick = () => loadSession(session.id);
+
+                div.innerHTML = `
+                    <div class="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${isActive ? 'bg-blue-100 text-blue-600' : 'bg-gray-200 text-gray-500'}">
+                        <i class="fa-regular fa-message text-xs"></i>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <h3 class="text-sm font-medium ${isActive ? 'text-gray-900' : 'text-gray-700'} truncate">${session.title}</h3>
+                        <p class="text-xs text-gray-400 truncate">${session.lastActive}</p>
+                    </div>
+                    <button onclick="deleteSession(${session.id}, event)" class="opacity-0 group-hover:opacity-100 p-1.5 text-gray-400 hover:text-red-500 hover:bg-gray-200 rounded transition-all" title="删除">
+                        <i class="fa-solid fa-times"></i>
+                    </button>
+                `;
+                listContainer.appendChild(div);
+            });
+        }
+
+        function renderMessages(messages) {
+            const container = document.getElementById('messages-container');
+            container.innerHTML = '';
+
+            // Welcome Timestamp
+            const timeDiv = document.createElement('div');
+            timeDiv.className = 'flex justify-center mb-6';
+            timeDiv.innerHTML = '<span class="bg-gray-100 text-gray-500 text-xs px-3 py-1 rounded-full">今天 10:30</span>';
+            container.appendChild(timeDiv);
+
+            messages.forEach(msg => {
+                const isUser = msg.role === 'user';
+                const div = document.createElement('div');
+                div.className = `flex gap-4 ${isUser ? 'flex-row-reverse' : ''} animate-fade-in max-w-[800px] mx-auto w-full`;
+                
+                // Format content (simple formatting)
+                let contentHtml = msg.content
+                    .replace(/\n/g, '<br>')
+                    .replace(/```([\s\S]*?)```/g, '<div class="bg-gray-900 text-gray-200 p-3 rounded-lg my-2 font-mono text-xs overflow-x-auto">$1</div>');
+
+                div.innerHTML = `
+                    <div class="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 ${isUser ? 'bg-gray-200 text-gray-600' : 'bg-blue-100 text-blue-600'}">
+                        <i class="fa-solid ${isUser ? 'fa-user' : 'fa-robot'} text-sm"></i>
+                    </div>
+                    <div class="message-bubble p-4 rounded-2xl shadow-sm text-sm leading-relaxed ${
+                        isUser 
+                        ? 'bg-blue-600 text-white rounded-tr-none' 
+                        : 'bg-white text-gray-800 border border-gray-100 rounded-tl-none'
+                    }">
+                        ${contentHtml}
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+
+            scrollToBottom();
+        }
+
+        function sendMessage() {
+            if (isTyping) return;
+            
+            const input = document.getElementById('message-input');
+            const content = input.value.trim();
+            if (!content) return;
+
+            // Add User Message
+            const session = getSession(currentSessionId);
+            session.messages.push({ role: 'user', content: content });
+            
+            // Update Title if it's the first user message
+            if (session.messages.length === 2) {
+                session.title = content.substring(0, 15) + (content.length > 15 ? '...' : '');
+                renderSessionList();
+            }
+
+            renderMessages(session.messages);
+            input.value = '';
+            input.style.height = '52px';
+
+            // Simulate AI Response
+            isTyping = true;
+            showTypingIndicator();
+
+            setTimeout(() => {
+                removeTypingIndicator();
+                session.messages.push({ 
+                    role: 'assistant', 
+                    content: '这是一个模拟的回复。在真实环境中，这里会调用后端 API 获取模型的生成结果。' 
+                });
+                session.lastActive = '刚刚';
+                renderMessages(session.messages);
+                renderSessionList(document.getElementById('search-input').value); // Update order/time
+                isTyping = false;
+            }, 1500);
+        }
+
+        function showTypingIndicator() {
+            const container = document.getElementById('messages-container');
+            const div = document.createElement('div');
+            div.id = 'typing-indicator';
+            div.className = 'flex gap-4 max-w-[800px] mx-auto w-full';
+            div.innerHTML = `
+                <div class="w-9 h-9 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center flex-shrink-0">
+                    <i class="fa-solid fa-robot text-sm"></i>
+                </div>
+                <div class="bg-white p-4 rounded-2xl rounded-tl-none shadow-sm border border-gray-100 flex gap-1 items-center h-12">
+                    <div class="typing-dot w-2 h-2 bg-gray-400 rounded-full"></div>
+                    <div class="typing-dot w-2 h-2 bg-gray-400 rounded-full"></div>
+                    <div class="typing-dot w-2 h-2 bg-gray-400 rounded-full"></div>
+                </div>
+            `;
+            container.appendChild(div);
+            scrollToBottom();
+        }
+
+        function removeTypingIndicator() {
+            const el = document.getElementById('typing-indicator');
+            if (el) el.remove();
+        }
+
+
+
+        function scrollToBottom() {
+            const container = document.getElementById('messages-container');
+            container.scrollTop = container.scrollHeight;
+        }
+
+        // --- UI Interactions ---
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('mobile-overlay');
+            const isClosed = sidebar.classList.contains('-translate-x-full');
+
+            if (isClosed) {
+                sidebar.classList.remove('-translate-x-full');
+                overlay.classList.remove('hidden');
+            } else {
+                sidebar.classList.add('-translate-x-full');
+                overlay.classList.add('hidden');
+            }
+        }
+    </script>
+</body>
+</html>
