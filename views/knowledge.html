@@ -197,11 +197,11 @@
                             <button onclick="toggleDocEditMode(true)" class="px-3 py-1.5 text-sm font-medium text-blue-600 hover:bg-blue-50 rounded-lg transition-colors border border-blue-200 flex items-center gap-1" title="编辑文档内容">
                                 <i class="fa-solid fa-pen"></i> 编辑
                             </button>
-                            <div class="relative group">
-                                <button class="px-2 py-1.5 text-sm font-medium text-gray-500 hover:bg-gray-100 rounded-lg transition-colors border border-gray-200 flex items-center gap-1">
+                            <div class="relative">
+                                <button onclick="toggleDocMoreMenu(event)" class="px-2 py-1.5 text-sm font-medium text-gray-500 hover:bg-gray-100 rounded-lg transition-colors border border-gray-200 flex items-center gap-1">
                                     <i class="fa-solid fa-ellipsis"></i>
                                 </button>
-                                <div class="absolute right-0 top-full mt-1 w-32 bg-white border border-gray-200 rounded-lg shadow-lg hidden group-hover:block z-20 py-1">
+                                <div id="doc-more-menu" class="absolute right-0 top-full mt-1 w-32 bg-white border border-gray-200 rounded-lg shadow-lg hidden z-20 py-1">
                                     <button onclick="deleteCurrentDoc()" class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2">
                                         <i class="fa-solid fa-trash-can"></i> 删除
                                     </button>
@@ -245,6 +245,23 @@
             <div class="flex gap-3 justify-center">
                 <button onclick="closeDeleteDocModal()" class="px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg transition-colors w-24">取消</button>
                 <button onclick="confirmDeleteDoc()" class="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg shadow-sm transition-colors w-24">删除</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete KB Confirmation Modal -->
+    <div id="delete-kb-modal" class="fixed inset-0 bg-gray-900/50 hidden z-[70] flex items-center justify-center backdrop-blur-sm">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-sm p-6 text-center animate-fade-in-up">
+            <div class="w-12 h-12 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4 text-xl">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+            </div>
+            <h3 class="text-lg font-semibold text-gray-900 mb-2">确认删除知识库？</h3>
+            <p class="text-sm text-gray-500 mb-6">
+                您确定要永久删除该知识库吗？<br>所有关联文档也将被删除，此操作不可撤销。
+            </p>
+            <div class="flex gap-3 justify-center">
+                <button onclick="closeDeleteKbModal()" class="px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg transition-colors w-24">取消</button>
+                <button onclick="confirmDeleteKb()" class="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg shadow-sm transition-colors w-24">删除</button>
             </div>
         </div>
     </div>

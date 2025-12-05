@@ -231,11 +231,11 @@ function renderAgentList(reset = false) {
                     ${agent.updatedAt}
                 </td>
                 <td class="px-6 py-4 text-right">
-                    <div class="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button onclick="editAgent('${agent.id}')" class="p-1.5 text-gray-400 hover:text-blue-600 transition-colors" title="编辑">
+                    <div class="flex items-center justify-end gap-2">
+                        <button onclick="event.stopPropagation(); editAgent('${agent.id}')" class="p-1.5 text-gray-400 hover:text-blue-600 transition-colors" title="编辑">
                             <i class="fa-solid fa-pen"></i>
                         </button>
-                        <button onclick="openDeleteConfirm('${agent.id}')" class="p-1.5 text-gray-400 hover:text-red-600 transition-colors" title="删除">
+                        <button onclick="event.stopPropagation(); openDeleteConfirm('${agent.id}')" class="p-1.5 text-gray-400 hover:text-red-600 transition-colors" title="删除">
                             <i class="fa-solid fa-trash"></i>
                         </button>
                     </div>

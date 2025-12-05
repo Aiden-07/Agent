@@ -8,6 +8,20 @@ const ORCH_NAMES = [
 ];
 const ORCH_TRIGGERS = ['API Webhook', 'Cron Schedule', 'Event Driven', 'Manual'];
 
+// Agent Configuration
+const AGENT_TYPES = [
+    { type: 'functional', label: '功能型', icon: 'fa-robot', color: 'bg-blue-50 text-blue-700 border-blue-200' },
+    { type: 'industry', label: '行业型', icon: 'fa-briefcase', color: 'bg-purple-50 text-purple-700 border-purple-200' },
+    { type: 'role', label: '角色型', icon: 'fa-user-tie', color: 'bg-orange-50 text-orange-700 border-orange-200' }
+];
+
+// Renamed to avoid conflict with js/agent.js
+const ORCH_AGENT_NAMES = {
+    functional: ['数据分析Agent', '客户服务Bot', '文档解析助手', '代码审查员', '日志监控器'],
+    industry: ['金融风控助手', '医疗咨询专家', '法律顾问Bot', '教育辅导员', '电商导购助手'],
+    role: ['项目经理Agent', '技术支持Bot', '产品经理助理', 'HR招聘助手', '销售代表Bot']
+};
+
 // Initialize Page
 window.initOrchestratorPage = function() {
     console.log('Initializing Orchestrator Page...');
@@ -16,6 +30,25 @@ window.initOrchestratorPage = function() {
     }
     renderOrchestratorList();
     setupInputListeners();
+}
+
+function generateMockAgents() {
+    const count = Math.floor(Math.random() * 4); // 0 to 3 agents
+    if (count === 0) return [];
+    
+    const agents = [];
+    for (let i = 0; i < count; i++) {
+        const typeKey = Object.keys(ORCH_AGENT_NAMES)[Math.floor(Math.random() * 3)];
+        const nameList = ORCH_AGENT_NAMES[typeKey];
+        const name = nameList[Math.floor(Math.random() * nameList.length)];
+        agents.push({
+            id: `AG-${Math.random().toString(36).substr(2, 6).toUpperCase()}`,
+            name: name,
+            type: typeKey,
+            avatar: `https://ui-avatars.com/api/?name=${name}&background=random`
+        });
+    }
+    return agents;
 }
 
 function generateMockOrchestrators(count) {
@@ -31,7 +64,7 @@ function generateMockOrchestrators(count) {
             id: id,
             name: name,
             description: `This is a description for ${name}, handling automated tasks efficiently.`,
-            agent: `Agent-${Math.floor(Math.random() * 5) + 1}`,
+            agents: generateMockAgents(), 
             status: Math.random() > 0.3 ? 'active' : 'paused',
             nodeCount: Math.floor(Math.random() * 10) + 3,
             creator: 'Admin',
@@ -67,8 +100,11 @@ function renderOrchestratorList() {
         const tr = document.createElement('tr');
         tr.className = 'hover:bg-gray-50 transition-colors';
         
-        const statusClass = item.status === 'active' ? 'bg-green-50 text-green-600' : 'bg-gray-100 text-gray-500';
-        const statusText = item.status === 'active' ? 'Active' : 'Paused';
+        // Status Toggle Logic
+        const isActive = item.status === 'active';
+        const toggleBg = isActive ? 'bg-blue-600' : 'bg-gray-200';
+        const toggleDot = isActive ? 'translate-x-5' : 'translate-x-0';
+        const statusLabel = isActive ? '已启用' : '已停用';
 
         tr.innerHTML = `
             <td class="px-6 py-4">
@@ -82,9 +118,16 @@ function renderOrchestratorList() {
                     </div>
                 </div>
             </td>
-            <td class="px-6 py-4 text-sm text-gray-600">${item.agent}</td>
             <td class="px-6 py-4">
-                <span class="px-2 py-1 rounded-full text-xs font-medium ${statusClass}">${statusText}</span>
+                ${renderAgentTags(item.agents)}
+            </td>
+            <td class="px-6 py-4">
+                <div class="flex items-center cursor-pointer" onclick="window.toggleOrchestratorStatus('${item.id}', event)">
+                    <div class="${toggleBg} relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none">
+                        <span class="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${toggleDot}"></span>
+                    </div>
+                    <span class="ml-2 text-xs text-gray-500 select-none min-w-[36px]">${statusLabel}</span>
+                </div>
             </td>
             <td class="px-6 py-4 text-sm text-gray-600">${item.nodeCount}</td>
             <td class="px-6 py-4 text-sm text-gray-600">${item.creator}</td>
@@ -105,8 +148,127 @@ function renderOrchestratorList() {
     });
 }
 
-// --- Create Modal Logic ---
+function renderAgentTags(agents) {
+    if (!agents || agents.length === 0) return '<span class="text-gray-400 text-xs">无关联智能体</span>';
+    
+    // Support legacy string format if any
+    if (typeof agents === 'string') {
+        return `<span class="text-gray-600 text-sm">${agents}</span>`;
+    }
 
+    const displayAgents = agents.slice(0, 3);
+    const remainingCount = agents.length - 3;
+    
+    let html = '<div class="flex flex-wrap items-center gap-2">';
+    
+    displayAgents.forEach(agent => {
+        const typeConfig = AGENT_TYPES.find(t => t.type === agent.type) || AGENT_TYPES[0];
+        const agentJson = encodeURIComponent(JSON.stringify(agent));
+        
+        html += `
+            <div class="group relative inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border cursor-pointer hover:shadow-sm transition-all ${typeConfig.color}"
+                 onclick="window.showAgentCard(event, '${agentJson}')"
+                 title="${agent.name} (${typeConfig.label})">
+                <i class="fa-solid ${typeConfig.icon} opacity-70"></i>
+                <span class="truncate max-w-[80px]">${agent.name}</span>
+            </div>
+        `;
+    });
+    
+    if (remainingCount > 0) {
+        const remainingNames = agents.slice(3).map(a => a.name).join('\n');
+        html += `
+            <div class="inline-flex items-center justify-center w-7 h-7 rounded-full bg-gray-100 text-gray-600 text-xs font-medium border border-gray-200 cursor-pointer hover:bg-gray-200 transition-colors"
+                 title="${remainingNames}">
+                +${remainingCount}
+            </div>
+        `;
+    }
+    
+    html += '</div>';
+    return html;
+}
+
+// --- Status Toggle Logic ---
+
+window.toggleOrchestratorStatus = function(id, event) {
+    if (event) event.stopPropagation();
+    
+    const item = window.orchestratorData.find(o => o.id === id);
+    if (!item) return;
+    
+    // Toggle Status
+    item.status = item.status === 'active' ? 'paused' : 'active';
+    
+    // Re-render
+    renderOrchestratorList();
+}
+
+// --- Agent Popover Logic ---
+
+window.showAgentCard = function(event, agentJson) {
+    event.stopPropagation();
+    const agent = JSON.parse(decodeURIComponent(agentJson));
+    
+    // Remove existing popovers
+    window.closeAgentPopovers();
+    
+    const typeConfig = AGENT_TYPES.find(t => t.type === agent.type) || AGENT_TYPES[0];
+    
+    const popover = document.createElement('div');
+    popover.className = 'agent-card-popover fixed z-[100] bg-white rounded-lg shadow-xl border border-gray-100 p-4 w-64 animate-fade-in-up';
+    popover.innerHTML = `
+        <div class="flex items-start gap-3 mb-3">
+            <div class="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-lg overflow-hidden border border-gray-200">
+                <img src="${agent.avatar}" alt="${agent.name}" class="w-full h-full object-cover" onerror="this.parentElement.innerHTML='<i class=\\'fa-solid fa-robot text-gray-400\\'></i>'">
+            </div>
+            <div>
+                <h4 class="font-bold text-gray-900 text-sm leading-tight">${agent.name}</h4>
+                <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium ${typeConfig.color} mt-1.5">
+                    <i class="fa-solid ${typeConfig.icon}"></i> ${typeConfig.label}
+                </span>
+            </div>
+        </div>
+        <div class="space-y-2 text-xs text-gray-500">
+            <div class="flex justify-between items-center border-b border-gray-50 pb-2">
+                <span>ID</span>
+                <span class="font-mono text-gray-700">${agent.id}</span>
+            </div>
+             <div class="flex justify-between items-center">
+                <span>API 调用</span>
+                <span class="font-medium text-gray-700">${(Math.random() * 5000 + 100).toFixed(0)} 次/周</span>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(popover);
+    
+    // Positioning
+    const rect = event.currentTarget.getBoundingClientRect();
+    const popoverHeight = 150; // approximate
+    let top = rect.bottom + 8;
+    
+    // Check if bottom overflow
+    if (top + popoverHeight > window.innerHeight) {
+        top = rect.top - popoverHeight - 8;
+    }
+    
+    popover.style.left = `${rect.left}px`;
+    popover.style.top = `${top}px`;
+    
+    // Handle click outside
+    requestAnimationFrame(() => {
+        document.addEventListener('click', window.closeAgentPopovers);
+    });
+}
+
+window.closeAgentPopovers = function() {
+    const existing = document.querySelectorAll('.agent-card-popover');
+    existing.forEach(el => el.remove());
+    document.removeEventListener('click', window.closeAgentPopovers);
+}
+
+// ... existing Create/Edit/Delete Logic (which was included in previous Write) ...
 function setupInputListeners() {
     const nameInput = document.getElementById('orch-name-input');
     const descInput = document.getElementById('orch-desc-input');
@@ -155,7 +317,7 @@ window.submitCreateOrchestrator = function() {
             : `WF-${Math.random().toString(36).substr(2, 9).toUpperCase()}`,
         name: name,
         description: desc,
-        agent: '-',
+        agents: [], // New items have no agents initially
         status: 'active',
         nodeCount: 0,
         creator: 'Current User',
@@ -172,8 +334,6 @@ window.submitCreateOrchestrator = function() {
     editOrchestrator(newOrch.id);
 }
 
-// --- Edit Logic ---
-
 window.editOrchestrator = function(id) {
     if (typeof window.switchView === 'function') {
         window.switchView('orchestrator-editor', { id: id });
@@ -182,8 +342,6 @@ window.editOrchestrator = function(id) {
         alert('无法跳转到编辑器：switchView 未定义');
     }
 }
-
-// --- Delete Logic ---
 
 let deletingOrchId = null;
 
@@ -209,12 +367,8 @@ window.confirmDeleteOrchestrator = function() {
     window.orchestratorData = window.orchestratorData.filter(o => o.id !== deletingOrchId);
     renderOrchestratorList();
     closeDeleteOrchestratorModal();
-    
-    // Show Toast or Alert
-    // alert('编排器已删除'); 
 }
 
-// Event Listener for View Load
 document.addEventListener('view-loaded', (e) => {
     if (e.detail.view === 'orchestrator') {
         window.initOrchestratorPage();

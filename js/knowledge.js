@@ -176,7 +176,7 @@ function renderKnowledgeList() {
                     <button onclick="window.switchView('knowledge-testing', { id: '${item.id}' })" class="p-1.5 text-gray-400 hover:text-green-600 transition-colors" title="命中测试">
                         <i class="fa-solid fa-bullseye"></i>
                     </button>
-                    <button class="p-1.5 text-gray-400 hover:text-red-600 transition-colors" title="删除">
+                    <button onclick="event.stopPropagation(); window.deleteKb('${item.id}')" class="p-1.5 text-gray-400 hover:text-red-600 transition-colors" title="删除">
                         <i class="fa-solid fa-trash"></i>
                     </button>
                 </div>
@@ -414,16 +414,16 @@ function renderDocList() {
             </td>
             <td class="px-6 py-4 text-gray-500">${doc.updatedAt}</td>
             <td class="px-6 py-4 text-right">
-                <div class="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                <div class="flex items-center justify-end gap-2">
                     <button onclick="openParseModal('${doc.id}')" class="p-1.5 text-gray-400 hover:text-indigo-600 transition-colors" title="查看解析结果">
-                        <i class="fa-solid fa-layer-group"></i>
-                    </button>
-                    <button class="p-1.5 text-gray-400 hover:text-blue-600 transition-colors" title="预览">
-                        <i class="fa-solid fa-eye"></i>
-                    </button>
-                    <button class="p-1.5 text-gray-400 hover:text-red-600 transition-colors" title="删除">
-                        <i class="fa-solid fa-trash"></i>
-                    </button>
+                    <i class="fa-solid fa-layer-group"></i>
+                </button>
+                <button onclick="selectDoc('${doc.id}')" class="p-1.5 text-gray-400 hover:text-blue-600 transition-colors" title="预览">
+                    <i class="fa-solid fa-eye"></i>
+                </button>
+                <button onclick="event.stopPropagation(); window.prepareDeleteDoc('${doc.id}')" class="p-1.5 text-gray-400 hover:text-red-600 transition-colors" title="删除">
+                    <i class="fa-solid fa-trash"></i>
+                </button>
                 </div>
             </td>
         `;
@@ -579,7 +579,12 @@ function searchTreeDocs(query) {
     renderDocTree();
 }
 
+// Expose functions to window for HTML onclick access
+window.selectDoc = selectDoc;
+window.showKbDetail = showKbDetail;
+
 function selectDoc(docId) {
+    console.log('selectDoc called with:', docId);
     selectedDocId = docId;
     renderDocTree(); // Re-render to update selection highlight
     
@@ -793,6 +798,57 @@ window.confirmDeleteDoc = function() {
     
     closeDeleteDocModal();
     alert('文档已删除');
+}
+
+// --- KB Delete Logic ---
+let kbToDeleteId = null;
+
+window.deleteKb = function(id) {
+    kbToDeleteId = id;
+    const modal = document.getElementById('delete-kb-modal');
+    if (modal) {
+        modal.classList.remove('hidden');
+    } else {
+        // Fallback if modal doesn't exist yet (though we will add it)
+        if (confirm('确认删除该知识库吗？')) {
+            kbToDeleteId = id;
+            confirmDeleteKb();
+        }
+    }
+}
+
+window.closeDeleteKbModal = function() {
+    const modal = document.getElementById('delete-kb-modal');
+    if (modal) modal.classList.add('hidden');
+    kbToDeleteId = null;
+}
+
+window.confirmDeleteKb = function() {
+    if (!kbToDeleteId) return;
+    
+    // Remove from data
+    knowledgeData = knowledgeData.filter(k => k.id !== kbToDeleteId);
+    renderKnowledgeList();
+    
+    closeDeleteKbModal();
+    if (window.showToast) {
+        window.showToast('知识库已删除', 'success');
+    } else {
+        alert('知识库已删除');
+    }
+}
+
+window.prepareDeleteDoc = function(docId) {
+    console.log('prepareDeleteDoc called with:', docId);
+    selectedDocId = docId;
+    const modal = document.getElementById('delete-doc-modal');
+    if (modal) {
+        modal.classList.remove('hidden');
+    } else {
+        if (confirm('确认删除该文档吗？')) {
+            confirmDeleteDoc();
+        }
+    }
 }
 
 // Parse Result Logic
@@ -1315,6 +1371,23 @@ function getFileType(filename) {
     if (['md', 'markdown'].includes(ext)) return 'Markdown';
     return 'Text';
 }
+
+// --- Doc More Menu Logic ---
+window.toggleDocMoreMenu = function(event) {
+    event.stopPropagation();
+    const menu = document.getElementById('doc-more-menu');
+    if (menu) {
+        menu.classList.toggle('hidden');
+    }
+}
+
+// Close menu when clicking outside
+document.addEventListener('click', function(event) {
+    const menu = document.getElementById('doc-more-menu');
+    if (menu && !menu.classList.contains('hidden')) {
+        menu.classList.add('hidden');
+    }
+});
 
 document.addEventListener('view-loaded', (e) => {
     if (e.detail.view === 'knowledge') {
