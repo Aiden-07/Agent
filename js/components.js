@@ -109,18 +109,31 @@ window.renderComponentsList = function() {
                 <span class="px-2 py-1 rounded-full text-xs font-medium ${statusClass}">${statusText}</span>
             </td>
             <td class="px-6 py-4 text-right">
-                <div class="flex items-center justify-end gap-2">
-                    <button onclick="alert('编辑组件: ${item.id}')" class="p-1.5 text-gray-400 hover:text-blue-600 transition-colors" title="编辑">
-                        <i class="fa-solid fa-pen"></i>
-                    </button>
-                    <button onclick="deleteComponent('${item.id}')" class="p-1.5 text-gray-400 hover:text-red-600 transition-colors" title="删除">
-                        <i class="fa-solid fa-trash"></i>
-                    </button>
-                </div>
+                <button onclick="window.openCompActions(event, '${item.id}')" class="p-1.5 text-gray-400 hover:text-gray-600 transition-colors rounded hover:bg-gray-100">
+                    <i class="fa-solid fa-ellipsis"></i>
+                </button>
             </td>
         `;
         tbody.appendChild(tr);
     });
+}
+
+window.openCompActions = function(event, id) {
+    const actions = [
+        {
+            label: '编辑',
+            icon: 'fa-solid fa-pen',
+            onClick: () => alert('编辑组件: ' + id)
+        },
+        {
+            label: '删除',
+            icon: 'fa-solid fa-trash',
+            className: 'text-red-600 hover:bg-red-50',
+            iconClass: 'text-red-500',
+            onClick: () => window.deleteComponent(id)
+        }
+    ];
+    window.showActionMenu(event, actions);
 }
 
 window.filterComponents = function() {
@@ -146,8 +159,15 @@ window.sortComponents = function(field) {
 window.openCreateComponentModal = function() {
     const modal = document.getElementById('create-comp-modal');
     if (modal) modal.classList.remove('hidden');
-    createCompConfig = { type: 'agent', method: 'new' };
-    updateCreateUI();
+    createCompConfig = { type: 'agent' };
+    
+    // Reset radio button state
+    const agentRadio = document.querySelector('input[name="comp-type"][value="agent"]');
+    if (agentRadio) {
+        agentRadio.click(); // Trigger click to set state and UI
+    } else {
+        updateResourceDropdown();
+    }
 }
 
 window.closeCreateComponentModal = function() {
@@ -157,51 +177,71 @@ window.closeCreateComponentModal = function() {
 
 window.selectCompType = function(type) {
     createCompConfig.type = type;
-    updateCreateUI();
+    updateResourceDropdown();
 }
 
-function updateCreateUI() {
-    const methodSelect = document.getElementById('comp-create-method');
-    const sourceSelect = document.getElementById('comp-source-select');
-    
-    if (methodSelect) {
-        methodSelect.onchange = (e) => {
-            createCompConfig.method = e.target.value;
-            if (e.target.value === 'publish') {
-                sourceSelect.classList.remove('hidden');
-            } else {
-                sourceSelect.classList.add('hidden');
-            }
-        };
+window.createNewComponentTab = function() {
+    // Open corresponding list page in new tab
+    const url = createCompConfig.type === 'agent' ? 'index.html#/agent' : 'index.html#/orchestrator';
+    window.open(url, '_blank');
+}
+
+function getExistingResources(type) {
+    // Try to get data from global scope or generate mock
+    if (type === 'agent') {
+        if (window.agentData && window.agentData.length > 0) return window.agentData;
+        // Mock Agents if no data
+        return [
+            { id: 'AGENT-001', name: '客服助手' },
+            { id: 'AGENT-002', name: '代码审计' },
+            { id: 'AGENT-003', name: '文案生成' }
+        ];
+    } else {
+        if (window.orchestratorData && window.orchestratorData.length > 0) return window.orchestratorData;
+        // Mock Orchestrators if no data
+        return [
+            { id: 'WF-001', name: '多轮对话流程' },
+            { id: 'WF-002', name: '数据清洗流' }
+        ];
     }
+}
+
+function updateResourceDropdown() {
+    const select = document.getElementById('comp-create-method');
+    if (!select) return;
+    
+    const resources = getExistingResources(createCompConfig.type);
+    select.innerHTML = '';
+    
+    if (resources.length === 0) {
+        const option = document.createElement('option');
+        option.text = '无可用资源';
+        option.disabled = true;
+        select.appendChild(option);
+        return;
+    }
+    
+    resources.forEach(res => {
+        const option = document.createElement('option');
+        option.value = res.id;
+        option.textContent = `${res.name} (${res.id})`;
+        select.appendChild(option);
+    });
 }
 
 window.submitCreateComponent = function() {
     window.closeCreateComponentModal();
     
-    // Check for switchView function
-    if (typeof window.switchView !== 'function') {
-        console.error('switchView function not found!');
-        alert('Navigation Error: switchView is missing.');
+    const select = document.getElementById('comp-create-method');
+    const selectedId = select ? select.value : null;
+    
+    if (!selectedId) {
+        alert('请选择一个资源');
         return;
     }
 
-    if (createCompConfig.method === 'new') {
-        if (createCompConfig.type === 'agent') {
-            window.switchView('agent-editor'); // Redirect to Agent Editor
-        } else {
-             // Create a temporary ID for the new orchestrator component
-             const newOrchId = (window.generateId && typeof window.generateId === 'function') 
-                ? window.generateId('WF') 
-                : `WF-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
-            
-            // Redirect to Orchestrator Editor
-            window.switchView('orchestrator-editor', { id: newOrchId }); 
-        }
-    } else {
-        // Publish Flow
-        alert('发布已有组件功能正在开发中...');
-    }
+    // Mock creation logic
+    alert(`正在从资源 ${selectedId} 创建组件... (功能开发中)`);
 }
 
 // Delete Logic

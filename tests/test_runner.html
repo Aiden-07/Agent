@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Unit Tests</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="p-8">
+    <h1 class="text-2xl font-bold mb-4">Unit Tests Results</h1>
+    <div id="test-results" class="space-y-2"></div>
+
+    <!-- Scripts to Test -->
+    <script src="../js/utils.js"></script>
+    <script src="../js/parser.js"></script>
+    <script src="../js/components.js"></script>
+    <!-- We might need other scripts if we test more -->
+
+    <!-- Test Suite -->
+    <script>
+        const results = document.getElementById('test-results');
+
+        function assert(condition, message) {
+            const div = document.createElement('div');
+            if (condition) {
+                div.className = 'p-2 bg-green-100 text-green-800 rounded';
+                div.innerHTML = `<i class="fa-solid fa-check mr-2"></i> PASS: ${message}`;
+            } else {
+                div.className = 'p-2 bg-red-100 text-red-800 rounded';
+                div.innerHTML = `<i class="fa-solid fa-times mr-2"></i> FAIL: ${message}`;
+                console.error('FAIL:', message);
+            }
+            results.appendChild(div);
+        }
+
+        async function runTests() {
+            await testActionMenu();
+            await testMobilePositioning();
+            await testParserPage();
+            await testComponentsPage();
+        }
+
+        async function testParserPage() {
+            console.log('Testing Parser Page...');
+            
+            // Mock DOM
+            const tbody = document.createElement('tbody');
+            tbody.id = 'parser-list-body';
+            document.body.appendChild(tbody);
+            
+            try {
+                // Ensure data exists
+                assert(window.parserData && window.parserData.length > 0, 'Parser data should be initialized');
+                
+                // Render
+                window.renderParserList();
+                
+                // Check rows
+                const rows = tbody.querySelectorAll('tr');
+                assert(rows.length === window.parserData.length, `Should render ${window.parserData.length} rows`);
+                
+                // Check action button
+                const btn = rows[0].querySelector('button');
+                assert(btn !== null, 'Action button should exist in row');
+                assert(btn.onclick !== null, 'Action button should have onclick handler');
+                
+                // Test Open Action Menu
+                const event = { stopPropagation: () => {}, currentTarget: btn, preventDefault: () => {} };
+                window.openParserActions(event, window.parserData[0].id);
+                
+                const menu = window.currentActionMenu;
+                assert(menu !== null, 'Parser action menu should open');
+                if (menu) {
+                     assert(menu.textContent.includes('编辑'), 'Menu should contain "编辑"');
+                     assert(menu.textContent.includes('测试'), 'Menu should contain "测试"');
+                     window.closeActionMenu();
+                }
+
+            } catch (e) {
+                assert(false, 'Exception during testParserPage: ' + e.message);
+                console.error(e);
+            }
+            
+            tbody.remove();
+        }
+
+        async function testComponentsPage() {
+            console.log('Testing Components Page...');
+            
+            // Mock DOM
+            const tbody = document.createElement('tbody');
+            tbody.id = 'components-list-body';
+            document.body.appendChild(tbody);
+            
+            // Mock Data
+            window.componentsData = [
+                { id: 'c1', name: 'Test Comp', type: 'agent', refCount: 2, status: 'active', updatedAt: '2024-01-01' }
+            ];
+            window.currentFilter = { search: '', type: 'all' };
+            
+            try {
+                // Render
+                window.renderComponentsList();
+                
+                // Check rows
+                const rows = tbody.querySelectorAll('tr');
+                assert(rows.length === 1, 'Should render 1 row');
+                
+                // Check action button
+                const btn = rows[0].querySelector('button');
+                assert(btn !== null, 'Action button should exist in row');
+                
+                 // Test Open Action Menu
+                const event = { stopPropagation: () => {}, currentTarget: btn, preventDefault: () => {} };
+                window.openCompActions(event, 'c1');
+                
+                const menu = window.currentActionMenu;
+                assert(menu !== null, 'Component action menu should open');
+                if (menu) {
+                     assert(menu.textContent.includes('编辑'), 'Menu should contain "编辑"');
+                     assert(menu.textContent.includes('删除'), 'Menu should contain "删除"');
+                     window.closeActionMenu();
+                }
+                
+            } catch (e) {
+                assert(false, 'Exception during testComponentsPage: ' + e.message);
+                console.error(e);
+            }
+            
+            tbody.remove();
+        }
+
+        async function testActionMenu() {
+            console.log('Testing Action Menu...');
+            
+            // Mock Event
+            const btn = document.createElement('button');
+            btn.style.position = 'absolute';
+            btn.style.top = '100px';
+            btn.style.left = '100px';
+            btn.textContent = 'Click Me';
+            document.body.appendChild(btn);
+            
+            const event = {
+                stopPropagation: () => {},
+                currentTarget: btn
+            };
+
+            // Test 1: Create Menu
+            const actions = [
+                { label: 'Test Item 1', icon: 'fa-test', onClick: () => {} },
+                { label: 'Test Item 2', icon: 'fa-test-2', className: 'text-red-500', onClick: () => {} }
+            ];
+            
+            try {
+                // Ensure no menu exists initially
+                if (window.currentActionMenu) window.closeActionMenu();
+
+                window.showActionMenu(event, actions);
+                
+                // Check if menu exists in DOM
+                const menu = document.querySelector('.fixed.z-\\[9999\\]');
+                assert(menu !== null, 'Action menu element should be created in DOM');
+                assert(window.currentActionMenu === menu, 'window.currentActionMenu should reference the menu');
+                
+                // Check content
+                if (menu) {
+                    assert(menu.textContent.includes('Test Item 1'), 'Menu should contain "Test Item 1"');
+                    assert(menu.textContent.includes('Test Item 2'), 'Menu should contain "Test Item 2"');
+                    
+                    const buttons = menu.querySelectorAll('button');
+                    assert(buttons.length === 2, 'Menu should have 2 buttons');
+                    
+                    if (buttons[1]) {
+                        assert(buttons[1].className.includes('text-red-500'), 'Second item should have custom class');
+                    }
+
+                    // Check positioning (basic check)
+                    const rect = menu.getBoundingClientRect();
+                    assert(rect.top > 0, 'Menu top should be positive');
+                    
+                    // Check close
+                    window.closeActionMenu();
+                    assert(document.querySelector('.fixed.z-\\[9999\\]') === null, 'Menu element should be removed from DOM after close');
+                    assert(window.currentActionMenu === null, 'window.currentActionMenu should be null after close');
+                }
+            } catch (e) {
+                assert(false, 'Exception during testActionMenu: ' + e.message);
+                console.error(e);
+            }
+            
+            btn.remove();
+        }
+
+        async function testMobilePositioning() {
+            console.log('Testing Mobile Positioning...');
+            
+            // Mock Button at bottom-right of viewport to force flip/shift
+            const btn = document.createElement('button');
+            btn.style.position = 'fixed';
+            btn.style.bottom = '10px';
+            btn.style.right = '10px';
+            btn.style.width = '50px';
+            btn.style.height = '50px';
+            btn.textContent = 'Edge';
+            document.body.appendChild(btn);
+            
+            const event = {
+                stopPropagation: () => {},
+                currentTarget: btn
+            };
+
+            const actions = [{ label: 'Item', icon: 'fa-test', onClick: () => {} }];
+            
+            try {
+                window.showActionMenu(event, actions);
+                const menu = window.currentActionMenu;
+                
+                if (menu) {
+                    const rect = menu.getBoundingClientRect();
+                    
+                    // Should be flipped to top (since bottom space is small)
+                    // The button is at bottom 10px, so top of button is window.innerHeight - 60.
+                    // Menu top should be less than button top.
+                    assert(rect.top < (window.innerHeight - 60), 'Menu should flip to top when space is limited');
+                    
+                    // Should be shifted left (since right space is small)
+                    // But our logic pins to right edge: left = window.innerWidth - menuWidth - 4
+                    const expectedLeft = window.innerWidth - 144 - 4; // 144 is w-36 width
+                    // Allow small margin of error for scrollbars etc.
+                    assert(Math.abs(parseInt(menu.style.left) - expectedLeft) < 20, 'Menu should adjust horizontally to fit viewport');
+                    
+                    window.closeActionMenu();
+                }
+            } catch (e) {
+                assert(false, 'Exception during testMobilePositioning: ' + e.message);
+                console.error(e);
+            }
+            
+            btn.remove();
+        }
+
+        // Run Tests
+        window.onload = runTests;
+    </script>
+</body>
+</html>

@@ -146,15 +146,36 @@
                 </td>
                 <td class="px-6 py-4">${statusBadge}</td>
                 <td class="px-6 py-4 text-right">
-                    <button onclick="openEditUserModal(${user.id})" class="text-blue-600 hover:text-blue-800 mr-3 text-sm font-medium">编辑</button>
-                    ${user.status === 'normal' 
-                        ? `<button onclick="changeUserStatus(${user.id}, 'resigned')" class="text-red-600 hover:text-red-800 text-sm font-medium">离职</button>`
-                        : `<button onclick="changeUserStatus(${user.id}, 'normal')" class="text-green-600 hover:text-green-800 text-sm font-medium">激活</button>`
-                    }
+                    <button onclick="window.openUserActions(event, ${user.id}, '${user.status}')" class="p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors">
+                        <i class="fa-solid fa-ellipsis"></i>
+                    </button>
                 </td>
             `;
             tbody.appendChild(tr);
         });
+    }
+
+    window.openUserActions = function(event, id, status) {
+        const statusLabel = status === 'normal' ? '离职' : '激活';
+        const statusIcon = status === 'normal' ? 'fa-solid fa-ban' : 'fa-solid fa-check';
+        const statusClass = status === 'normal' ? 'text-red-600 hover:bg-red-50' : 'text-green-600 hover:bg-green-50';
+        const statusIconClass = status === 'normal' ? 'text-red-500' : 'text-green-500';
+        const newStatus = status === 'normal' ? 'resigned' : 'normal';
+
+        window.showActionMenu(event, [
+            {
+                label: '编辑',
+                icon: 'fa-solid fa-pen',
+                onClick: () => openEditUserModal(id)
+            },
+            {
+                label: statusLabel,
+                icon: statusIcon,
+                className: statusClass,
+                iconClass: statusIconClass,
+                onClick: () => changeUserStatus(id, newStatus)
+            }
+        ]);
     }
 
     // Expose to window

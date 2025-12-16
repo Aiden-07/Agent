@@ -166,24 +166,41 @@ function renderKnowledgeList() {
             <td class="px-6 py-4 text-sm text-gray-600">${item.creator}</td>
             <td class="px-6 py-4 text-sm text-gray-600">${item.permission}</td>
             <td class="px-6 py-4 text-right">
-                <div class="flex items-center justify-end gap-2">
-                    <button onclick="showKbDetail('${item.id}')" class="p-1.5 text-gray-400 hover:text-blue-600 transition-colors" title="查看">
-                        <i class="fa-solid fa-eye"></i>
-                    </button>
-                    <button onclick="window.switchView('knowledge-settings', { id: '${item.id}' })" class="p-1.5 text-gray-400 hover:text-blue-600 transition-colors" title="设置">
-                        <i class="fa-solid fa-gear"></i>
-                    </button>
-                    <button onclick="window.switchView('knowledge-testing', { id: '${item.id}' })" class="p-1.5 text-gray-400 hover:text-green-600 transition-colors" title="命中测试">
-                        <i class="fa-solid fa-bullseye"></i>
-                    </button>
-                    <button onclick="event.stopPropagation(); window.deleteKb('${item.id}')" class="p-1.5 text-gray-400 hover:text-red-600 transition-colors" title="删除">
-                        <i class="fa-solid fa-trash"></i>
-                    </button>
-                </div>
+                <button onclick="window.openKnowledgeActions(event, '${item.id}')" class="p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors">
+                    <i class="fa-solid fa-ellipsis"></i>
+                </button>
             </td>
         `;
         tbody.appendChild(tr);
     });
+}
+
+window.openKnowledgeActions = function(event, id) {
+    window.showActionMenu(event, [
+        {
+            label: '查看',
+            icon: 'fa-solid fa-eye',
+            onClick: () => showKbDetail(id)
+        },
+        {
+            label: '设置',
+            icon: 'fa-solid fa-gear',
+            onClick: () => window.switchView('knowledge-settings', { id: id })
+        },
+        {
+            label: '命中测试',
+            icon: 'fa-solid fa-bullseye',
+            iconClass: 'text-green-500',
+            onClick: () => window.switchView('knowledge-testing', { id: id })
+        },
+        {
+            label: '删除',
+            icon: 'fa-solid fa-trash',
+            className: 'text-red-600 hover:bg-red-50',
+            iconClass: 'text-red-500',
+            onClick: () => window.deleteKb(id)
+        }
+    ]);
 }
 
 function submitCreateKb() {
@@ -414,21 +431,35 @@ function renderDocList() {
             </td>
             <td class="px-6 py-4 text-gray-500">${doc.updatedAt}</td>
             <td class="px-6 py-4 text-right">
-                <div class="flex items-center justify-end gap-2">
-                    <button onclick="openParseModal('${doc.id}')" class="p-1.5 text-gray-400 hover:text-indigo-600 transition-colors" title="查看解析结果">
-                    <i class="fa-solid fa-layer-group"></i>
+                <button onclick="window.openDocActions(event, '${doc.id}')" class="p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors">
+                    <i class="fa-solid fa-ellipsis"></i>
                 </button>
-                <button onclick="selectDoc('${doc.id}')" class="p-1.5 text-gray-400 hover:text-blue-600 transition-colors" title="预览">
-                    <i class="fa-solid fa-eye"></i>
-                </button>
-                <button onclick="event.stopPropagation(); window.prepareDeleteDoc('${doc.id}')" class="p-1.5 text-gray-400 hover:text-red-600 transition-colors" title="删除">
-                    <i class="fa-solid fa-trash"></i>
-                </button>
-                </div>
             </td>
         `;
         tbody.appendChild(tr);
     });
+}
+
+window.openDocActions = function(event, id) {
+    window.showActionMenu(event, [
+        {
+            label: '查看解析结果',
+            icon: 'fa-solid fa-layer-group',
+            onClick: () => openParseModal(id)
+        },
+        {
+            label: '预览',
+            icon: 'fa-solid fa-eye',
+            onClick: () => selectDoc(id)
+        },
+        {
+            label: '删除',
+            icon: 'fa-solid fa-trash',
+            className: 'text-red-600 hover:bg-red-50',
+            iconClass: 'text-red-500',
+            onClick: () => window.prepareDeleteDoc(id)
+        }
+    ]);
 }
 
 function loadMoreDocs() {
@@ -582,15 +613,9 @@ function searchTreeDocs(query) {
 // Expose functions to window for HTML onclick access
 window.selectDoc = selectDoc;
 window.showKbDetail = showKbDetail;
-
-function selectDoc(docId) {
-    console.log('selectDoc called with:', docId);
-    selectedDocId = docId;
-    renderDocTree(); // Re-render to update selection highlight
-    
-    // Find doc in mockDocs OR mockTreeData
+window.getMockDocs = () => mockDocs;
+window.getDocById = function(docId) {
     let doc = mockDocs.find(d => d.id === docId);
-    
     if (!doc) {
         // Search in tree
         const findInTree = (nodes) => {
@@ -605,17 +630,43 @@ function selectDoc(docId) {
         };
         const treeNode = findInTree(mockTreeData);
         if (treeNode) {
-            // Adapt tree node to doc format
             doc = {
                 id: treeNode.id,
                 name: treeNode.name,
-                type: treeNode.fileType,
-                size: `${(Math.random() * 5).toFixed(2)} MB`,
+                type: treeNode.fileType || 'Text', // Fallback type
+                size: '1.2 MB', // Mock size
                 status: 'indexed',
                 updatedAt: new Date().toLocaleString()
             };
         }
     }
+    return doc;
+};
+
+// Expose Parse Logic
+window.initParseData = initParseData;
+window.renderParseChunks = renderParseChunks;
+window.updateParseUI = updateParseUI;
+window.undoParseAction = undoParseAction;
+window.redoParseAction = redoParseAction;
+window.toggleOriginalPanel = toggleOriginalPanel;
+window.saveParseResult = saveParseResult;
+window.startEditChunk = startEditChunk;
+window.saveEditChunk = saveEditChunk;
+window.cancelEditChunk = cancelEditChunk;
+window.splitChunkMode = splitChunkMode;
+window.executeSplit = executeSplit;
+window.mergeAdjacent = mergeAdjacent;
+window.insertChunkAbove = insertChunkAbove;
+window.deleteChunk = deleteChunk;
+
+function selectDoc(docId) {
+    console.log('selectDoc called with:', docId);
+    selectedDocId = docId;
+    renderDocTree(); // Re-render to update selection highlight
+    
+    // Find doc using the exposed helper
+    let doc = window.getDocById(docId);
     
     if (!doc) return;
     

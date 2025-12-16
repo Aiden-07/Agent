@@ -134,18 +134,30 @@ function renderOrchestratorList() {
             <td class="px-6 py-4 text-xs text-gray-500">${item.createdAt}</td>
             <td class="px-6 py-4 text-xs text-gray-500">${item.updatedAt}</td>
             <td class="px-6 py-4 text-right">
-                <div class="flex items-center justify-end gap-2">
-                    <button onclick="editOrchestrator('${item.id}')" class="p-1.5 text-gray-400 hover:text-blue-600 transition-colors" title="编辑">
-                        <i class="fa-solid fa-pen"></i>
-                    </button>
-                    <button onclick="deleteOrchestrator('${item.id}')" class="p-1.5 text-gray-400 hover:text-red-600 transition-colors" title="删除">
-                        <i class="fa-solid fa-trash"></i>
-                    </button>
-                </div>
+                <button onclick="window.openOrchActions(event, '${item.id}')" class="p-1.5 text-gray-400 hover:text-gray-600 transition-colors rounded hover:bg-gray-100">
+                    <i class="fa-solid fa-ellipsis"></i>
+                </button>
             </td>
         `;
         tbody.appendChild(tr);
     });
+}
+
+window.openOrchActions = function(event, id) {
+    window.showActionMenu(event, [
+        {
+            label: '编辑',
+            icon: 'fa-solid fa-pen',
+            onClick: () => editOrchestrator(id)
+        },
+        {
+            label: '删除',
+            icon: 'fa-solid fa-trash',
+            className: 'text-red-600 hover:bg-red-50',
+            iconClass: 'text-red-500',
+            onClick: () => deleteOrchestrator(id)
+        }
+    ]);
 }
 
 function renderAgentTags(agents) {

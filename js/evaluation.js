@@ -110,19 +110,52 @@ function renderEvaluationList() {
             <td class="px-6 py-4 text-xs text-gray-500">${item.createdAt}</td>
             <td class="px-6 py-4 text-xs text-gray-500">${item.completedAt}</td>
             <td class="px-6 py-4 text-right">
-                <div class="flex items-center justify-end gap-2">
-                    ${item.status === 'completed' ? `
-                    <button onclick="openEvalReport('${item.id}')" class="p-1.5 text-gray-400 hover:text-indigo-600 transition-colors" title="查看解析结果">
-                        <i class="fa-solid fa-chart-pie"></i>
-                    </button>` : ''}
-                    <button class="p-1.5 text-gray-400 hover:text-blue-600 transition-colors" title="重新评测">
-                        <i class="fa-solid fa-rotate-right"></i>
-                    </button>
-                </div>
+                <button onclick="window.openEvalActions(event, '${item.id}', '${item.status}')" class="p-1.5 text-gray-400 hover:text-gray-600 transition-colors rounded hover:bg-gray-100">
+                    <i class="fa-solid fa-ellipsis"></i>
+                </button>
             </td>
         `;
         tbody.appendChild(tr);
     });
+}
+
+window.openEvalActions = function(event, id, status) {
+    const actions = [];
+    
+    // View Report (Only if completed)
+    if (status === 'completed') {
+        actions.push({
+            label: '查看报告',
+            icon: 'fa-solid fa-chart-pie',
+            onClick: () => openEvalReport(id)
+        });
+    }
+    
+    // Re-run
+    actions.push({
+        label: '重新评测',
+        icon: 'fa-solid fa-rotate-right',
+        onClick: () => {
+            alert('重新评测任务已提交 (模拟)');
+            // In real app: call API to restart
+        }
+    });
+    
+    // Delete
+    actions.push({
+        label: '删除',
+        icon: 'fa-solid fa-trash',
+        className: 'text-red-600 hover:bg-red-50',
+        iconClass: 'text-red-500',
+        onClick: () => {
+             if(confirm('确定要删除该评测任务吗？')) {
+                 evaluationData = evaluationData.filter(i => i.id !== id);
+                 renderEvaluationList();
+             }
+        }
+    });
+
+    window.showActionMenu(event, actions);
 }
 
 // Report Logic

@@ -33,7 +33,7 @@
                         <th class="px-6 py-4">创建人</th>
                         <th class="px-6 py-4">创建时间</th>
                         <th class="px-6 py-4">最后更新时间</th>
-                        <th class="px-6 py-4 text-right">操作</th>
+                        <th class="px-6 py-4 text-right"></th>
                     </tr>
                 </thead>
                 <tbody id="agent-list-body" class="divide-y divide-gray-100">
@@ -101,6 +101,35 @@
         <div class="flex gap-3 justify-center">
             <button onclick="closeModal('delete-confirm-modal')" class="px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg transition-colors w-24">取消</button>
             <button id="confirm-delete-btn" class="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg shadow-sm transition-colors w-24">删除</button>
+        </div>
+    </div>
+</div>
+
+<!-- Stop Confirmation Modal -->
+<div id="stop-confirm-modal" class="fixed inset-0 bg-gray-900/50 hidden z-50 flex items-center justify-center backdrop-blur-sm">
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-md p-6 mx-4">
+        <div class="flex items-center gap-4 mb-4">
+            <div class="w-12 h-12 bg-red-100 text-red-600 rounded-full flex-shrink-0 flex items-center justify-center text-xl">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+            </div>
+            <div>
+                <h3 class="text-lg font-semibold text-gray-900">确认关闭智能体</h3>
+                <p class="text-sm text-gray-500">此操作将立即停止智能体服务。</p>
+            </div>
+        </div>
+        
+        <div class="bg-yellow-50 border border-yellow-100 rounded-lg p-4 mb-6">
+            <p class="text-sm font-medium text-yellow-800 mb-2">关闭智能体将导致以下功能不可用：</p>
+            <ul class="text-sm text-yellow-700 space-y-1 list-disc list-inside ml-1">
+                <li>所有关联的自动化任务将停止执行</li>
+                <li>对外提供的 API 接口将无法访问</li>
+                <li>实时监控数据采集将中断</li>
+            </ul>
+        </div>
+
+        <div class="flex gap-3 justify-end">
+            <button onclick="closeModal('stop-confirm-modal')" class="px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">取消</button>
+            <button onclick="confirmStopAgent()" class="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg shadow-sm transition-colors">确认关闭</button>
         </div>
     </div>
 </div>

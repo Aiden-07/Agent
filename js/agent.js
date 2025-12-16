@@ -210,7 +210,7 @@ function renderAgentList(reset = false) {
                 </td>
                 <td class="px-6 py-4">
                     <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                        ${agent.model}
+                        ${agent.model || '未设置'}
                     </span>
                 </td>
                 <td class="px-6 py-4 text-sm text-gray-500">
@@ -228,21 +228,41 @@ function renderAgentList(reset = false) {
                     ${agent.createdAt || '-'}
                 </td>
                 <td class="px-6 py-4 text-xs text-gray-500">
-                    ${agent.updatedAt}
+                    ${agent.updatedAt || '-'}
                 </td>
                 <td class="px-6 py-4 text-right">
-                    <div class="flex items-center justify-end gap-2">
-                        <button onclick="event.stopPropagation(); editAgent('${agent.id}')" class="p-1.5 text-gray-400 hover:text-blue-600 transition-colors" title="编辑">
-                            <i class="fa-solid fa-pen"></i>
-                        </button>
-                        <button onclick="event.stopPropagation(); openDeleteConfirm('${agent.id}')" class="p-1.5 text-gray-400 hover:text-red-600 transition-colors" title="删除">
-                            <i class="fa-solid fa-trash"></i>
-                        </button>
-                    </div>
+                    <button onclick="window.openAgentActions(event, '${agent.id}')" class="p-1.5 text-gray-400 hover:text-gray-600 transition-colors rounded hover:bg-gray-100">
+                        <i class="fa-solid fa-ellipsis"></i>
+                    </button>
                 </td>
             `;
             tbody.appendChild(tr);
         });
+    }
+}
+
+// Action Menu Handler
+window.openAgentActions = function(event, id) {
+    window.showActionMenu(event, [
+        {
+            label: '编辑',
+            icon: 'fa-solid fa-pen',
+            onClick: () => editAgent(id)
+        },
+        {
+            label: '删除',
+            icon: 'fa-solid fa-trash',
+            className: 'text-red-600 hover:bg-red-50',
+            iconClass: 'text-red-500',
+            onClick: () => openDeleteConfirm(id)
+        }
+    ]);
+}
+
+// Edit Agent (Ensure it's exposed)
+window.editAgent = function(id) {
+    if (typeof switchView === 'function') {
+        switchView('agent-editor', { id: id });
     }
 }
 
@@ -288,6 +308,7 @@ function createNewAgent() {
 
 // Delete Agent
 let agentToDeleteId = null;
+let agentToStopId = null; // State for stop confirmation
 
 function openDeleteConfirm(id) {
     agentToDeleteId = id;
@@ -319,8 +340,39 @@ function confirmDelete() {
 function toggleAgentStatus(id) {
     const agent = agentsData.find(a => a.id === id);
     if (agent) {
-        agent.status = agent.status === 'running' ? 'stopped' : 'running';
-        renderAgentList(false); 
+        if (agent.status === 'running') {
+            // If running, ask for confirmation to stop
+            agentToStopId = id;
+            if (typeof openModal === 'function') {
+                openModal('stop-confirm-modal');
+            } else {
+                // Fallback if openModal is not globally available (it should be in utils.js)
+                const modal = document.getElementById('stop-confirm-modal');
+                if (modal) modal.classList.remove('hidden');
+            }
+        } else {
+            // If stopped, start immediately
+            agent.status = 'running';
+            renderAgentList(false);
+        }
+    }
+}
+
+function confirmStopAgent() {
+    if (agentToStopId) {
+        const agent = agentsData.find(a => a.id === agentToStopId);
+        if (agent) {
+            agent.status = 'stopped';
+            renderAgentList(false);
+        }
+        
+        if (typeof closeModal === 'function') {
+            closeModal('stop-confirm-modal');
+        } else {
+             const modal = document.getElementById('stop-confirm-modal');
+             if (modal) modal.classList.add('hidden');
+        }
+        agentToStopId = null;
     }
 }
 
@@ -358,6 +410,7 @@ window.initAgentPage = initAgentPage;
 window.createNewAgent = createNewAgent;
 window.openDeleteConfirm = openDeleteConfirm;
 window.toggleAgentStatus = toggleAgentStatus;
+window.confirmStopAgent = confirmStopAgent;
 window.editAgent = editAgent;
 
 // --- Agent Editor Logic ---
