@@ -1,0 +1,136 @@
+<div class="space-y-6">
+    <!-- Header & Filter -->
+    <div class="flex flex-col gap-4">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-4">
+                <div class="relative">
+                    <i class="fa-solid fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                    <input type="text" id="comp-search-input" placeholder="搜索组件..." class="pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-64" oninput="filterComponents()">
+                </div>
+                <select id="comp-filter-type" class="px-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-600" onchange="filterComponents()">
+                    <option value="all">所有类型</option>
+                    <option value="agent">智能体</option>
+                    <option value="orchestrator">编排器</option>
+                </select>
+            </div>
+            <button onclick="openCreateComponentModal()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 shadow-sm">
+                <i class="fa-solid fa-plus"></i>
+                创建组件
+            </button>
+        </div>
+    </div>
+
+    <!-- Component List -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        <table class="w-full text-sm text-left">
+            <thead class="bg-gray-50 text-gray-500 font-medium border-b border-gray-100">
+                <tr>
+                    <th class="px-6 py-4 cursor-pointer hover:bg-gray-100" onclick="sortComponents('name')">名称 <i class="fa-solid fa-sort text-xs text-gray-400 ml-1"></i></th>
+                    <th class="px-6 py-4">类型</th>
+                    <th class="px-6 py-4">引用数量</th>
+                    <th class="px-6 py-4">描述</th>
+                    <th class="px-6 py-4 cursor-pointer hover:bg-gray-100" onclick="sortComponents('updatedAt')">更新时间 <i class="fa-solid fa-sort text-xs text-gray-400 ml-1"></i></th>
+                    <th class="px-6 py-4">版本</th>
+                    <th class="px-6 py-4">状态</th>
+                    <th class="px-6 py-4 text-right"></th>
+                </tr>
+            </thead>
+            <tbody id="components-list-body" class="divide-y divide-gray-100">
+                <!-- Dynamic Content -->
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Create Component Modal -->
+    <div id="create-comp-modal" class="fixed inset-0 bg-gray-900/50 hidden z-50 flex items-center justify-center backdrop-blur-sm">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg p-6 animate-fade-in-up">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-lg font-semibold text-gray-800">创建新组件</h3>
+                <button onclick="closeCreateComponentModal()" class="text-gray-400 hover:text-gray-600">
+                    <i class="fa-solid fa-times"></i>
+                </button>
+            </div>
+            
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">组件类型</label>
+                    <div class="grid grid-cols-2 gap-4">
+                        <label class="border border-gray-200 rounded-lg p-4 cursor-pointer hover:border-blue-500 hover:bg-blue-50 transition-all" onclick="selectCompType('agent')">
+                            <input type="radio" name="comp-type" value="agent" class="hidden" checked>
+                            <div class="flex flex-col items-center gap-2">
+                                <div class="w-10 h-10 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center">
+                                    <i class="fa-solid fa-robot"></i>
+                                </div>
+                                <span class="text-sm font-medium">智能体</span>
+                            </div>
+                        </label>
+                        <label class="border border-gray-200 rounded-lg p-4 cursor-pointer hover:border-blue-500 hover:bg-blue-50 transition-all" onclick="selectCompType('orchestrator')">
+                            <input type="radio" name="comp-type" value="orchestrator" class="hidden">
+                            <div class="flex flex-col items-center gap-2">
+                                <div class="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center">
+                                    <i class="fa-solid fa-layer-group"></i>
+                                </div>
+                                <span class="text-sm font-medium">编排器</span>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">选择资源</label>
+                    <div class="flex gap-2">
+                        <select id="comp-create-method" class="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <!-- Options will be populated by JS -->
+                        </select>
+                        <button onclick="createNewComponentTab()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors whitespace-nowrap flex items-center">
+                            <i class="fa-solid fa-plus mr-1"></i> 新建
+                        </button>
+                    </div>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">组件名称</label>
+                    <input type="text" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="请输入组件名称">
+                </div>
+            </div>
+            
+            <div class="mt-8 flex justify-end gap-3">
+                <button onclick="closeCreateComponentModal()" class="px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">取消</button>
+                <button onclick="submitCreateComponent()" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm transition-colors">下一步</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Safety Check Modal -->
+    <div id="delete-safety-modal" class="fixed inset-0 bg-gray-900/50 hidden z-50 flex items-center justify-center backdrop-blur-sm">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-md p-6 animate-fade-in-up">
+            <div class="flex items-center gap-3 text-red-600 mb-4">
+                <i class="fa-solid fa-triangle-exclamation text-xl"></i>
+                <h3 class="text-lg font-semibold">组件删除警告</h3>
+            </div>
+            
+            <p class="text-sm text-gray-600 mb-4">
+                您正在尝试删除组件 <span class="font-bold text-gray-900" id="del-comp-name">-</span>。
+                该组件当前被以下 <span class="font-bold text-red-600" id="del-ref-count">0</span> 个智能体引用，强制删除将导致这些智能体功能异常！
+            </p>
+            
+            <div class="bg-gray-50 border border-gray-200 rounded-lg p-3 mb-6 max-h-40 overflow-y-auto">
+                <ul class="space-y-2 text-sm text-gray-700" id="del-ref-list">
+                    <!-- References -->
+                </ul>
+            </div>
+            
+            <div class="flex flex-col gap-3">
+                <label class="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
+                    <input type="checkbox" id="del-confirm-check" class="rounded text-red-600 focus:ring-red-500">
+                    <span>我已知晓风险，确认解除引用并删除</span>
+                </label>
+                
+                <div class="flex justify-end gap-3 mt-2">
+                    <button onclick="closeDeleteSafetyModal()" class="px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">取消</button>
+                    <button onclick="confirmDeleteComponent()" id="btn-del-confirm" disabled class="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg shadow-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed">确认删除</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
