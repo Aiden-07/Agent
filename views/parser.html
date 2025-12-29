@@ -1,0 +1,36 @@
+<div id="parser-list-view" class="space-y-6">
+    <!-- Header -->
+    <div class="flex items-center justify-between">
+        <div class="flex items-center gap-4">
+            <div class="relative">
+                <i class="fa-solid fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                <input type="text" placeholder="搜索解析规则..." class="pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-64">
+            </div>
+        </div>
+        <button onclick="window.location.href='views/parser-edit.html'" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 shadow-sm">
+            <i class="fa-solid fa-plus"></i>
+            新建解析规则
+        </button>
+    </div>
+
+    <!-- Parser List -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        <table class="w-full text-sm text-left">
+            <thead class="bg-gray-50 text-gray-500 font-medium border-b border-gray-100">
+                <tr>
+                    <th class="px-6 py-4">解析器名称</th>
+                    <th class="px-6 py-4">源格式</th>
+                    <th class="px-6 py-4">目标Schema</th>
+                    <th class="px-6 py-4">成功率</th>
+                    <th class="px-6 py-4">状态</th>
+                    <th class="px-6 py-4 text-right">操作</th>
+                </tr>
+            </thead>
+            <tbody id="parser-list-body" class="divide-y divide-gray-100">
+                <!-- Dynamic Content -->
+            </tbody>
+        </table>
+    </div>
+</div>
+
+
