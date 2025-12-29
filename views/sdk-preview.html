@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>开发者预览 - Agent SDK</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-gray-50 h-screen flex flex-col overflow-hidden">
+    <!-- Top Navigation -->
+    <header class="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6 flex-shrink-0 z-20">
+        <div class="flex items-center gap-4">
+            <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold">
+                <i class="fa-solid fa-cube"></i>
+            </div>
+            <span class="text-lg font-semibold text-gray-800">SaaS 工作台 <span class="text-xs bg-purple-100 text-purple-600 px-2 py-0.5 rounded-full ml-2">Dev Preview</span></span>
+        </div>
+        <div class="flex items-center gap-4">
+            <button class="p-2 text-gray-400 hover:text-gray-600 relative">
+                <i class="fa-regular fa-bell"></i>
+                <span class="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full"></span>
+            </button>
+            <div class="flex items-center gap-3 pl-4 border-l border-gray-100">
+                <img src="https://ui-avatars.com/api/?name=Dev+User&background=0D8ABC&color=fff" class="w-8 h-8 rounded-full">
+                <div class="text-sm">
+                    <div class="font-medium text-gray-700">开发者</div>
+                    <div class="text-xs text-gray-500">Admin</div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <div class="flex flex-1 overflow-hidden">
+        <!-- Sidebar -->
+        <aside class="w-64 bg-white border-r border-gray-200 flex-col hidden md:flex z-10">
+            <div class="p-4 space-y-1">
+                <a href="#" class="flex items-center gap-3 px-4 py-3 bg-blue-50 text-blue-600 rounded-lg font-medium">
+                    <i class="fa-solid fa-chart-pie w-5"></i>
+                    数据概览
+                </a>
+                <a href="#" class="flex items-center gap-3 px-4 py-3 text-gray-600 hover:bg-gray-50 rounded-lg font-medium transition-colors">
+                    <i class="fa-solid fa-users w-5"></i>
+                    客户管理
+                </a>
+                <a href="#" class="flex items-center gap-3 px-4 py-3 text-gray-600 hover:bg-gray-50 rounded-lg font-medium transition-colors">
+                    <i class="fa-solid fa-box w-5"></i>
+                    订单中心
+                </a>
+                <a href="#" class="flex items-center gap-3 px-4 py-3 text-gray-600 hover:bg-gray-50 rounded-lg font-medium transition-colors">
+                    <i class="fa-solid fa-gear w-5"></i>
+                    系统设置
+                </a>
+            </div>
+            <div class="mt-auto p-4 border-t border-gray-100">
+                <div class="bg-gray-50 p-4 rounded-xl">
+                    <h4 class="text-sm font-medium text-gray-900 mb-1">SDK 状态</h4>
+                    <p class="text-xs text-gray-500 mb-3">当前为开发者预览模式</p>
+                    <button onclick="window.agentSDK.show()" class="w-full py-1.5 text-xs bg-white border border-gray-200 rounded text-gray-600 hover:bg-gray-50">重置 Widget</button>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="flex-1 overflow-y-auto p-8 relative">
+            <div class="max-w-7xl mx-auto space-y-6">
+                <!-- Stats Row -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="bg-white p-6 rounded-xl border border-gray-100 shadow-sm">
+                        <div class="text-sm text-gray-500 mb-2">今日销售额</div>
+                        <div class="text-3xl font-bold text-gray-900">¥ 124,592</div>
+                        <div class="text-sm text-green-500 mt-2">↑ 12.5% 较昨日</div>
+                    </div>
+                    <div class="bg-white p-6 rounded-xl border border-gray-100 shadow-sm">
+                        <div class="text-sm text-gray-500 mb-2">活跃用户</div>
+                        <div class="text-3xl font-bold text-gray-900">8,432</div>
+                        <div class="text-sm text-blue-500 mt-2">↑ 5.2% 较昨日</div>
+                    </div>
+                    <div class="bg-white p-6 rounded-xl border border-gray-100 shadow-sm">
+                        <div class="text-sm text-gray-500 mb-2">待处理订单</div>
+                        <div class="text-3xl font-bold text-gray-900">156</div>
+                        <div class="text-sm text-orange-500 mt-2">需要关注</div>
+                    </div>
+                </div>
+
+                <!-- Chart Placeholder -->
+                <div class="bg-white p-6 rounded-xl border border-gray-100 shadow-sm h-96 flex items-center justify-center text-gray-400">
+                    <div class="text-center">
+                        <i class="fa-solid fa-chart-area text-4xl mb-3"></i>
+                        <p>业务数据趋势图表区域</p>
+                    </div>
+                </div>
+
+                <!-- Table -->
+                <div class="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+                    <div class="px-6 py-4 border-b border-gray-100 font-medium text-gray-900">最新订单</div>
+                    <table class="w-full text-sm text-left">
+                        <thead class="bg-gray-50 text-gray-500">
+                            <tr>
+                                <th class="px-6 py-3 font-medium">订单号</th>
+                                <th class="px-6 py-3 font-medium">客户</th>
+                                <th class="px-6 py-3 font-medium">状态</th>
+                                <th class="px-6 py-3 font-medium">金额</th>
+                                <th class="px-6 py-3 font-medium text-right">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-100">
+                            <tr class="hover:bg-gray-50">
+                                <td class="px-6 py-4 font-mono text-gray-600">ORD-2023-001</td>
+                                <td class="px-6 py-4">杭州科技网络有限公司</td>
+                                <td class="px-6 py-4"><span class="px-2 py-1 bg-green-50 text-green-600 rounded text-xs">已完成</span></td>
+                                <td class="px-6 py-4">¥ 12,000</td>
+                                <td class="px-6 py-4 text-right text-blue-600 cursor-pointer hover:underline">查看</td>
+                            </tr>
+                            <tr class="hover:bg-gray-50">
+                                <td class="px-6 py-4 font-mono text-gray-600">ORD-2023-002</td>
+                                <td class="px-6 py-4">上海创新工作室</td>
+                                <td class="px-6 py-4"><span class="px-2 py-1 bg-blue-50 text-blue-600 rounded text-xs">处理中</span></td>
+                                <td class="px-6 py-4">¥ 8,500</td>
+                                <td class="px-6 py-4 text-right text-blue-600 cursor-pointer hover:underline">查看</td>
+                            </tr>
+                            <tr class="hover:bg-gray-50">
+                                <td class="px-6 py-4 font-mono text-gray-600">ORD-2023-003</td>
+                                <td class="px-6 py-4">北京未来科技有限公司</td>
+                                <td class="px-6 py-4"><span class="px-2 py-1 bg-orange-50 text-orange-600 rounded text-xs">待付款</span></td>
+                                <td class="px-6 py-4">¥ 24,000</td>
+                                <td class="px-6 py-4 text-right text-blue-600 cursor-pointer hover:underline">查看</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Agent SDK Integration -->
+    <script src="../js/agent-sdk.js"></script>
+    <script>
+        // Init Agent SDK
+        document.addEventListener('DOMContentLoaded', () => {
+            const agentSDK = new AgentSDK({
+                agentId: 'mock-agent-id', // In real usage, this would be dynamic
+                name: '智能助手',
+                avatar: 'fa-solid fa-robot',
+                welcomeMsg: '您好！我是您的专属业务助手，有什么可以帮您？'
+            });
+            window.agentSDK = agentSDK; // Expose for debugging/sidebar button
+        });
+    </script>
+</body>
+</html>

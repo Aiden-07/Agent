@@ -18,11 +18,13 @@ window.renderSystemLogs = function() {
     function addLog(minutesAgo, user, type, detail, color = 'blue') {
         const t = new Date(currentTime.getTime() - minutesAgo * 60000);
         logs.push({
+            id: Math.random().toString(36).substring(2, 9),
             time: formatDate(t),
             user: user,
             type: type,
             detail: detail,
             ip: ips[Math.floor(Math.random() * ips.length)],
+            status: Math.random() < 0.85 ? '成功' : '失败',
             color: color
         });
     }
@@ -98,7 +100,7 @@ window.renderSystemLogs = function() {
         if (logsToRender.length === 0) {
             tbody.innerHTML = `
                 <tr>
-                    <td colspan="5" class="px-6 py-8 text-center text-gray-500">
+                    <td colspan="6" class="px-6 py-8 text-center text-gray-500">
                         <div class="flex flex-col items-center justify-center gap-2">
                             <i class="fa-solid fa-search text-gray-300 text-2xl"></i>
                             <p>未找到匹配的日志记录</p>
@@ -120,6 +122,12 @@ window.renderSystemLogs = function() {
                 </td>
                 <td class="px-6 py-3 text-gray-600 max-w-md truncate" title="${log.detail}">${log.detail}</td>
                 <td class="px-6 py-3 text-gray-500 font-mono text-xs">${log.ip}</td>
+                <td class="px-6 py-3 whitespace-nowrap">
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${log.status === '成功' ? 'bg-green-50 text-green-700 border border-green-100' : 'bg-red-50 text-red-700 border border-red-100'}">
+                        <span class="w-1.5 h-1.5 mr-1.5 rounded-full ${log.status === '成功' ? 'bg-green-500' : 'bg-red-500'}"></span>
+                        ${log.status}
+                    </span>
+                </td>
             </tr>
         `).join('');
     }
@@ -154,7 +162,8 @@ window.renderSystemLogs = function() {
                        log.type.toLowerCase().includes(term) ||
                        log.detail.toLowerCase().includes(term) ||
                        log.ip.toLowerCase().includes(term) ||
-                       log.time.toLowerCase().includes(term);
+                       log.time.toLowerCase().includes(term) ||
+                       log.status.includes(term);
             });
 
             renderTable(filtered);

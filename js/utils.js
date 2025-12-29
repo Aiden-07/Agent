@@ -119,8 +119,8 @@ window.showActionMenu = function(event, items) {
         `;
         btn.onclick = (e) => {
             e.stopPropagation();
-            item.onClick();
             closeActionMenu();
+            item.onClick();
         };
         menu.appendChild(btn);
     });

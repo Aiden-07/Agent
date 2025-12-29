@@ -296,19 +296,81 @@
 
         // --- Core Functions ---
         
+        const AVATAR_OPTIONS = ['fa-robot', 'fa-brain', 'fa-wand-magic-sparkles', 'fa-bolt', 'fa-comment-dots', 'fa-lightbulb', 'fa-code', 'fa-pen-nib', 'fa-plane', 'fa-scale-balanced', 'fa-chart-line', 'fa-file-code', 'fa-language', 'fa-shield-halved', 'fa-file-lines', 'fa-database'];
+        const COLOR_OPTIONS = [
+            'bg-blue-100 text-blue-600', 'bg-green-100 text-green-600', 
+            'bg-purple-100 text-purple-600', 'bg-orange-100 text-orange-600', 
+            'bg-teal-100 text-teal-600', 'bg-pink-100 text-pink-600',
+            'bg-indigo-100 text-indigo-600', 'bg-cyan-100 text-cyan-600',
+            'bg-red-100 text-red-600', 'bg-yellow-100 text-yellow-600'
+        ];
+
+        function assignVisuals(agent, index) {
+            // Only assign if missing or if it's the generic default 'fa-robot' (to enforce variety)
+            // But we respect if user explicitly set it to 'fa-robot' via editor? 
+            // Since we can't distinguish, we assume 'fa-robot' + 'blue' is the unconfigured state we want to diversify.
+            // Or better: only if !agent.avatar.
+            
+            if (!agent.avatar || agent.avatar === 'fa-robot') {
+                const seed = (agent.id || '').split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) + index;
+                agent.avatar = AVATAR_OPTIONS[seed % AVATAR_OPTIONS.length];
+            }
+            
+            if (!agent.color || agent.color === 'bg-blue-100 text-blue-600') {
+                 const seed = (agent.id || '').split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) + index;
+                 agent.color = COLOR_OPTIONS[seed % COLOR_OPTIONS.length];
+            }
+        }
+
         function loadData() {
             // Load from localStorage or use defaults
+            const editorData = localStorage.getItem('agentsData');
             const savedData = localStorage.getItem('vagent_chat_data');
-            if (savedData) {
+            
+            if (editorData) {
+                agents = JSON.parse(editorData);
+                // Try to merge sessions from saved chat data to persist history
+                if (savedData) {
+                    try {
+                        const savedAgents = JSON.parse(savedData);
+                        agents.forEach(agent => {
+                            const saved = savedAgents.find(a => a.id === agent.id);
+                            if (saved && saved.sessions) {
+                                agent.sessions = saved.sessions;
+                            }
+                        });
+                    } catch (e) {
+                        console.error('Error merging saved sessions:', e);
+                    }
+                }
+            } else if (savedData) {
                 agents = JSON.parse(savedData);
             } else {
                 agents = JSON.parse(JSON.stringify(DEFAULT_AGENTS));
             }
+
+            // Fix: Ensure sessions array exists for all agents to prevent crash
+            agents.forEach((agent, index) => {
+                if (!agent.sessions || !Array.isArray(agent.sessions)) agent.sessions = [];
+                // Fix: Ensure messages array exists for all sessions
+                agent.sessions.forEach(session => {
+                    if (!session.messages || !Array.isArray(session.messages)) session.messages = [];
+                });
+                
+                // Dynamic Visual Assignment for variety
+                assignVisuals(agent, index);
+            });
             
             // Load last state
             const lastState = JSON.parse(localStorage.getItem('vagent_chat_state') || '{}');
             currentAgentId = lastState.agentId || (agents[0] ? agents[0].id : null);
             currentSessionId = lastState.sessionId;
+            
+            // Apply Background if agent has it
+            if (currentAgentId) {
+                const agent = getAgent(currentAgentId);
+                applyAgentBackground(agent);
+            }
             
             // Expand current agent
             if (currentAgentId) expandedAgents.add(currentAgentId);
@@ -379,6 +441,8 @@
             expandedAgents.add(agentId);
             
             const agent = getAgent(agentId);
+            applyAgentBackground(agent);
+            
             // Load most recent session or create new
             if (agent.sessions.length > 0) {
                 loadSession(agent.sessions[0].id, agentId);
@@ -387,6 +451,47 @@
             }
             
             renderSessionList();
+        }
+
+        function applyAgentBackground(agent) {
+            const container = document.getElementById('messages-container');
+            const mainContent = document.querySelector('main');
+            
+            // Reset first
+            if (container) {
+                container.style.backgroundImage = 'none';
+                container.style.backgroundColor = '';
+            }
+            if (mainContent) {
+                mainContent.style.backgroundImage = 'none';
+            }
+
+            if (!agent || !agent.experience || !agent.experience.background || !agent.experience.background.enabled || !agent.experience.background.image) {
+                return;
+            }
+
+            const { image, scope, opacity } = agent.experience.background;
+            const styleString = `url('${image}')`;
+            const opacityVal = opacity / 100;
+            const overlayAlpha = 1 - opacityVal;
+            const overlayColor = `rgba(255, 255, 255, ${overlayAlpha})`;
+            const bgStyle = `linear-gradient(${overlayColor}, ${overlayColor}), ${styleString}`;
+
+            if (scope === 'global') {
+                if (mainContent) {
+                    mainContent.style.backgroundImage = bgStyle;
+                    mainContent.style.backgroundSize = 'cover';
+                    mainContent.style.backgroundPosition = 'center';
+                    mainContent.style.backgroundAttachment = 'fixed';
+                }
+            } else {
+                if (container) {
+                    container.style.backgroundImage = bgStyle;
+                    container.style.backgroundSize = 'cover';
+                    container.style.backgroundPosition = 'center';
+                    container.style.backgroundAttachment = 'local';
+                }
+            }
         }
 
         function createNewSession() {
@@ -456,8 +561,9 @@
             // Update Header
             const titleEl = document.getElementById('current-chat-title');
             if (titleEl) {
+                const agentAvatar = agent.avatar || 'fa-robot';
                 titleEl.innerHTML = `
-                    <i class="fa-solid ${agent.avatar} text-blue-600 mr-2"></i>
+                    <i class="fa-solid ${agentAvatar} text-blue-600 mr-2"></i>
                     <span class="truncate">${session.title}</span>
                 `;
             }
@@ -499,10 +605,13 @@
                 agentDiv.className = `group flex items-center justify-between px-3 py-3 rounded-lg cursor-pointer transition-all mb-1 select-none ${isCurrentAgent ? 'bg-blue-50/50' : 'hover:bg-gray-100'}`;
                 agentDiv.onclick = () => switchAgent(agent.id);
 
+                const agentAvatar = agent.avatar || 'fa-robot';
+                const agentColor = agent.color || 'bg-blue-100 text-blue-600';
+
                 agentDiv.innerHTML = `
                     <div class="flex items-center gap-3 overflow-hidden">
-                        <div class="flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center ${agent.color}">
-                            <i class="fa-solid ${agent.avatar} text-sm"></i>
+                        <div class="flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center ${agentColor}">
+                            <i class="fa-solid ${agentAvatar} text-sm"></i>
                         </div>
                         <div class="font-medium text-gray-800 text-sm truncate">${agent.name}</div>
                         <span class="text-xs text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded-full">${agent.sessions.length}</span>
@@ -584,6 +693,8 @@
             if (!container) return;
             container.innerHTML = '';
 
+            if (!messages || !Array.isArray(messages)) return;
+
             // Welcome Timestamp
             const timeDiv = document.createElement('div');
             timeDiv.className = 'flex justify-center mb-6';
@@ -591,26 +702,37 @@
             container.appendChild(timeDiv);
 
             messages.forEach((msg, index) => {
+                if (!msg) return;
                 const isUser = msg.role === 'user';
                 const div = document.createElement('div');
                 div.className = `flex gap-4 ${isUser ? 'flex-row-reverse' : ''} animate-fade-in max-w-5xl mx-auto w-full group/msg`;
                 
                 // Format content (simple formatting)
                 let contentHtml;
+                const safeContent = msg.content || '';
+                
                 if (!isUser) {
                     // Use marked for AI response
-                    contentHtml = `<div class="markdown-content" id="msg-content-${index}">${marked.parse(msg.content)}</div>`;
+                    try {
+                        contentHtml = `<div class="markdown-content" id="msg-content-${index}">${marked.parse(safeContent)}</div>`;
+                    } catch (e) {
+                        contentHtml = `<div class="text-red-500">Error rendering content</div>`;
+                        console.error('Markdown parse error:', e);
+                    }
                 } else {
                     // Simple format for user
-                    contentHtml = msg.content
+                    contentHtml = safeContent
                         .replace(/\n/g, '<br>')
                         .replace(/```([\s\S]*?)```/g, '<div class="bg-gray-900 text-gray-200 p-3 rounded-lg my-2 font-mono text-xs overflow-x-auto">$1</div>');
                 }
 
                 // Get current agent avatar if assistant
                 const agent = getAgent(currentAgentId);
-                const avatarIcon = isUser ? 'fa-user' : (agent ? agent.avatar : 'fa-robot');
-                const avatarColor = isUser ? 'bg-gray-200 text-gray-600' : (agent ? agent.color : 'bg-blue-100 text-blue-600');
+                const agentAvatar = agent ? (agent.avatar || 'fa-robot') : 'fa-robot';
+                const agentColor = agent ? (agent.color || 'bg-blue-100 text-blue-600') : 'bg-blue-100 text-blue-600';
+                
+                const avatarIcon = isUser ? 'fa-user' : agentAvatar;
+                const avatarColor = isUser ? 'bg-gray-200 text-gray-600' : agentColor;
 
                 // Recommendations HTML
                 let recommendationsHtml = '';
@@ -755,7 +877,7 @@
             div.id = 'typing-indicator';
             div.className = 'flex gap-4 max-w-[800px] mx-auto w-full';
             const agent = getAgent(currentAgentId);
-            const color = agent ? agent.color : 'bg-blue-100 text-blue-600';
+            const color = agent ? (agent.color || 'bg-blue-100 text-blue-600') : 'bg-blue-100 text-blue-600';
             
             div.innerHTML = `
                 <div class="w-9 h-9 rounded-full ${color} flex items-center justify-center flex-shrink-0">
@@ -989,8 +1111,20 @@
             currentDislikeMsgIndex = index;
             selectedReason = null;
             
+            const agent = getAgent(currentAgentId);
+            let reasons = DISLIKE_REASONS;
+
+            // Try to use configured options
+            if (agent && agent.experience && agent.experience.feedback && Array.isArray(agent.experience.feedback.options) && agent.experience.feedback.options.length > 0) {
+                 reasons = [...agent.experience.feedback.options];
+                 // If custom input is allowed, ensure '其他原因' is in the list
+                 if (agent.experience.feedback.custom && !reasons.includes('其他原因')) {
+                     reasons.push('其他原因');
+                 }
+            }
+            
             const listEl = document.getElementById('dislike-reasons-list');
-            listEl.innerHTML = DISLIKE_REASONS.map(reason => `
+            listEl.innerHTML = reasons.map(reason => `
                 <label class="flex items-center gap-3 p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
                     <input type="radio" name="dislike_reason" value="${reason}" class="w-4 h-4 text-red-600 focus:ring-red-500 border-gray-300" onchange="handleReasonChange(this.value)">
                     <span class="text-sm text-gray-700">${reason}</span>
