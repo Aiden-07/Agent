@@ -69,7 +69,8 @@ function loadKbSettings(id) {
     if (parserSelect) {
         parserSelect.value = kb.parser || 'default';
     }
-    
+
+
     // Prompt Settings
     const promptEnable = document.getElementById('kb-custom-prompt-enable');
     const promptTemplate = document.getElementById('kb-prompt-template');
@@ -321,7 +322,7 @@ window.saveKbSettings = function() {
             kb.description = document.getElementById('kb-setting-desc').value;
             kb.autoParse = document.getElementById('kb-auto-parse').checked;
             kb.parser = document.getElementById('kb-parser-select').value;
-            
+
             // Prompt
             kb.promptEnabled = document.getElementById('kb-custom-prompt-enable').checked;
             kb.promptTemplate = document.getElementById('kb-prompt-template').value;
