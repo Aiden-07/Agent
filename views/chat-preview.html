@@ -766,6 +766,24 @@
                     `;
                 }
 
+                // Citations HTML
+                let citationsHtml = '';
+                if (!isUser && msg.citations && msg.citations.length > 0) {
+                    citationsHtml = `
+                        <div class="mt-4 pt-3 border-t border-gray-100 flex flex-col gap-2">
+                            <div class="text-xs text-gray-500 font-medium mb-1">参考文档：</div>
+                            ${msg.citations.map(doc => `
+                                <div onclick="openDocument('${doc.id}', '${doc.trackingId}')" 
+                                     class="citation-link flex items-center gap-2 p-2 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 cursor-pointer transition-colors text-xs border border-blue-100 group">
+                                    <i class="fa-solid fa-file-lines text-blue-500 group-hover:scale-110 transition-transform"></i>
+                                    <span class="font-medium">【《${doc.title}》】</span>
+                                    <i class="fa-solid fa-external-link-alt ml-auto opacity-50 text-[10px]"></i>
+                                </div>
+                            `).join('')}
+                        </div>
+                    `;
+                }
+
                 // Action Bar HTML (Assistant only)
                 let actionsHtml = '';
                 if (!isUser) {
@@ -809,6 +827,7 @@
                             : 'bg-white text-gray-800 border border-gray-100 rounded-tl-none'
                         }">
                             ${contentHtml}
+                            ${citationsHtml}
                         </div>
                         ${recommendationsHtml}
                         ${followupsHtml}
@@ -819,6 +838,12 @@
             });
 
             scrollToBottom();
+        }
+
+        function openDocument(docId, trackingId) {
+            console.log(`[Tracking] Document Click: ${docId}, TrackingID: ${trackingId}`);
+            const url = `knowledge-detail.html?id=${docId}&track=${trackingId}`;
+            window.open(url, '_blank');
         }
 
         function sendMessage(content = null) {
@@ -1008,6 +1033,10 @@
                 if (charIndex >= mockResponseFull.length) {
                     // Finished
                     aiResponse.followups = ['能提供具体的代码示例吗？', '这种方案有什么潜在风险？', '帮我总结成一个表格'];
+                    aiResponse.citations = [
+                        { id: 'doc-101', title: '用户需求规格说明书', trackingId: 'track-001' },
+                        { id: 'doc-102', title: '系统架构设计', trackingId: 'track-002' }
+                    ];
                     // Update final state
                     saveData();
                     renderMessages(session.messages); // Re-render to show followups/actions
