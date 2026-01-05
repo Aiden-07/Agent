@@ -1,0 +1,110 @@
+<div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden animate-fade-in h-full flex flex-col">
+    <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+        <!-- Search & Filter -->
+        <div class="flex gap-4 flex-1 items-center">
+            <div class="relative max-w-md w-full">
+                <i class="fa-solid fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                <input id="user-search-input" type="text" placeholder="搜索姓名、手机号、邮箱..." class="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white shadow-sm">
+            </div>
+            <select id="user-role-filter" class="border border-gray-200 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-600 bg-white shadow-sm">
+                <option value="所有角色">所有角色</option>
+                <option value="管理员">管理员</option>
+                <option value="开发者">开发者</option>
+                <option value="普通用户">普通用户</option>
+            </select>
+        </div>
+
+        <!-- Action Button -->
+        <button onclick="openAddUserModal()" class="bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white px-4 py-2 rounded-lg text-sm font-medium transition-all shadow-sm flex items-center ml-4">
+            <i class="fa-solid fa-plus mr-2"></i>新增用户
+        </button>
+    </div>
+    
+    <!-- Filter/Search Bar Removed -->
+
+    <!-- Table Container (Flex Grow + Scroll) -->
+    <div class="flex-1 overflow-auto">
+        <table class="w-full text-left border-collapse sticky top-0">
+            <thead class="bg-gray-50 sticky top-0 z-10 shadow-sm">
+                <tr class="text-gray-500 text-xs uppercase tracking-wider">
+                    <th class="px-6 py-3 font-medium">姓名</th>
+                    <th class="px-6 py-3 font-medium">手机号</th>
+                    <th class="px-6 py-3 font-medium">邮箱</th>
+                    <th class="px-6 py-3 font-medium">角色</th>
+                    <th class="px-6 py-3 font-medium">状态</th>
+                    <th class="px-6 py-3 font-medium text-right"></th>
+                </tr>
+            </thead>
+            <tbody id="user-table-body" class="divide-y divide-gray-100 text-sm bg-white">
+                <!-- Rows will be populated by JS -->
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- User Modal (Add/Edit) -->
+<div id="user-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center backdrop-blur-sm">
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg mx-4 overflow-hidden animate-fade-in-up">
+        <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+            <h3 id="user-modal-title" class="font-semibold text-gray-800 text-lg">新增用户</h3>
+            <button onclick="closeModal('user-modal')" class="text-gray-400 hover:text-gray-600 transition-colors">
+                <i class="fa-solid fa-times text-xl"></i>
+            </button>
+        </div>
+        
+        <form id="user-form" onsubmit="event.preventDefault(); saveUser();" class="p-6 space-y-5 max-h-[70vh] overflow-y-auto">
+            <!-- Name -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">姓名 <span class="text-red-500">*</span></label>
+                <input id="user-name" type="text" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all" placeholder="请输入真实姓名">
+                <p id="user-name-error" class="text-red-500 text-xs mt-1 hidden error-msg"></p>
+            </div>
+
+            <!-- Contact Info Group (ADD MODE: Combined) -->
+            <div id="user-contact-add-group" class="bg-blue-50 p-4 rounded-lg border border-blue-100">
+                <label class="block text-sm font-medium text-gray-700 mb-1">账号 <span class="text-red-500">*</span></label>
+                <input id="user-combined-contact" type="text" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white" placeholder="请输入手机号或邮箱">
+                <p class="text-xs text-gray-500 mt-1">请输入手机号或邮箱作为登录账号</p>
+                <p id="user-combined-contact-error" class="text-red-500 text-xs mt-1 hidden error-msg"></p>
+            </div>
+
+            <!-- Contact Info Group (EDIT MODE: Split) -->
+            <div id="user-contact-edit-group" class="hidden space-y-4 bg-gray-50 p-4 rounded-lg border border-gray-100">
+                 <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">手机号</label>
+                        <input id="user-phone" type="text" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white" placeholder="11位手机号">
+                        <p id="user-phone-error" class="text-red-500 text-xs mt-1 hidden error-msg"></p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">邮箱</label>
+                        <input id="user-email" type="email" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white" placeholder="example@company.com">
+                        <p id="user-email-error" class="text-red-500 text-xs mt-1 hidden error-msg"></p>
+                    </div>
+                 </div>
+            </div>
+
+            <!-- Role -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">角色 <span class="text-red-500">*</span></label>
+                <select id="user-role" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white">
+                    <option value="普通用户">普通用户</option>
+                    <option value="开发者">开发者</option>
+                    <option value="管理员">管理员</option>
+                </select>
+            </div>
+
+            <!-- Password (Only for Add) -->
+            <div id="user-password-field">
+                <label class="block text-sm font-medium text-gray-700 mb-1">初始密码 <span class="text-red-500">*</span></label>
+                <input id="user-password" type="password" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="至少8位，包含字母和数字">
+                <p id="user-password-error" class="text-red-500 text-xs mt-1 hidden error-msg"></p>
+            </div>
+        </form>
+
+        <div class="px-6 py-4 bg-gray-50 flex justify-end gap-3 border-t border-gray-100">
+            <button type="button" onclick="closeModal('user-modal')" class="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg text-sm font-medium transition-colors">取消</button>
+            <button type="button" onclick="saveUser()" class="px-6 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm">保存</button>
+        </div>
+    </div>
+</div>

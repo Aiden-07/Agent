@@ -3,6 +3,8 @@
 const routes = {
     'dashboard': { title: '仪表盘', file: 'views/dashboard.html' },
     'settings': { title: '系统设置', file: 'views/settings.html' },
+    'settings-info': { title: '企业信息', file: 'views/settings-info.html' },
+    'settings-logs': { title: '系统日志', file: 'views/settings-logs.html' },
     'user-mgmt': { title: '用户管理', file: 'views/user-mgmt.html' },
     'role-mgmt': { title: '角色管理', file: 'views/role-mgmt.html' },
     'agent': { title: '智能体管理', file: 'views/agent.html' },
@@ -98,8 +100,15 @@ async function loadView(viewName, params = null) {
         const html = await response.text();
         
         // Inject content
-        contentArea.innerHTML = html;
-        contentArea.scrollTop = 0; // Reset scroll position
+        if (contentArea) {
+            contentArea.innerHTML = html;
+            contentArea.scrollTop = 0; // Reset scroll position
+            
+            // Execute view-specific scripts if available
+            if (viewName === 'settings-logs' && window.renderSystemLogs) {
+                window.renderSystemLogs();
+            }
+        }
         
         // Update Title
         if (pageTitle) pageTitle.textContent = route.title;
@@ -202,6 +211,27 @@ function updateNavState(viewName) {
             link.classList.add('text-gray-600', 'hover:text-blue-600', 'hover:bg-gray-50');
         }
     });
+
+    // Handle Settings Parent State
+    const settingsBtn = document.getElementById('settings-menu-btn');
+    const settingsChevron = document.getElementById('settings-chevron');
+    const settingsSubmenu = document.getElementById('settings-submenu');
+    
+    if (settingsBtn) {
+        if (viewName === 'settings-info' || viewName === 'settings-logs') {
+            settingsBtn.classList.add('text-blue-600', 'bg-blue-50');
+            settingsBtn.classList.remove('text-gray-600', 'hover:text-blue-600', 'hover:bg-gray-50');
+            
+            // Auto expand if hidden
+            if (settingsSubmenu && settingsSubmenu.classList.contains('hidden')) {
+                settingsSubmenu.classList.remove('hidden');
+                if (settingsChevron) settingsChevron.classList.add('rotate-90');
+            }
+        } else {
+            settingsBtn.classList.remove('text-blue-600', 'bg-blue-50');
+            settingsBtn.classList.add('text-gray-600', 'hover:text-blue-600', 'hover:bg-gray-50');
+        }
+    }
 }
 
 // Initialize

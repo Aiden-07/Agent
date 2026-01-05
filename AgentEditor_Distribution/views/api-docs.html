@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API 文档 - 智能体平台</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-gray-50">
+    <div class="min-h-screen flex flex-col">
+        <header class="bg-white border-b border-gray-200 sticky top-0 z-30">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold">
+                        API
+                    </div>
+                    <h1 class="text-xl font-bold text-gray-900">开发者文档</h1>
+                </div>
+                <div>
+                    <a href="#" class="text-sm text-gray-500 hover:text-gray-900">返回控制台</a>
+                </div>
+            </div>
+        </header>
+
+        <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-10">
+            <div class="flex gap-8">
+                <!-- Sidebar -->
+                <div class="w-64 flex-shrink-0 hidden lg:block">
+                    <nav class="space-y-1 sticky top-24">
+                        <a href="#overview" class="bg-blue-50 text-blue-600 group flex items-center px-3 py-2 text-sm font-medium rounded-md">
+                            概览
+                        </a>
+                        <a href="#auth" class="text-gray-600 hover:bg-gray-50 hover:text-gray-900 group flex items-center px-3 py-2 text-sm font-medium rounded-md">
+                            鉴权
+                        </a>
+                        <a href="#chat" class="text-gray-600 hover:bg-gray-50 hover:text-gray-900 group flex items-center px-3 py-2 text-sm font-medium rounded-md">
+                            对话接口
+                        </a>
+                        <a href="#history" class="text-gray-600 hover:bg-gray-50 hover:text-gray-900 group flex items-center px-3 py-2 text-sm font-medium rounded-md">
+                            历史记录
+                        </a>
+                    </nav>
+                </div>
+
+                <!-- Content -->
+                <div class="flex-1 min-w-0">
+                    <div class="prose prose-blue max-w-none">
+                        <section id="overview" class="mb-12">
+                            <h2 class="text-2xl font-bold text-gray-900 mb-4">概览</h2>
+                            <p class="text-gray-600 mb-4">
+                                欢迎使用智能体平台 API。通过 API，您可以将智能体集成到任何应用程序中。
+                                所有 API 请求都应使用 <code class="bg-gray-100 px-1 py-0.5 rounded text-sm">https://api.vagent.ai/v1</code> 作为基础 URL。
+                            </p>
+                        </section>
+
+                        <section id="auth" class="mb-12">
+                            <h2 class="text-2xl font-bold text-gray-900 mb-4">鉴权</h2>
+                            <p class="text-gray-600 mb-4">
+                                使用 Bearer Token 进行身份验证。请在请求头中包含您的 API Key。
+                            </p>
+                            <div class="bg-gray-900 rounded-lg p-4 mb-4">
+                                <pre class="text-gray-300 font-mono text-sm">Authorization: Bearer YOUR_API_KEY</pre>
+                            </div>
+                        </section>
+
+                        <section id="chat" class="mb-12">
+                            <h2 class="text-2xl font-bold text-gray-900 mb-4">发送对话 (Chat Completions)</h2>
+                            <p class="text-gray-600 mb-4">
+                                向智能体发送消息并获取回复。支持流式传输 (SSE)。
+                            </p>
+                            <div class="bg-white border border-gray-200 rounded-lg overflow-hidden">
+                                <div class="flex items-center gap-2 px-4 py-2 bg-gray-50 border-b border-gray-200">
+                                    <span class="bg-green-100 text-green-700 px-2 py-0.5 rounded text-xs font-bold">POST</span>
+                                    <code class="text-sm text-gray-600">/chat/completions</code>
+                                </div>
+                                <div class="p-4">
+                                    <h4 class="text-sm font-medium text-gray-900 mb-2">Request Body</h4>
+                                    <div class="bg-gray-900 rounded-lg p-4">
+<pre class="text-green-400 font-mono text-sm">
+{
+  "agent_id": "ag_839201",
+  "messages": [
+    {"role": "user", "content": "Hello!"}
+  ],
+  "stream": true
+}
+</pre>
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+</body>
+</html>

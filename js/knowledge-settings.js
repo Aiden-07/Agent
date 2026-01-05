@@ -278,32 +278,7 @@ window.deleteDocField = function(index) {
     }
 }
 
-// --- Prompt Logic ---
-window.togglePromptInput = function() {
-    const enabled = document.getElementById('kb-custom-prompt-enable').checked;
-    const container = document.getElementById('kb-prompt-container');
-    if (enabled) {
-        container.classList.remove('hidden');
-        // If empty, fill default
-        const textarea = document.getElementById('kb-prompt-template');
-        if (!textarea.value.trim()) {
-            resetPromptTemplate();
-        }
-    } else {
-        container.classList.add('hidden');
-    }
-}
 
-window.resetPromptTemplate = function() {
-    const defaultPrompt = `基于以下已知信息，回答用户的问题。如果无法从已知信息中得到答案，请说"根据已知信息无法回答该问题"，不要编造答案。
-
-已知信息：
-{context}
-
-问题：
-{question}`;
-    document.getElementById('kb-prompt-template').value = defaultPrompt;
-}
 
 // --- Global Actions ---
 window.saveKbSettings = function() {

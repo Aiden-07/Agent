@@ -9,6 +9,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
     
     <!-- Custom Config & Styles -->
     <script>
@@ -109,12 +110,28 @@
                     设置
                 </div>
 
-                <!-- System Settings (TEE Dashboard) -->
+                <!-- System Settings -->
                 <li>
-                    <a href="javascript:void(0)" onclick="switchView('settings')" class="flex items-center px-3 py-2.5 text-gray-600 hover:text-blue-600 hover:bg-gray-50 rounded-lg group transition-colors">
-                        <i class="fa-solid fa-cog w-6 text-center mr-2"></i>
-                        <span class="font-medium">系统设置</span>
-                    </a>
+                    <button onclick="toggleSettingsMenu()" id="settings-menu-btn" class="w-full flex items-center justify-between px-3 py-2.5 text-gray-600 hover:text-blue-600 hover:bg-gray-50 rounded-lg group transition-colors focus:outline-none">
+                        <div class="flex items-center">
+                            <i class="fa-solid fa-cog w-6 text-center mr-2"></i>
+                            <span class="font-medium">系统设置</span>
+                        </div>
+                        <i id="settings-chevron" class="fa-solid fa-chevron-right text-xs transition-transform duration-200 text-gray-400"></i>
+                    </button>
+                    <!-- Submenu -->
+                    <ul id="settings-submenu" class="hidden mt-1 space-y-1">
+                        <li>
+                            <a href="javascript:void(0)" onclick="switchView('settings-info')" class="flex items-center px-3 py-2 text-sm text-gray-600 hover:text-blue-600 hover:bg-gray-50 rounded-lg transition-colors pl-11">
+                                <span class="font-medium">企业信息</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="javascript:void(0)" onclick="switchView('settings-logs')" class="flex items-center px-3 py-2 text-sm text-gray-600 hover:text-blue-600 hover:bg-gray-50 rounded-lg transition-colors pl-11">
+                                <span class="font-medium">系统日志</span>
+                            </a>
+                        </li>
+                    </ul>
                 </li>
 
                 <!-- User Management -->
@@ -200,6 +217,7 @@
     <!-- Scripts -->
     <script src="js/utils.js"></script>
     <script src="js/router.js"></script>
+    <script src="js/settings-logs.js"></script>
     <script src="js/agent.js"></script>
     <script src="js/orchestrator.js"></script>
     <script src="js/orchestrator-editor.js"></script>
@@ -211,6 +229,20 @@
     <script src="js/evaluation.js"></script>
     <script src="js/user-mgmt.js"></script>
     <script src="js/role-mgmt.js"></script>
-    <script src="js/doc-assistant.js"></script>
+
+    <script>
+        function toggleSettingsMenu() {
+            const submenu = document.getElementById('settings-submenu');
+            const chevron = document.getElementById('settings-chevron');
+            
+            if (submenu.classList.contains('hidden')) {
+                submenu.classList.remove('hidden');
+                chevron.classList.add('rotate-90');
+            } else {
+                submenu.classList.add('hidden');
+                chevron.classList.remove('rotate-90');
+            }
+        }
+    </script>
 </body>
 </html>
