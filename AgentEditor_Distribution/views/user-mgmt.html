@@ -30,6 +30,7 @@
                     <th class="px-6 py-3 font-medium">姓名</th>
                     <th class="px-6 py-3 font-medium">手机号</th>
                     <th class="px-6 py-3 font-medium">邮箱</th>
+                    <th class="px-6 py-3 font-medium">部门</th>
                     <th class="px-6 py-3 font-medium">角色</th>
                     <th class="px-6 py-3 font-medium">状态</th>
                     <th class="px-6 py-3 font-medium text-right"></th>
@@ -54,10 +55,17 @@
         
         <form id="user-form" onsubmit="event.preventDefault(); saveUser();" class="p-6 space-y-5 max-h-[70vh] overflow-y-auto">
             <!-- Name -->
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">姓名 <span class="text-red-500">*</span></label>
-                <input id="user-name" type="text" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all" placeholder="请输入真实姓名">
-                <p id="user-name-error" class="text-red-500 text-xs mt-1 hidden error-msg"></p>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">姓名 <span class="text-red-500">*</span></label>
+                    <input id="user-name" type="text" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all" placeholder="请输入真实姓名">
+                    <p id="user-name-error" class="text-red-500 text-xs mt-1 hidden error-msg"></p>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">部门 <span class="text-red-500">*</span></label>
+                    <input id="user-department" type="text" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all" placeholder="例如：研发部">
+                    <p id="user-department-error" class="text-red-500 text-xs mt-1 hidden error-msg"></p>
+                </div>
             </div>
 
             <!-- Contact Info Group (ADD MODE: Combined) -->
@@ -86,12 +94,27 @@
 
             <!-- Role -->
             <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">角色 <span class="text-red-500">*</span></label>
-                <select id="user-role" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white">
-                    <option value="普通用户">普通用户</option>
-                    <option value="开发者">开发者</option>
-                    <option value="管理员">管理员</option>
-                </select>
+                <label class="block text-sm font-medium text-gray-700 mb-2">角色 <span class="text-red-500">*</span></label>
+                <div class="bg-white border border-gray-300 rounded-lg p-4">
+                    <div id="role-checkbox-group" class="grid grid-cols-3 gap-4">
+                        <label class="inline-flex items-center cursor-pointer hover:bg-gray-50 rounded p-1 -ml-1 transition-colors">
+                            <input type="checkbox" name="user-role" value="普通用户" class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                            <span class="ml-2 text-sm text-gray-700">普通用户</span>
+                        </label>
+                        <label class="inline-flex items-center cursor-pointer hover:bg-gray-50 rounded p-1 -ml-1 transition-colors">
+                            <input type="checkbox" name="user-role" value="开发者" class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                            <span class="ml-2 text-sm text-gray-700">开发者</span>
+                        </label>
+                        <label class="inline-flex items-center cursor-pointer hover:bg-gray-50 rounded p-1 -ml-1 transition-colors">
+                            <input type="checkbox" name="user-role" value="管理员" class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                            <span class="ml-2 text-sm text-gray-700">管理员</span>
+                        </label>
+                    </div>
+                </div>
+                <div class="flex justify-between items-center mt-1">
+                    <p id="user-role-error" class="text-red-500 text-xs hidden error-msg"></p>
+                    <span id="role-selected-count" class="text-xs text-gray-500 ml-auto">已选: 0</span>
+                </div>
             </div>
 
             <!-- Password (Only for Add) -->

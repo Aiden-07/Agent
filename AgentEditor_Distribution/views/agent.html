@@ -45,11 +45,16 @@
                 <i class="fa-solid fa-spinner fa-spin mr-2"></i> 加载更多...
             </div>
             <!-- Empty State -->
-            <div id="agent-list-empty" class="hidden flex flex-col items-center justify-center h-64 text-gray-400">
-                <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4 text-2xl">
+            <div id="agent-list-empty" class="hidden flex flex-col items-center justify-center h-96 text-gray-400">
+                <div class="w-20 h-20 bg-blue-50 text-blue-500 rounded-full flex items-center justify-center mb-6 text-3xl shadow-sm">
                     <i class="fa-solid fa-robot"></i>
                 </div>
-                <p>暂无智能体数据</p>
+                <h3 class="text-lg font-medium text-gray-900 mb-2">暂无智能体数据</h3>
+                <p class="text-sm text-gray-500 mb-8 max-w-sm text-center">您可以创建一个新的智能体来开始使用，或者等待系统加载默认模板。</p>
+                <button onclick="openModal('create-agent-modal')" class="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg shadow-sm transition-colors flex items-center gap-2">
+                    <i class="fa-solid fa-plus"></i>
+                    立即创建智能体
+                </button>
             </div>
         </div>
     </div>
@@ -105,130 +110,6 @@
     </div>
 </div>
 
-<!-- Permission Configuration Modal -->
-<div id="permission-modal" class="fixed inset-0 bg-gray-900/50 hidden z-50 flex items-center justify-center backdrop-blur-sm">
-    <div class="bg-white rounded-xl shadow-2xl w-[800px] h-[600px] flex flex-col transform transition-all animate-fade-in" id="permission-modal-content">
-        <!-- Header -->
-        <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-            <div>
-                <h3 class="text-lg font-semibold text-gray-900" id="permission-modal-title">权限配置</h3>
-                <p class="text-xs text-gray-500 mt-1">为不同角色分配成员以控制智能体访问权限</p>
-            </div>
-            <button onclick="closeModal('permission-modal')" class="text-gray-400 hover:text-gray-600 transition-colors">
-                <i class="fa-solid fa-times"></i>
-            </button>
-        </div>
-        
-        <!-- Body -->
-        <div class="flex-1 overflow-y-auto p-6 space-y-6">
-            <!-- Role: Manage -->
-            <div class="bg-gray-50 rounded-xl p-4 border border-gray-100">
-                <div class="flex items-start justify-between mb-3">
-                    <div>
-                        <div class="flex items-center gap-2">
-                            <h4 class="font-semibold text-gray-800">管理员 (可管理)</h4>
-                            <span class="px-2 py-0.5 bg-purple-100 text-purple-700 text-xs rounded border border-purple-200">最高权限</span>
-                        </div>
-                        <p class="text-xs text-gray-500 mt-1">拥有完整权限：创建/删除/修改智能体配置、管理成员权限</p>
-                    </div>
-                    <button onclick="openMemberSelector('manage')" class="text-blue-600 hover:text-blue-700 text-sm font-medium flex items-center gap-1">
-                        <i class="fa-solid fa-plus"></i> 添加成员
-                    </button>
-                </div>
-                <!-- Member List -->
-                <div id="role-list-manage" class="flex flex-wrap gap-2 min-h-[40px]">
-                    <!-- Dynamic Members -->
-                </div>
-            </div>
-
-            <!-- Role: Edit -->
-            <div class="bg-white rounded-xl p-4 border border-gray-200">
-                <div class="flex items-start justify-between mb-3">
-                    <div>
-                        <div class="flex items-center gap-2">
-                            <h4 class="font-semibold text-gray-800">协作者 (可编辑)</h4>
-                            <span class="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded border border-blue-200">编辑权限</span>
-                        </div>
-                        <p class="text-xs text-gray-500 mt-1">支持业务操作：修改智能体配置、查看运行日志</p>
-                    </div>
-                    <button onclick="openMemberSelector('edit')" class="text-blue-600 hover:text-blue-700 text-sm font-medium flex items-center gap-1">
-                        <i class="fa-solid fa-plus"></i> 添加成员
-                    </button>
-                </div>
-                <div id="role-list-edit" class="flex flex-wrap gap-2 min-h-[40px]"></div>
-            </div>
-
-            <!-- Role: View -->
-            <div class="bg-white rounded-xl p-4 border border-gray-200">
-                <div class="flex items-start justify-between mb-3">
-                    <div>
-                        <div class="flex items-center gap-2">
-                            <h4 class="font-semibold text-gray-800">使用者 (可查看)</h4>
-                            <span class="px-2 py-0.5 bg-green-100 text-green-700 text-xs rounded border border-green-200">使用权限</span>
-                        </div>
-                        <p class="text-xs text-gray-500 mt-1">仅支持访问和使用智能体对话功能</p>
-                    </div>
-                    <button onclick="openMemberSelector('view')" class="text-blue-600 hover:text-blue-700 text-sm font-medium flex items-center gap-1">
-                        <i class="fa-solid fa-plus"></i> 添加成员
-                    </button>
-                </div>
-                <div id="role-list-view" class="flex flex-wrap gap-2 min-h-[40px]"></div>
-            </div>
-        </div>
-
-        <!-- Footer -->
-        <div class="px-6 py-4 bg-gray-50 rounded-b-xl flex justify-end gap-3 border-t border-gray-100">
-            <button onclick="closeModal('permission-modal')" class="px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">取消</button>
-            <button onclick="savePermissions()" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm transition-colors">保存配置</button>
-        </div>
-    </div>
-</div>
-
-<!-- Member Selector Modal (Nested or separate) -->
-<div id="member-selector-modal" class="fixed inset-0 bg-black/20 hidden z-[60] flex items-center justify-center">
-    <div class="bg-white rounded-lg shadow-xl w-[500px] flex flex-col max-h-[600px] animate-scale-in">
-        <div class="px-4 py-3 border-b border-gray-100 flex justify-between items-center">
-            <h4 class="font-semibold text-gray-800">添加成员</h4>
-            <button onclick="closeModal('member-selector-modal')" class="text-gray-400 hover:text-gray-600"><i class="fa-solid fa-times"></i></button>
-        </div>
-        
-        <!-- Tabs -->
-        <div class="flex border-b border-gray-100">
-            <button class="flex-1 py-2 text-sm font-medium text-blue-600 border-b-2 border-blue-600 bg-blue-50/50" id="tab-selector-user" onclick="switchSelectorTab('user')">
-                <i class="fa-solid fa-user mr-1"></i> 按人员选择
-            </button>
-            <button class="flex-1 py-2 text-sm font-medium text-gray-500 hover:text-gray-700" id="tab-selector-dept" onclick="switchSelectorTab('dept')">
-                <i class="fa-solid fa-sitemap mr-1"></i> 按部门选择
-            </button>
-        </div>
-
-        <!-- Search -->
-        <div class="p-3 border-b border-gray-100">
-            <div class="relative">
-                <i class="fa-solid fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs"></i>
-                <input type="text" id="member-search-input" class="w-full pl-8 pr-3 py-1.5 text-sm border border-gray-200 rounded focus:outline-none focus:border-blue-500" placeholder="搜索人员姓名或工号...">
-            </div>
-        </div>
-
-        <!-- List -->
-        <div class="flex-1 overflow-y-auto p-2 space-y-1" id="member-selector-list">
-            <!-- Dynamic Items -->
-        </div>
-
-        <!-- Selected Preview -->
-        <div class="p-3 border-t border-gray-100 bg-gray-50 max-h-32 overflow-y-auto">
-            <p class="text-xs text-gray-500 mb-2">已选择: <span id="selected-count">0</span></p>
-            <div class="flex flex-wrap gap-2" id="selected-preview-area"></div>
-        </div>
-
-        <!-- Footer -->
-        <div class="p-3 border-t border-gray-100 flex justify-end gap-2">
-            <button onclick="closeModal('member-selector-modal')" class="px-3 py-1.5 text-sm border border-gray-200 rounded hover:bg-gray-50">取消</button>
-            <button onclick="confirmMemberSelection()" class="px-3 py-1.5 text-sm bg-blue-600 text-white rounded hover:bg-blue-700">确认添加</button>
-        </div>
-    </div>
-</div>
-
 <!-- Stop Confirmation Modal -->
 <div id="stop-confirm-modal" class="fixed inset-0 bg-gray-900/50 hidden z-50 flex items-center justify-center backdrop-blur-sm">
     <div class="bg-white rounded-xl shadow-2xl w-full max-w-md p-6 mx-4">
@@ -257,6 +138,9 @@
         </div>
     </div>
 </div>
+
+<!-- Permission Config Modal (Moved to Global) -->
+
 
 <script>
     // Initialize Agent Page Logic immediately when loaded

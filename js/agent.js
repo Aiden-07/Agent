@@ -41,223 +41,44 @@ function insertVariable(variable, targetId = 'agent-prompt') {
     // Trigger input event for auto-saving if implemented
     textarea.dispatchEvent(new Event('input', { bubbles: true }));
     
-    // If it's a question input, we might need to trigger the onchange handler manually if it doesn't fire automatically
-    // But onchange fires on blur usually. The dispatchEvent('input') handles listeners bound to input.
-    // For the questions list, onchange="updateQuestion..." is used. We might need to trigger change event.
+    // Trigger change event for onchange listeners
     textarea.dispatchEvent(new Event('change', { bubbles: true }));
 }
 window.insertVariable = insertVariable;
 
-// Agent Management Logic with Persistence
+// Agent Management Logic
 
-// Version Control for Data Templates
-const DATA_VERSION = '1.0';
+// Mock Data
+let agentsData = [];
+const MODELS = ['GPT-4o', 'Claude 3.5 Sonnet', 'GPT-4 Turbo', 'DeepSeek V2'];
+const KBS = ['产品文档库', '技术规范', '员工手册', '市场分析报告'];
+const CREATORS = ['Admin', 'User_1001', 'User_1002', 'User_1003'];
 
-// Default Agent Templates (10 Representative Scenarios)
-const DEFAULT_AGENTS = [
-    {
-        id: 'AGT-TEMPLATE-001',
-        name: '电商客服助手',
-        model: 'GPT-4o',
-        avatar: 'fa-headset',
-        color: 'bg-blue-100 text-blue-600',
-        description: '专业的电商客服，负责处理用户咨询、售后服务和订单查询。能够礼貌、耐心地回答客户问题，并根据上下文推荐相关商品。',
-        prompt: '你是一名专业的电商客服专员。你的职责是回答客户关于商品、订单和售后的问题。请保持礼貌、耐心，并使用亲切的语气。如果客户遇到问题，请先安抚情绪，然后提供具体的解决方案。',
-        knowledge: ['产品文档库', '售后服务规范'],
-        creator: 'System',
-        createdAt: new Date().toLocaleString(),
-        timestamp: Date.now(),
-        updatedAt: new Date().toLocaleString(),
-        status: 'running',
-        experience: {
-            welcomeMsg: '您好！我是您的专属客服助手，请问有什么可以帮您？',
-            welcomeQuestions: { enabled: true, list: ['查询订单状态', '如何申请退款', '查看最新优惠'] },
-            responseQuestions: { enabled: true, list: [] }
-        }
-    },
-    {
-        id: 'AGT-TEMPLATE-002',
-        name: 'Python 代码审查员',
-        model: 'Claude 3.5 Sonnet',
-        avatar: 'fa-code',
-        color: 'bg-green-100 text-green-600',
-        description: '资深 Python 工程师，专注于代码质量审查、Bug 修复和性能优化建议。能够识别潜在的逻辑错误并提供重构建议。',
-        prompt: '你是一名拥有10年经验的 Python 资深工程师。请帮我审查代码，重点关注：1. 代码可读性与规范（PEP 8）；2. 潜在的 Bug 和逻辑错误；3. 性能优化空间；4. 安全性问题。请给出具体的修改建议和示例代码。',
-        knowledge: ['技术规范'],
-        creator: 'System',
-        createdAt: new Date().toLocaleString(),
-        timestamp: Date.now() - 100000,
-        updatedAt: new Date().toLocaleString(),
-        status: 'running',
-        experience: {
-            welcomeMsg: '你好，请粘贴你需要审查的 Python 代码。',
-            welcomeQuestions: { enabled: false, list: [] },
-            responseQuestions: { enabled: true, list: ['解释这段代码的原理', '如何优化这段代码的性能', '生成对应的单元测试'] }
-        }
-    },
-    {
-        id: 'AGT-TEMPLATE-003',
-        name: '英文翻译专家',
-        model: 'GPT-4 Turbo',
-        avatar: 'fa-language',
-        color: 'bg-purple-100 text-purple-600',
-        description: '精通中英文互译，擅长商务信函、技术文档和文学作品的翻译。追求信、达、雅的翻译境界。',
-        prompt: '你是一名专业的翻译专家，精通中文和英文。请将用户输入的文本翻译成目标语言。翻译时请注意语境、专业术语的准确性以及表达的地道性。如果是商务场景，请保持正式语气；如果是日常对话，请保持自然。',
-        knowledge: [],
-        creator: 'System',
-        createdAt: new Date().toLocaleString(),
-        timestamp: Date.now() - 200000,
-        updatedAt: new Date().toLocaleString(),
-        status: 'stopped',
-        experience: {
-            welcomeMsg: 'Hello! I can help you translate between Chinese and English.',
-            welcomeQuestions: { enabled: true, list: ['翻译商务邮件', '翻译技术文档', '润色英文简历'] },
-            responseQuestions: { enabled: false, list: [] }
-        }
-    },
-    {
-        id: 'AGT-TEMPLATE-004',
-        name: 'SQL 查询生成器',
-        model: 'DeepSeek V2',
-        avatar: 'fa-database',
-        color: 'bg-orange-100 text-orange-600',
-        description: '根据自然语言描述自动生成复杂的 SQL 查询语句，支持 MySQL、PostgreSQL 等多种数据库方言。',
-        prompt: '你是一个 SQL 专家。请根据用户的自然语言描述，生成正确的 SQL 查询语句。默认使用 standard SQL，如果用户指定了数据库类型（如 MySQL, PostgreSQL），请适配相应的语法。请解释生成的 SQL 语句的逻辑。',
-        knowledge: ['技术规范'],
-        creator: 'System',
-        createdAt: new Date().toLocaleString(),
-        timestamp: Date.now() - 300000,
-        updatedAt: new Date().toLocaleString(),
-        status: 'running',
-        experience: {
-            welcomeMsg: '请描述你想查询的数据，我来帮你写 SQL。',
-            welcomeQuestions: { enabled: false, list: [] },
-            responseQuestions: { enabled: true, list: ['优化这条 SQL', '解释执行计划', '添加索引建议'] }
-        }
-    },
-    {
-        id: 'AGT-TEMPLATE-005',
-        name: '周报自动生成助手',
-        model: 'GPT-4o',
-        avatar: 'fa-file-lines',
-        color: 'bg-teal-100 text-teal-600',
-        description: '根据用户提供的工作碎片和数据，自动整理生成结构清晰、重点突出的工作周报。',
-        prompt: '你是一个职场写作助手。请根据用户提供的本周工作内容、数据和下周计划，整理出一份结构清晰、重点突出的周报。周报结构应包含：1. 本周工作总结（Highlight）；2. 详细工作内容；3. 数据指标；4. 遇到的问题与解决方案；5. 下周工作计划。',
-        knowledge: ['员工手册'],
-        creator: 'System',
-        createdAt: new Date().toLocaleString(),
-        timestamp: Date.now() - 400000,
-        updatedAt: new Date().toLocaleString(),
-        status: 'running',
-        experience: {
-            welcomeMsg: '辛苦了一周！请告诉我这周都做了什么，我帮你写周报。',
-            welcomeQuestions: { enabled: true, list: ['生成研发周报', '生成销售周报', '润色已有周报'] },
-            responseQuestions: { enabled: false, list: [] }
-        }
-    },
-    {
-        id: 'AGT-TEMPLATE-006',
-        name: '产品文案润色',
-        model: 'Claude 3.5 Sonnet',
-        avatar: 'fa-pen-nib',
-        color: 'bg-pink-100 text-pink-600',
-        description: '擅长市场营销文案的润色和优化，能够提升文案的吸引力和转化率。',
-        prompt: '你是一名资深的文案策划。请帮我润色以下产品文案，使其更具吸引力，更能打动用户。请注意使用情感化设计语言，突出产品痛点和解决方案。',
-        knowledge: ['市场分析报告'],
-        creator: 'System',
-        createdAt: new Date().toLocaleString(),
-        timestamp: Date.now() - 500000,
-        updatedAt: new Date().toLocaleString(),
-        status: 'stopped',
-        experience: {
-            welcomeMsg: '请提供原始文案，我来帮你点石成金。',
-            welcomeQuestions: { enabled: false, list: [] },
-            responseQuestions: { enabled: true, list: ['提供更活泼的版本', '提供更专业的版本', '提取宣传Slogan'] }
-        }
-    },
-    {
-        id: 'AGT-TEMPLATE-007',
-        name: '旅游行程规划师',
-        model: 'GPT-4 Turbo',
-        avatar: 'fa-plane',
-        color: 'bg-cyan-100 text-cyan-600',
-        description: '根据用户的预算、时间和兴趣，定制个性化的旅游行程安排。',
-        prompt: '你是一名专业的旅游规划师。请根据用户的目的地、旅行时间、预算和兴趣偏好（如人文、自然、美食），规划一份详细的每日行程。行程应包含景点推荐、交通建议、住宿建议和美食推荐。',
-        knowledge: [],
-        creator: 'System',
-        createdAt: new Date().toLocaleString(),
-        timestamp: Date.now() - 600000,
-        updatedAt: new Date().toLocaleString(),
-        status: 'running',
-        experience: {
-            welcomeMsg: '想去哪里旅行？告诉我你的计划，我来帮你安排。',
-            welcomeQuestions: { enabled: true, list: ['规划日本七日游', '推荐国内小众景点', '制定亲子游攻略'] },
-            responseQuestions: { enabled: false, list: [] }
-        }
-    },
-    {
-        id: 'AGT-TEMPLATE-008',
-        name: '法律咨询顾问',
-        model: 'DeepSeek V2',
-        avatar: 'fa-scale-balanced',
-        color: 'bg-red-100 text-red-600',
-        description: '提供基础的法律咨询服务，解读法律条文，草拟简单的法律文书。',
-        prompt: '你是一名法律顾问助手。请根据用户描述的法律问题，提供相关的法律法规解读和建议。请注意，你的回答仅供参考，不构成正式的法律意见。在涉及复杂案件时，请建议用户咨询专业律师。',
-        knowledge: [],
-        creator: 'System',
-        createdAt: new Date().toLocaleString(),
-        timestamp: Date.now() - 700000,
-        updatedAt: new Date().toLocaleString(),
-        status: 'running',
-        experience: {
-            welcomeMsg: '您好，请简述您遇到的法律问题。',
-            welcomeQuestions: { enabled: true, list: ['劳动合同纠纷咨询', '知识产权保护咨询', '拟定房屋租赁合同'] },
-            responseQuestions: { enabled: true, list: ['查看相关法律条文', '生成法律函件模板'] }
-        }
-    },
-    {
-        id: 'AGT-TEMPLATE-009',
-        name: '数据分析报告生成',
-        model: 'GPT-4o',
-        avatar: 'fa-chart-line',
-        color: 'bg-indigo-100 text-indigo-600',
-        description: '根据输入的数据集或描述，自动进行数据分析并生成洞察报告。',
-        prompt: '你是一名数据分析师。请根据用户提供的数据（或数据描述），进行深入分析。请找出数据中的趋势、异常值和相关性，并生成一份包含图表建议和业务洞察的分析报告。',
-        knowledge: ['市场分析报告'],
-        creator: 'System',
-        createdAt: new Date().toLocaleString(),
-        timestamp: Date.now() - 800000,
-        updatedAt: new Date().toLocaleString(),
-        status: 'stopped',
-        experience: {
-            welcomeMsg: '请提供您的数据，我来帮您挖掘价值。',
-            welcomeQuestions: { enabled: false, list: [] },
-            responseQuestions: { enabled: true, list: ['解释数据波动原因', '预测未来趋势', '生成汇报PPT大纲'] }
-        }
-    },
-    {
-        id: 'AGT-TEMPLATE-010',
-        name: 'API 文档自动生成',
-        model: 'Claude 3.5 Sonnet',
-        avatar: 'fa-file-code',
-        color: 'bg-yellow-100 text-yellow-600',
-        description: '根据代码或简要描述，自动生成符合 OpenAPI 规范的 API 接口文档。',
-        prompt: '你是一名技术文档工程师。请根据用户提供的代码片段（如 Controller 层代码）或接口描述，自动生成标准的 OpenAPI (Swagger) 格式文档。文档应包含接口路径、请求方法、请求参数、响应结构和示例。',
-        knowledge: ['技术规范'],
-        creator: 'System',
-        createdAt: new Date().toLocaleString(),
-        timestamp: Date.now() - 900000,
-        updatedAt: new Date().toLocaleString(),
-        status: 'running',
-        experience: {
-            welcomeMsg: '请粘贴接口代码，我来生成文档。',
-            welcomeQuestions: { enabled: true, list: ['生成 RESTful API 文档', '生成 GraphQL Schema', '检查接口规范性'] },
-            responseQuestions: { enabled: false, list: [] }
-        }
-    }
+// Realistic Agent Names
+const AGENT_NAMES = [
+    '电商客服助手', 'Python 代码审查员', '英文翻译专家', 'SQL 查询生成器', 
+    '周报自动生成助手', '产品文案润色', '旅游行程规划师', '法律咨询顾问', 
+    '前端组件生成器', '招聘简历筛选助手', '数据分析报告生成', 'API 文档自动生成',
+    '用户评论情感分析', '智能会议纪要', '个性化推荐引擎'
 ];
 
-let agentsData = [];
+// Mock MCP and Plugin Data
+let mcpData = [
+    { id: 'MCP-001', name: 'Google Search' },
+    { id: 'MCP-002', name: 'GitHub Integration' },
+    { id: 'MCP-003', name: 'Slack Notifier' },
+    { id: 'MCP-004', name: 'Linear Issue Tracker' },
+    { id: 'MCP-005', name: 'Postgres Database' }
+];
+
+let pluginData = [
+    { id: 'PLG-001', name: 'Code Interpreter' },
+    { id: 'PLG-002', name: 'Image Generator' },
+    { id: 'PLG-003', name: 'PDF Reader' },
+    { id: 'PLG-004', name: 'Wolfram Alpha' },
+    { id: 'PLG-005', name: 'Web Browser' }
+];
+
 let currentPage = 1;
 const pageSize = 10;
 let isLoading = false;
@@ -265,100 +86,164 @@ let hasMore = true;
 let currentSearch = '';
 let currentFilter = 'all';
 
-// --- Data Persistence Layer ---
-
-function loadAgentsFromStorage() {
-    try {
-        const storedData = localStorage.getItem('agentsData');
-        const storedVersion = localStorage.getItem('agentDataVersion');
-
-        if (!storedData || storedVersion !== DATA_VERSION) {
-            console.log('Initializing default agent data...');
-            // Initialize with default templates
-            const initialData = JSON.parse(JSON.stringify(DEFAULT_AGENTS));
-            saveAgentsToStorage(initialData);
-            return initialData;
-        }
-
-        let data = JSON.parse(storedData);
-        
-        // Migration: Ensure avatar and color exist and diversify defaults
-        const AVATAR_OPTIONS = ['fa-robot', 'fa-brain', 'fa-wand-magic-sparkles', 'fa-bolt', 'fa-comment-dots', 'fa-lightbulb', 'fa-code', 'fa-pen-nib', 'fa-plane', 'fa-scale-balanced', 'fa-chart-line', 'fa-file-code', 'fa-language', 'fa-shield-halved', 'fa-file-lines', 'fa-database'];
-        const COLOR_OPTIONS = [
-            'bg-blue-100 text-blue-600', 'bg-green-100 text-green-600', 
-            'bg-purple-100 text-purple-600', 'bg-orange-100 text-orange-600', 
-            'bg-teal-100 text-teal-600', 'bg-pink-100 text-pink-600',
-            'bg-indigo-100 text-indigo-600', 'bg-cyan-100 text-cyan-600',
-            'bg-red-100 text-red-600', 'bg-yellow-100 text-yellow-600'
-        ];
-
-        data = data.map((agent, index) => {
-            let avatar = agent.avatar || 'fa-robot';
-            let color = agent.color || 'bg-blue-100 text-blue-600';
-
-            // If still using generic defaults, try to diversify based on ID/Index
-            if (avatar === 'fa-robot' && color === 'bg-blue-100 text-blue-600') {
-                 const seed = (agent.id || '').split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) + index;
-                 avatar = AVATAR_OPTIONS[seed % AVATAR_OPTIONS.length];
-                 color = COLOR_OPTIONS[seed % COLOR_OPTIONS.length];
-            }
-
-            return {
-                ...agent,
-                avatar: avatar,
-                color: color
-            };
-        });
-        
-        return data;
-    } catch (e) {
-        console.error('Failed to load agents from storage:', e);
-        return JSON.parse(JSON.stringify(DEFAULT_AGENTS)); // Fallback
+// Fixed Mock Data
+const FIXED_AGENT_LIST = [
+    {
+        id: 'AGT-FIX-001',
+        name: '电商客服助手',
+        model: 'GPT-4o',
+        description: '专业的电商客服，擅长处理售后问题和产品咨询，支持多轮对话和情绪安抚。',
+        knowledgeBase: ['产品文档库', '话术规范'],
+        creator: 'Admin',
+        createdAt: '2024/05/20 10:00:00',
+        timestamp: 1716170400000,
+        updatedAt: '2024/05/21 14:30:00',
+        status: 'running',
+        hot: 9527
+    },
+    {
+        id: 'AGT-FIX-002',
+        name: 'Python 代码审查员',
+        model: 'Claude 3.5 Sonnet',
+        description: '资深 Python 开发工程师，专注于代码质量审查、性能优化建议和安全漏洞扫描。',
+        knowledgeBase: ['技术规范', '最佳实践'],
+        creator: 'User_1001',
+        createdAt: '2024/05/18 09:15:00',
+        timestamp: 1715994900000,
+        updatedAt: '2024/05/20 11:20:00',
+        status: 'running',
+        hot: 8843
+    },
+    {
+        id: 'AGT-FIX-003',
+        name: '英文翻译专家',
+        model: 'GPT-4 Turbo',
+        description: '精通中英互译，擅长科技、法律、文学等多种文风的翻译，信达雅兼备。',
+        knowledgeBase: ['专业术语库'],
+        creator: 'User_1002',
+        createdAt: '2024/05/15 16:45:00',
+        timestamp: 1715762700000,
+        updatedAt: '2024/05/19 09:10:00',
+        status: 'running',
+        hot: 7210
+    },
+    {
+        id: 'AGT-FIX-004',
+        name: 'SQL 查询生成器',
+        model: 'DeepSeek V2',
+        description: '根据自然语言描述生成复杂的 SQL 查询语句，支持 MySQL、PostgreSQL 和 Oracle。',
+        knowledgeBase: ['数据库Schema', 'SQL优化指南'],
+        creator: 'User_1001',
+        createdAt: '2024/05/12 11:30:00',
+        timestamp: 1715484600000,
+        updatedAt: '2024/05/18 15:55:00',
+        status: 'stopped',
+        hot: 6532
+    },
+    {
+        id: 'AGT-FIX-005',
+        name: '周报自动生成助手',
+        model: 'GPT-4o',
+        description: '根据本周工作记录自动生成结构清晰、重点突出的周报，支持自定义模板。',
+        knowledgeBase: ['员工手册'],
+        creator: 'User_1003',
+        createdAt: '2024/05/10 08:50:00',
+        timestamp: 1715302200000,
+        updatedAt: '2024/05/17 18:20:00',
+        status: 'running',
+        hot: 5421
+    },
+    {
+        id: 'AGT-FIX-006',
+        name: '产品文案润色',
+        model: 'Claude 3.5 Sonnet',
+        description: '为产品营销文案提供润色建议，提升吸引力和转化率，支持多种营销风格。',
+        knowledgeBase: ['市场分析报告', '广告法合规库'],
+        creator: 'Admin',
+        createdAt: '2024/05/08 14:20:00',
+        timestamp: 1715149200000,
+        updatedAt: '2024/05/15 10:40:00',
+        status: 'running',
+        hot: 4980
+    },
+    {
+        id: 'AGT-FIX-007',
+        name: '旅游行程规划师',
+        model: 'GPT-4 Turbo',
+        description: '根据预算、时间和兴趣爱好，为您定制个性化的全球旅游行程规划。',
+        knowledgeBase: ['全球景点库', '签证指南'],
+        creator: 'User_1002',
+        createdAt: '2024/05/05 13:10:00',
+        timestamp: 1714885800000,
+        updatedAt: '2024/05/12 09:30:00',
+        status: 'stopped',
+        hot: 3215
+    },
+    {
+        id: 'AGT-FIX-008',
+        name: '法律咨询顾问',
+        model: 'DeepSeek V2',
+        description: '提供基础的法律咨询服务，涵盖劳动法、合同法、婚姻法等常见领域。',
+        knowledgeBase: ['民法典', '劳动法'],
+        creator: 'Admin',
+        createdAt: '2024/05/01 09:00:00',
+        timestamp: 1714525200000,
+        updatedAt: '2024/05/10 16:15:00',
+        status: 'running',
+        hot: 2890
+    },
+    {
+        id: 'AGT-FIX-009',
+        name: '前端组件生成器',
+        model: 'Claude 3.5 Sonnet',
+        description: '根据描述生成 React/Vue 组件代码，支持 TailwindCSS 样式。',
+        knowledgeBase: ['技术规范', 'UI组件库'],
+        creator: 'User_1001',
+        createdAt: '2024/04/28 10:30:00',
+        timestamp: 1714271400000,
+        updatedAt: '2024/05/08 11:50:00',
+        status: 'running',
+        hot: 2560
+    },
+    {
+        id: 'AGT-FIX-010',
+        name: '招聘简历筛选助手',
+        model: 'GPT-4o',
+        description: '自动分析简历与职位的匹配度，提取关键信息并生成面试建议。',
+        knowledgeBase: ['岗位JD库', '人才画像'],
+        creator: 'User_1003',
+        createdAt: '2024/04/25 15:00:00',
+        timestamp: 1714028400000,
+        updatedAt: '2024/05/05 14:20:00',
+        status: 'running',
+        hot: 2100
     }
-}
+];
 
-function saveAgentsToStorage(data) {
-    try {
-        localStorage.setItem('agentsData', JSON.stringify(data));
-        localStorage.setItem('agentDataVersion', DATA_VERSION);
-        // Also update memory
-        agentsData = data;
-    } catch (e) {
-        console.error('Failed to save agents to storage:', e);
-        showToast('本地存储空间不足，数据保存失败', 'error');
-    }
+// Generate initial mock data
+function generateMockAgents(count) {
+    // Return fixed list regardless of count to ensure consistency
+    // If count is larger than list, we could loop, but for now just return the fixed list.
+    return JSON.parse(JSON.stringify(FIXED_AGENT_LIST));
 }
 
 // Initialize
 function initAgentPage() {
     console.log('Initializing Agent Page...');
     
-    // Show loading state initially if needed
-    const loader = document.getElementById('agent-list-loader');
-    if (loader) loader.classList.remove('hidden');
+    // Always reset to fixed data on initialization to prevent stale/random data persistence
+    agentsData = generateMockAgents(10); 
+    
+    // Reset view state
+    currentPage = 1;
+    hasMore = true;
+    isLoading = false;
+    currentSearch = ''; // Optional: Reset filters on re-entry
+    currentFilter = 'all';
 
-    // Simulate async initialization for better UX perception
-    setTimeout(() => {
-        // Load data from storage
-        agentsData = loadAgentsFromStorage();
-        
-        // Reset view state
-        currentPage = 1;
-        hasMore = true; // Simple logic: always true initially if we have data, pagination handles end
-        isLoading = false;
-        currentSearch = ''; 
-        currentFilter = 'all';
-
-        // Render initial list
-        renderAgentList(true);
-        updateStats();
-        
-        if (loader) loader.classList.add('hidden');
-        
-        // Show welcome toast if it was a fresh init (detected by checking if we just saved defaults)
-        // For simplicity, just log it.
-        console.log(`Loaded ${agentsData.length} agents.`);
-    }, 500);
+    // Render initial list
+    renderAgentList(true);
+    updateStats();
     
     // Bind Events
     const scrollContainer = document.getElementById('agent-list-container');
@@ -401,31 +286,30 @@ function handleScroll(e) {
 }
 
 function loadMoreAgents() {
-    if (!hasMore || isLoading) return;
-
     isLoading = true;
     const loader = document.getElementById('agent-list-loader');
     if (loader) loader.classList.remove('hidden');
 
-    // Simulate network delay for realistic feel
+    // Simulate network delay
     setTimeout(() => {
-        const allFiltered = getFilteredAgents();
-        const total = allFiltered.length;
-        const currentDisplayed = currentPage * pageSize;
-        
-        if (currentDisplayed >= total) {
-            hasMore = false;
-            isLoading = false;
-            if (loader) loader.classList.add('hidden');
-            return;
-        }
-
         currentPage++;
-        renderAgentList(false); // Append
+        
+        // Let's generate 5 more "new" items to simulate infinite DB if we run out of mock data?
+        // Or just pretend existing data is paginated.
+        // For true infinite scroll feel in prototype, let's generate more data if we reach the end of static list.
+        // But logic is simpler if we just filter existing data. 
+        // Let's create more data on the fly to append to `agentsData` so the list grows.
+        
+        // Disable infinite scroll of random data as per user request for "Fixed Batch"
+        // const newItems = generateMockAgents(5); 
+        // agentsData = [...agentsData, ...newItems]; // Append to master list
+        
+        // renderAgentList(false); // Append/Re-render
         
         isLoading = false;
+        hasMore = false; // Stop loading more
         if (loader) loader.classList.add('hidden');
-    }, 500);
+    }, 800);
 }
 
 function getFilteredAgents() {
@@ -530,14 +414,19 @@ function renderAgentList(reset = false) {
 window.openAgentActions = function(event, id) {
     window.showActionMenu(event, [
         {
+            label: '权限配置',
+            icon: 'fa-solid fa-user-shield',
+            onClick: () => {
+                const agent = agentsData.find(a => a.id === id);
+                if (window.navigateToPermissionConfig) {
+                    window.navigateToPermissionConfig(id, 'agent', agent ? agent.name : 'Unknown Agent');
+                }
+            }
+        },
+        {
             label: '编辑',
             icon: 'fa-solid fa-pen',
             onClick: () => editAgent(id)
-        },
-        {
-            label: '配置权限',
-            icon: 'fa-solid fa-user-lock',
-            onClick: () => openPermissionConfig(id)
         },
         {
             label: '删除',
@@ -567,48 +456,30 @@ function createNewAgent() {
         return;
     }
 
-    // Randomize avatar and color
-    const avatars = ['fa-robot', 'fa-brain', 'fa-wand-magic-sparkles', 'fa-bolt', 'fa-comment-dots', 'fa-lightbulb'];
-    const colors = [
-        'bg-blue-100 text-blue-600', 
-        'bg-green-100 text-green-600', 
-        'bg-purple-100 text-purple-600', 
-        'bg-orange-100 text-orange-600', 
-        'bg-teal-100 text-teal-600',
-        'bg-pink-100 text-pink-600'
-    ];
-    const randomAvatar = avatars[Math.floor(Math.random() * avatars.length)];
-    const randomColor = colors[Math.floor(Math.random() * colors.length)];
-
     const newAgent = {
         id: window.generateId ? window.generateId('AGT') : `AGT-${Date.now()}`,
         name: nameInput.value,
         model: modelInput.value,
         description: descInput.value,
         prompt: descInput.value, // Use description as initial prompt
-        avatar: randomAvatar,
-        color: randomColor,
         hot: 0,
         status: 'running',
         createdAt: new Date().toLocaleString(),
         timestamp: Date.now(),
-        updatedAt: new Date().toLocaleString(),
-        // Initialize empty experience config for new agent
-        experience: {
-            welcomeMsg: '',
-            welcomeQuestions: { enabled: false, list: [] },
-            responseQuestions: { enabled: false, list: [] }
-        }
+        updatedAt: new Date().toLocaleString()
     };
 
     agentsData.unshift(newAgent); // Add to top
-    saveAgentsToStorage(agentsData); // Persist changes
-    
     closeModal('create-agent-modal');
     
     // Clear inputs
     nameInput.value = '';
     descInput.value = '';
+    
+    // Instead of rendering list, switch to editor
+    // currentPage = 1;
+    // renderAgentList(true);
+    // updateStats();
     
     // Go to editor
     switchView('agent-editor', { id: newAgent.id });
@@ -630,21 +501,12 @@ function openDeleteConfirm(id) {
 function confirmDelete() {
     if (agentToDeleteId) {
         agentsData = agentsData.filter(a => a.id !== agentToDeleteId);
-        saveAgentsToStorage(agentsData); // Persist changes
-        
         closeModal('delete-confirm-modal');
         renderAgentList(true);
         updateStats();
         agentToDeleteId = null;
     }
 }
-
-// Bind confirm delete button (Global listener in case element is recreated, though modal is static in views/agent.html? No, modal is part of view, so it is re-injected)
-// Since modal is part of the view, we need to bind the click event AFTER view load or use inline onclick.
-// The HTML uses onclick="createNewAgent()" and onclick="confirmDelete()" but wait, confirmDelete is button id="confirm-delete-btn".
-// In `views/agent.html`: <button id="confirm-delete-btn" ...>删除</button>
-// So we need to bind it in initAgentPage or use onclick in HTML.
-// Let's add onclick to the button in HTML to be safe and consistent with createNewAgent.
 
 // Toggle Status
 function toggleAgentStatus(id) {
@@ -663,7 +525,6 @@ function toggleAgentStatus(id) {
         } else {
             // If stopped, start immediately
             agent.status = 'running';
-            saveAgentsToStorage(agentsData); // Persist changes
             renderAgentList(false);
         }
     }
@@ -674,7 +535,6 @@ function confirmStopAgent() {
         const agent = agentsData.find(a => a.id === agentToStopId);
         if (agent) {
             agent.status = 'stopped';
-            saveAgentsToStorage(agentsData); // Persist changes
             renderAgentList(false);
         }
         
@@ -725,433 +585,9 @@ window.toggleAgentStatus = toggleAgentStatus;
 window.confirmStopAgent = confirmStopAgent;
 window.editAgent = editAgent;
 
-// --- Permission Management Logic ---
-let currentConfigAgentId = null;
-let currentPermissions = []; // Array of { userId, role }
-let permissionHistory = []; // Stack for undo
-let permPagination = { page: 1, pageSize: 20 };
-let permSelectedRows = new Set(); // For batch delete
-let permSearchDebounceTimer = null;
-
-function openPermissionConfig(id) {
-    currentConfigAgentId = id;
-    const agent = agentsData.find(a => a.id === id);
-    if (!agent) return;
-    
-    // Reset State
-    currentPermissions = agent.permissions ? JSON.parse(JSON.stringify(agent.permissions)) : [];
-    permissionHistory = [];
-    permPagination.page = 1;
-    permSelectedRows.clear();
-    
-    // UI Setup
-    const nameEl = document.getElementById('perm-agent-name');
-    if (nameEl) nameEl.textContent = agent.name;
-    
-    // Reset Search & Inputs
-    document.getElementById('perm-user-search').value = '';
-    document.getElementById('perm-search-results').classList.add('hidden');
-    document.getElementById('perm-dept-select').value = '';
-    
-    // Populate Departments
-    const deptSelect = document.getElementById('perm-dept-select');
-    if (deptSelect) {
-        deptSelect.innerHTML = '<option value="">请选择部门...</option>';
-        const depts = window.getAllDepartments ? window.getAllDepartments() : [];
-        depts.forEach(d => {
-            const option = document.createElement('option');
-            option.value = d;
-            option.textContent = d;
-            deptSelect.appendChild(option);
-        });
-    }
-
-    // Default to single add mode
-    switchPermAddMode('single');
-    
-    renderPermissionList();
-    openModal('permission-config-modal');
-}
-
-function switchPermAddMode(mode) {
-    document.getElementById('perm-mode-single').classList.toggle('hidden', mode !== 'single');
-    document.getElementById('perm-mode-single').classList.toggle('flex', mode === 'single');
-    
-    document.getElementById('perm-mode-dept').classList.toggle('hidden', mode !== 'dept');
-    document.getElementById('perm-mode-dept').classList.toggle('flex', mode === 'dept');
-    
-    // Tab Styles
-    const tabSingle = document.getElementById('perm-tab-single');
-    const tabDept = document.getElementById('perm-tab-dept');
-    
-    const activeClass = ['bg-white', 'text-blue-600', 'shadow-sm'];
-    const inactiveClass = ['text-gray-500', 'hover:text-gray-700'];
-    
-    if (mode === 'single') {
-        tabSingle.classList.add(...activeClass);
-        tabSingle.classList.remove(...inactiveClass);
-        tabDept.classList.remove(...activeClass);
-        tabDept.classList.add(...inactiveClass);
-    } else {
-        tabDept.classList.add(...activeClass);
-        tabDept.classList.remove(...inactiveClass);
-        tabSingle.classList.remove(...activeClass);
-        tabSingle.classList.add(...inactiveClass);
-    }
-}
-
-function debounceSearchUser(query) {
-    clearTimeout(permSearchDebounceTimer);
-    permSearchDebounceTimer = setTimeout(() => {
-        performUserSearch(query);
-    }, 300);
-}
-
-function performUserSearch(query) {
-    const resultsContainer = document.getElementById('perm-search-results');
-    if (!query.trim()) {
-        resultsContainer.classList.add('hidden');
-        return;
-    }
-    
-    const users = window.getAllUsers ? window.getAllUsers() : [];
-    const lowerQuery = query.toLowerCase();
-    
-    // Filter users not already added and matching query
-    const matches = users.filter(u => {
-        const isAdded = currentPermissions.some(p => p.userId == u.id);
-        const matchesQuery = u.name.toLowerCase().includes(lowerQuery) || 
-                           u.phone.includes(lowerQuery) || 
-                           u.email.toLowerCase().includes(lowerQuery);
-        return !isAdded && matchesQuery;
-    }).slice(0, 10); // Limit results
-    
-    resultsContainer.innerHTML = '';
-    if (matches.length === 0) {
-        resultsContainer.innerHTML = '<div class="px-4 py-2 text-xs text-gray-500">无匹配用户</div>';
-    } else {
-        matches.forEach(u => {
-            const div = document.createElement('div');
-            div.className = 'px-4 py-2 hover:bg-gray-50 cursor-pointer text-sm flex justify-between items-center border-b border-gray-50 last:border-0';
-            div.innerHTML = `
-                <div>
-                    <div class="font-medium text-gray-900">${u.name}</div>
-                    <div class="text-xs text-gray-500">${u.department || '无部门'} · ${u.email}</div>
-                </div>
-                <i class="fa-solid fa-plus text-gray-300"></i>
-            `;
-            div.onclick = () => selectUserForAdd(u);
-            resultsContainer.appendChild(div);
-        });
-    }
-    resultsContainer.classList.remove('hidden');
-}
-
-function selectUserForAdd(user) {
-    const searchInput = document.getElementById('perm-user-search');
-    searchInput.value = user.name;
-    searchInput.dataset.selectedUserId = user.id;
-    document.getElementById('perm-search-results').classList.add('hidden');
-}
-
-function saveSnapshot() {
-    permissionHistory.push(JSON.parse(JSON.stringify(currentPermissions)));
-    // Limit history stack size if needed
-    if (permissionHistory.length > 20) permissionHistory.shift();
-    updateUndoButton();
-}
-
-function updateUndoButton() {
-    const btn = document.getElementById('perm-undo-btn');
-    if (btn) {
-        if (permissionHistory.length > 0) {
-            btn.classList.remove('hidden');
-        } else {
-            btn.classList.add('hidden');
-        }
-    }
-}
-
-function undoLastAction() {
-    if (permissionHistory.length === 0) return;
-    currentPermissions = permissionHistory.pop();
-    updateUndoButton();
-    renderPermissionList();
-    autoSavePermissions(); // Save the reverted state
-    showToast('已撤销上一步操作', 'success');
-}
-
-function addPermission() {
-    const searchInput = document.getElementById('perm-user-search');
-    const userId = searchInput.dataset.selectedUserId;
-    const roleSelect = document.getElementById('perm-role-select-single');
-    
-    if (!userId) {
-        // Try to find exact match by name if ID missing (edge case)
-        showToast('请从下拉列表中选择用户', 'error'); // Or alert
-        return;
-    }
-    
-    saveSnapshot();
-    
-    const role = roleSelect.value;
-    currentPermissions.push({ userId, role });
-    
-    // Reset Input
-    searchInput.value = '';
-    delete searchInput.dataset.selectedUserId;
-    
-    renderPermissionList();
-    autoSavePermissions();
-    showToast('用户添加成功', 'success');
-}
-
-function addDeptPermissions() {
-    const deptSelect = document.getElementById('perm-dept-select');
-    const roleSelect = document.getElementById('perm-role-select-dept');
-    const dept = deptSelect.value;
-    const role = roleSelect.value;
-    
-    if (!dept) {
-        showToast('请选择部门', 'error');
-        return;
-    }
-    
-    saveSnapshot();
-    
-    const users = window.getAllUsers ? window.getAllUsers() : [];
-    const deptUsers = users.filter(u => u.department === dept);
-    
-    let addedCount = 0;
-    deptUsers.forEach(u => {
-        if (!currentPermissions.some(p => p.userId == u.id)) {
-            currentPermissions.push({ userId: u.id, role });
-            addedCount++;
-        }
-    });
-    
-    if (addedCount > 0) {
-        renderPermissionList();
-        autoSavePermissions();
-        showToast(`批量添加了 ${addedCount} 位用户`, 'success');
-        // Reset
-        deptSelect.value = '';
-    } else {
-        showToast('该部门用户均已在列表中', 'success'); // Not strictly an error
-    }
-}
-
-function removePermission(index) {
-    // Calculate actual index based on pagination
-    const actualIndex = (permPagination.page - 1) * permPagination.pageSize + index;
-    
-    // Confirmation
-    if(!confirm('确定要移除该用户的权限吗？')) return;
-    
-    saveSnapshot();
-    currentPermissions.splice(actualIndex, 1);
-    renderPermissionList();
-    autoSavePermissions();
-    showToast('权限已移除', 'success');
-}
-
-function batchRemovePermissions() {
-    if (permSelectedRows.size === 0) return;
-    
-    if (!confirm(`确定要移除选中的 ${permSelectedRows.size} 位用户吗？`)) return;
-    
-    saveSnapshot();
-    
-    currentPermissions = currentPermissions.filter(p => !permSelectedRows.has(String(p.userId))); // Ensure type match
-    permSelectedRows.clear();
-    document.getElementById('perm-check-all').checked = false;
-    
-    renderPermissionList();
-    autoSavePermissions();
-    showToast('批量移除成功', 'success');
-}
-
-function updatePermissionRole(userId, newRole) {
-    const perm = currentPermissions.find(p => p.userId == userId);
-    if (perm && perm.role !== newRole) {
-        saveSnapshot();
-        perm.role = newRole;
-        // No full re-render needed, just save
-        autoSavePermissions();
-        showToast('权限已更新', 'success');
-    }
-}
-
-function autoSavePermissions() {
-    if (currentConfigAgentId) {
-        const agent = agentsData.find(a => a.id === currentConfigAgentId);
-        if (agent) {
-            agent.permissions = currentPermissions;
-            saveAgentsToStorage(agentsData);
-            
-            // Show auto-save indicator
-            const indicator = document.getElementById('perm-auto-save-indicator');
-            if (indicator) {
-                indicator.classList.remove('hidden');
-                setTimeout(() => {
-                    indicator.classList.add('hidden');
-                }, 2000);
-            }
-        }
-    }
-}
-
-function changePermPage(delta) {
-    const maxPage = Math.ceil(currentPermissions.length / permPagination.pageSize) || 1;
-    const newPage = permPagination.page + delta;
-    
-    if (newPage >= 1 && newPage <= maxPage) {
-        permPagination.page = newPage;
-        renderPermissionList();
-    }
-}
-
-function togglePermCheckAll(checkbox) {
-    const displayedPerms = getPaginatedPermissions();
-    if (checkbox.checked) {
-        displayedPerms.forEach(p => permSelectedRows.add(String(p.userId)));
-    } else {
-        displayedPerms.forEach(p => permSelectedRows.delete(String(p.userId)));
-    }
-    renderPermissionList();
-}
-
-function togglePermRowCheck(userId, checkbox) {
-    if (checkbox.checked) {
-        permSelectedRows.add(String(userId));
-    } else {
-        permSelectedRows.delete(String(userId));
-    }
-    // Update batch delete button visibility
-    updateBatchActions();
-}
-
-function updateBatchActions() {
-    const batchBtn = document.getElementById('perm-batch-del-btn');
-    if (batchBtn) {
-        if (permSelectedRows.size > 0) {
-            batchBtn.classList.remove('hidden');
-        } else {
-            batchBtn.classList.add('hidden');
-        }
-    }
-}
-
-function getPaginatedPermissions() {
-    const start = (permPagination.page - 1) * permPagination.pageSize;
-    const end = start + permPagination.pageSize;
-    return currentPermissions.slice(start, end);
-}
-
-function renderPermissionList() {
-    const tbody = document.getElementById('perm-list-body');
-    const emptyState = document.getElementById('perm-empty-state');
-    const paginationEl = document.getElementById('perm-pagination');
-    
-    if (!tbody) return;
-    
-    tbody.innerHTML = '';
-    
-    const total = currentPermissions.length;
-    document.getElementById('perm-total-count').textContent = total;
-    
-    if (total === 0) {
-        if (emptyState) emptyState.classList.remove('hidden');
-        if (paginationEl) paginationEl.classList.add('hidden');
-    } else {
-        if (emptyState) emptyState.classList.add('hidden');
-        if (paginationEl) paginationEl.classList.remove('hidden');
-        
-        // Pagination Logic
-        const maxPage = Math.ceil(total / permPagination.pageSize) || 1;
-        if (permPagination.page > maxPage) permPagination.page = maxPage;
-        
-        const pagePerms = getPaginatedPermissions();
-        const users = window.getAllUsers ? window.getAllUsers() : [];
-        
-        // Update Pagination UI
-        document.getElementById('perm-page-start').textContent = (permPagination.page - 1) * permPagination.pageSize + 1;
-        document.getElementById('perm-page-end').textContent = Math.min(permPagination.page * permPagination.pageSize, total);
-        document.getElementById('perm-page-total').textContent = total;
-        document.getElementById('perm-prev-btn').disabled = permPagination.page === 1;
-        document.getElementById('perm-next-btn').disabled = permPagination.page === maxPage;
-        
-        pagePerms.forEach((perm, index) => { // Index here is relative to page
-            const user = users.find(u => u.id == perm.userId) || { name: `Unknown (${perm.userId})`, department: '-' };
-            const isChecked = permSelectedRows.has(String(perm.userId));
-            
-            const tr = document.createElement('tr');
-            tr.className = "hover:bg-gray-50 group transition-colors";
-            tr.innerHTML = `
-                <td class="px-4 py-3">
-                    <input type="checkbox" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500" 
-                        ${isChecked ? 'checked' : ''} 
-                        onchange="togglePermRowCheck('${perm.userId}', this)">
-                </td>
-                <td class="px-4 py-3">
-                    <div class="flex items-center gap-3">
-                        <div class="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-xs text-blue-600 font-bold">
-                            ${user.name.charAt(0).toUpperCase()}
-                        </div>
-                        <div>
-                            <div class="font-medium text-gray-900">${user.name}</div>
-                            <div class="text-xs text-gray-500">${user.email || ''}</div>
-                        </div>
-                    </div>
-                </td>
-                <td class="px-4 py-3 text-gray-600">
-                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs bg-gray-100 text-gray-700">
-                        ${user.department || '无部门'}
-                    </span>
-                </td>
-                <td class="px-4 py-3">
-                    <select onchange="updatePermissionRole('${perm.userId}', this.value)" 
-                        class="text-xs border-none bg-transparent focus:ring-0 cursor-pointer font-medium ${
-                            perm.role === 'manage' ? 'text-purple-700' : 
-                            perm.role === 'edit' ? 'text-blue-700' : 'text-gray-700'
-                        }">
-                        <option value="view" ${perm.role === 'view' ? 'selected' : ''}>可查看</option>
-                        <option value="edit" ${perm.role === 'edit' ? 'selected' : ''}>可编辑</option>
-                        <option value="manage" ${perm.role === 'manage' ? 'selected' : ''}>可管理</option>
-                    </select>
-                </td>
-                <td class="px-4 py-3 text-right">
-                    <button onclick="removePermission(${index})" class="text-gray-400 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100 p-1">
-                        <i class="fa-solid fa-trash"></i>
-                    </button>
-                </td>
-            `;
-            tbody.appendChild(tr);
-        });
-    }
-    updateBatchActions();
-}
-
-// Expose Permission Functions
-window.openPermissionConfig = openPermissionConfig;
-window.addPermission = addPermission;
-window.addDeptPermissions = addDeptPermissions;
-window.removePermission = removePermission;
-window.batchRemovePermissions = batchRemovePermissions;
-window.updatePermissionRole = updatePermissionRole;
-window.undoLastAction = undoLastAction;
-window.switchPermAddMode = switchPermAddMode;
-window.debounceSearchUser = debounceSearchUser;
-window.selectUserForAdd = selectUserForAdd;
-window.changePermPage = changePermPage;
-window.togglePermCheckAll = togglePermCheckAll;
-window.togglePermRowCheck = togglePermRowCheck;
-
 // --- Agent Editor Logic ---
 
 let currentEditorAgentId = null;
-let experienceConfig = {};
-let themeConfig = {};
 
 // --- Resource Management Logic ---
 let editorResources = {
@@ -1306,18 +742,8 @@ function saveAgentConfig(silent = false) {
             agent.updatedAt = new Date().toLocaleString();
             agent.timestamp = Date.now();
             
-            // Sync Experience Config from DOM
-            const welcomeMsgInput = document.getElementById('welcome-msg-input');
-            if (welcomeMsgInput) {
-                experienceConfig.welcomeMsg = welcomeMsgInput.value;
-            }
-
             // Save experience config
             agent.experience = JSON.parse(JSON.stringify(experienceConfig));
-            agent.theme = JSON.parse(JSON.stringify(themeConfig));
-            
-            // Persist changes
-            saveAgentsToStorage(agentsData);
         }
     } else {
         // Create new (if not already created via modal? Logic is user creates via modal then edits)
@@ -1440,6 +866,11 @@ function switchEditorTab(tabName) {
                 if (t === 'logs' && window.renderLogList) {
                     window.renderLogList();
                 }
+                // Special handling for analytics tab
+                if (t === 'analytics' && window.renderAnalytics) {
+                    // Delay slightly to ensure container is visible for size calculation
+                    setTimeout(() => window.renderAnalytics(), 50);
+                }
             }
         } else {
             if (btn) {
@@ -1468,9 +899,11 @@ let currentLogFilter = 'all';
 
 function generateMockLogs(count) {
     const logs = [];
-    const users = ['User_A', 'User_B', 'User_C', 'Admin'];
-    const topics = ['如何重置密码', '查询订单状态', '产品使用咨询', '系统报错反馈'];
+    const users = ['陈思宇', '林志强', '王晓明', '张雅婷', '李子涵', '刘伟', '赵丽华', '孙建国', '周梦琪', '吴嘉豪', '郑雨萱', '徐浩然'];
+    const departments = ['研发部', '产品部', '市场部', '销售部', '人力资源部', '财务部', '客服部'];
+    const topics = ['如何重置密码', '查询订单状态', '产品使用咨询', '系统报错反馈', 'API接入问题', '账号权限申请', '数据导出请求'];
     const statuses = ['active', 'closed'];
+    const platforms = ['WEB', 'OGW'];
     
     for (let i = 0; i < count; i++) {
         const date = new Date(Date.now() - Math.floor(Math.random() * 7 * 24 * 60 * 60 * 1000));
@@ -1480,7 +913,13 @@ function generateMockLogs(count) {
         logs.push({
             id: `sess_${Math.floor(Math.random() * 100000000)}`,
             user: users[Math.floor(Math.random() * users.length)],
-            agentName: '我的智能体', // Should match current agent name but hardcoded for now or use context
+            userId: `u_${Math.floor(Math.random() * 100000)}`,
+            department: departments[Math.floor(Math.random() * departments.length)],
+            platform: platforms[Math.floor(Math.random() * platforms.length)],
+            copyCount: Math.floor(Math.random() * 200),
+            regenerateCount: Math.floor(Math.random() * 50),
+            translateCount: Math.floor(Math.random() * 30),
+            summarizeCount: Math.floor(Math.random() * 20),
             status: status,
             topic: topics[Math.floor(Math.random() * topics.length)],
             messageCount: msgCount,
@@ -1504,14 +943,193 @@ function generateMockChatContent(count) {
     ];
     
     for (let i = 0; i < count; i++) {
-        content.push(interactions[i % interactions.length]);
+        const baseMsg = interactions[i % interactions.length];
+        const msg = {
+            ...baseMsg,
+            id: `msg_${Date.now()}_${i}`,
+            likeCount: 0, // Counts are hidden but we keep structure
+            dislikeCount: 0,
+            userAction: null, // 'like', 'dislike', or null
+            dislikeReason: null
+        };
+        
+        // Randomly assign some initial state for AI messages
+        if (msg.role === 'ai') {
+            const rand = Math.random();
+            // 80% chance to have an interaction for demo purposes (high density)
+            if (rand > 0.2) {
+                // Of the interactions: 60% like, 40% dislike
+                if (Math.random() > 0.4) {
+                    msg.userAction = 'like';
+                    msg.likeCount = 1;
+                } else {
+                    msg.userAction = 'dislike';
+                    msg.dislikeCount = 1;
+                    
+                    // Assign random reason
+                    const reasons = [
+                        '回答不准确',
+                        '内容不相关',
+                        '逻辑错误',
+                        '信息过时',
+                        '语气不当',
+                        '代码无法运行'
+                    ];
+                    msg.dislikeReason = reasons[Math.floor(Math.random() * reasons.length)];
+                }
+            }
+        }
+        
+        content.push(msg);
     }
     return content;
 }
 
+// --- Analytics Logic ---
+
+function renderAnalytics() {
+    if (typeof echarts === 'undefined') {
+        console.warn('ECharts is not loaded');
+        return;
+    }
+
+    // 1. Department Usage Chart (Bar)
+    const deptChartDom = document.getElementById('analytics-chart-dept');
+    if (deptChartDom) {
+        // Dispose existing instance if any to prevent memory leaks or reuse issues
+        const existingInstance = echarts.getInstanceByDom(deptChartDom);
+        if (existingInstance) {
+            existingInstance.dispose();
+        }
+
+        const deptChart = echarts.init(deptChartDom);
+        const deptOption = {
+            tooltip: {
+                trigger: 'axis',
+                axisPointer: {
+                    type: 'shadow'
+                }
+            },
+            grid: {
+                left: '3%',
+                right: '4%',
+                bottom: '3%',
+                containLabel: true
+            },
+            xAxis: [
+                {
+                    type: 'category',
+                    data: ['研发部', '产品部', '市场部', '销售部', '客服部', '人力资源', '财务部'],
+                    axisTick: {
+                        alignWithLabel: true
+                    }
+                }
+            ],
+            yAxis: [
+                {
+                    type: 'value'
+                }
+            ],
+            series: [
+                {
+                    name: '使用次数',
+                    type: 'bar',
+                    barWidth: '60%',
+                    data: [320, 280, 220, 180, 150, 90, 60],
+                    itemStyle: {
+                        color: '#3b82f6'
+                    }
+                }
+            ]
+        };
+        deptChart.setOption(deptOption);
+        
+        // Handle resize
+        window.addEventListener('resize', () => {
+            deptChart.resize();
+        });
+    }
+
+    // 2. User Feedback Chart (Pie)
+    const feedbackChartDom = document.getElementById('analytics-chart-feedback');
+    if (feedbackChartDom) {
+        // Dispose existing instance
+        const existingInstance = echarts.getInstanceByDom(feedbackChartDom);
+        if (existingInstance) {
+            existingInstance.dispose();
+        }
+
+        const feedbackChart = echarts.init(feedbackChartDom);
+        const feedbackOption = {
+            tooltip: {
+                trigger: 'item',
+                formatter: '{b}: {c} ({d}%)'
+            },
+            legend: {
+                bottom: '5%',
+                left: 'center',
+                itemGap: 20,
+                textStyle: {
+                    color: '#666'
+                }
+            },
+            color: ['#22c55e', '#ef4444', '#9ca3af'],
+            series: [
+                {
+                    name: '反馈分布',
+                    type: 'pie',
+                    radius: '70%',
+                    center: ['50%', '45%'],
+                    itemStyle: {
+                        borderRadius: 8,
+                        borderColor: '#fff',
+                        borderWidth: 2,
+                        shadowBlur: 10,
+                        shadowColor: 'rgba(0, 0, 0, 0.05)'
+                    },
+                    label: {
+                        show: true,
+                        formatter: '{b}\n{d}%',
+                        color: '#4b5563',
+                        fontSize: 14,
+                        lineHeight: 20
+                    },
+                    emphasis: {
+                        label: {
+                            show: true,
+                            fontSize: 16,
+                            fontWeight: 'bold'
+                        },
+                        itemStyle: {
+                            shadowBlur: 10,
+                            shadowOffsetX: 0,
+                            shadowColor: 'rgba(0, 0, 0, 0.2)'
+                        }
+                    },
+                    data: [
+                        { value: 735, name: '点赞' },
+                        { value: 102, name: '点踩' },
+                        { value: 367, name: '未评价' }
+                    ]
+                }
+            ]
+        };
+        feedbackChart.setOption(feedbackOption);
+        
+        // Handle resize
+        window.addEventListener('resize', () => {
+            feedbackChart.resize();
+        });
+    }
+}
+
+// Expose
+window.renderAnalytics = renderAnalytics;
+window.renderLogList = renderLogList;
+
 function renderLogList(reset = false) {
     if (reset || logsData.length === 0) {
-        logsData = generateMockLogs(15);
+        logsData = generateMockLogs(20); // Generate 20 items as requested
         
         // Bind search/filter events if not already bound
         const searchInput = document.getElementById('log-search');
@@ -1541,6 +1159,7 @@ function renderLogList(reset = false) {
     const filtered = logsData.filter(log => {
         const matchesSearch = log.id.toLowerCase().includes(currentLogSearch) || 
                               log.user.toLowerCase().includes(currentLogSearch) ||
+                              log.department.toLowerCase().includes(currentLogSearch) ||
                               log.topic.toLowerCase().includes(currentLogSearch);
         const matchesStatus = currentLogFilter === 'all' || log.status === currentLogFilter;
         return matchesSearch && matchesStatus;
@@ -1569,6 +1188,9 @@ function renderLogList(reset = false) {
                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-blue-600 font-mono">
                     ${log.id}
                 </td>
+                <td class="px-6 py-4 text-sm text-gray-900 max-w-xs truncate" title="${log.topic}">
+                    ${log.topic}
+                </td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     <div class="flex items-center gap-2">
                         <div class="w-6 h-6 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center text-xs">
@@ -1577,25 +1199,39 @@ function renderLogList(reset = false) {
                         ${log.user}
                     </div>
                 </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    ${log.agentName}
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 font-mono">
+                    ${log.userId}
                 </td>
-                <td class="px-6 py-4 whitespace-nowrap">
-                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusClass}">
-                        ${statusText}
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs bg-gray-100 text-gray-700">
+                        ${log.department || '无部门'}
                     </span>
                 </td>
-                <td class="px-6 py-4 text-sm text-gray-900 max-w-xs truncate" title="${log.topic}">
-                    ${log.topic}
-                </td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    ${log.messageCount}
+                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs ${log.platform === 'WEB' ? 'bg-blue-50 text-blue-700 border border-blue-100' : 'bg-purple-50 text-purple-700 border border-purple-100'}">
+                        ${log.platform || 'WEB'}
+                    </span>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     ${log.createdAt}
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     ${log.updatedAt}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    ${log.messageCount}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    ${(log.copyCount || 0).toLocaleString()}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    ${(log.regenerateCount || 0).toLocaleString()}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    ${(log.translateCount || 0).toLocaleString()}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    ${(log.summarizeCount || 0).toLocaleString()}
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <button onclick="openLogDetailModal('${log.id}')" class="text-blue-600 hover:text-blue-900">查看</button>
@@ -1616,17 +1252,47 @@ function openLogDetailModal(logId) {
     const contentContainer = document.getElementById('log-detail-content');
     contentContainer.innerHTML = '';
 
-    log.content.forEach(msg => {
+    log.content.forEach((msg, index) => {
         const isUser = msg.role === 'user';
         const div = document.createElement('div');
-        div.className = isUser ? 'flex gap-3 flex-row-reverse mb-4' : 'flex gap-3 mb-4';
+        div.className = isUser ? 'flex gap-3 flex-row-reverse mb-6' : 'flex gap-3 mb-6';
         
+        let feedbackHtml = '';
+        if (!isUser) {
+            const isLiked = msg.userAction === 'like';
+            const isDisliked = msg.userAction === 'dislike';
+            
+            if (isLiked) {
+                feedbackHtml = `
+                    <div class="flex items-center gap-2 mt-2 ml-1">
+                        <div class="flex items-center gap-1 text-xs text-green-600 font-medium select-none cursor-default">
+                            <i class="fa-solid fa-thumbs-up"></i>
+                        </div>
+                    </div>
+                `;
+            } else if (isDisliked) {
+                feedbackHtml = `
+                    <div class="flex items-center gap-2 mt-2 ml-1">
+                        <div class="flex items-center gap-1 text-xs text-red-600 font-medium select-none cursor-default">
+                            <i class="fa-solid fa-thumbs-down"></i>
+                        </div>
+                        <span class="text-xs text-red-500 bg-red-50 px-2 py-0.5 rounded border border-red-100 select-none">
+                            ${msg.dislikeReason || '未知原因'}
+                        </span>
+                    </div>
+                `;
+            }
+        }
+
         div.innerHTML = `
             <div class="w-8 h-8 rounded-full ${isUser ? 'bg-gray-200 text-gray-600' : 'bg-blue-100 text-blue-600'} flex items-center justify-center text-xs flex-shrink-0">
                 <i class="fa-solid fa-${isUser ? 'user' : 'robot'}"></i>
             </div>
-            <div class="${isUser ? 'bg-blue-600 text-white rounded-tr-none' : 'bg-white text-gray-800 border border-gray-100 rounded-tl-none'} rounded-2xl px-4 py-2.5 text-sm max-w-[80%] shadow-sm">
-                ${msg.text}
+            <div class="max-w-[80%]">
+                <div class="${isUser ? 'bg-blue-600 text-white rounded-tr-none' : 'bg-white text-gray-800 border border-gray-100 rounded-tl-none'} rounded-2xl px-4 py-2.5 text-sm shadow-sm">
+                    ${msg.text}
+                </div>
+                ${feedbackHtml}
             </div>
         `;
         contentContainer.appendChild(div);
@@ -2463,3 +2129,132 @@ window.removeBackground = removeBackground;
 window.updateBackgroundOpacity = updateBackgroundOpacity;
 window.updateThemeColor = updateThemeColor;
 window.toggleThemeFeature = toggleThemeFeature;
+
+// --- Feedback Logic ---
+
+let currentDislikeLogId = null;
+let currentDislikeMsgId = null;
+
+function toggleLike(logId, msgId) {
+    const log = logsData.find(l => l.id === logId);
+    if (!log) return;
+    
+    const msg = log.content.find(m => m.id === msgId);
+    if (!msg) return;
+
+    if (msg.userAction === 'like') {
+        // Cancel Like
+        msg.userAction = null;
+        msg.likeCount--;
+    } else {
+        // Like (and cancel dislike if exists)
+        if (msg.userAction === 'dislike') {
+            msg.dislikeCount--;
+            msg.dislikeReason = null; // Clear reason
+        }
+        msg.userAction = 'like';
+        msg.likeCount++;
+    }
+    
+    // Re-render
+    openLogDetailModal(logId);
+    showToast('操作成功');
+}
+
+function openDislikeModal(logId, msgId) {
+    const log = logsData.find(l => l.id === logId);
+    if (!log) return;
+    
+    const msg = log.content.find(m => m.id === msgId);
+    if (!msg) return;
+
+    // If already disliked, we might want to just cancel it or edit reason?
+    // Let's assume clicking again cancels it for simplicity, OR opens modal to edit.
+    // If we want to toggle:
+    if (msg.userAction === 'dislike') {
+        msg.userAction = null;
+        msg.dislikeCount--;
+        msg.dislikeReason = null; // Clear reason
+        openLogDetailModal(logId);
+        showToast('已取消点踩');
+        return;
+    }
+
+    currentDislikeLogId = logId;
+    currentDislikeMsgId = msgId;
+    
+    // Reset Modal
+    const radios = document.getElementsByName('dislike-reason');
+    radios.forEach(r => r.checked = false);
+    document.getElementById('dislike-reason-custom').value = '';
+    document.getElementById('dislike-reason-custom').classList.add('hidden');
+    
+    openModal('dislike-reason-modal');
+}
+
+function confirmDislike() {
+    if (!currentDislikeLogId || !currentDislikeMsgId) return;
+
+    const radios = document.getElementsByName('dislike-reason');
+    let selectedReason = null;
+    for (const r of radios) {
+        if (r.checked) {
+            selectedReason = r.value;
+            break;
+        }
+    }
+    
+    if (!selectedReason) {
+        showToast('请选择原因', 'warning');
+        return;
+    }
+    
+    if (selectedReason === 'other') {
+        const customReason = document.getElementById('dislike-reason-custom').value.trim();
+        if (!customReason) {
+            showToast('请输入具体原因', 'warning');
+            return;
+        }
+        selectedReason = customReason;
+    }
+    
+    // Update Data
+    const log = logsData.find(l => l.id === currentDislikeLogId);
+    if (log) {
+        const msg = log.content.find(m => m.id === currentDislikeMsgId);
+        if (msg) {
+            if (msg.userAction === 'like') {
+                msg.likeCount--;
+            }
+            msg.userAction = 'dislike';
+            msg.dislikeCount++;
+            msg.dislikeReason = selectedReason;
+        }
+    }
+    
+    closeModal('dislike-reason-modal');
+    openLogDetailModal(currentDislikeLogId);
+    showToast('反馈已提交');
+    
+    currentDislikeLogId = null;
+    currentDislikeMsgId = null;
+}
+
+// Bind radio change for custom reason visibility
+document.addEventListener('change', (e) => {
+    if (e.target.name === 'dislike-reason') {
+        const customInput = document.getElementById('dislike-reason-custom');
+        if (customInput) {
+            if (e.target.value === 'other') {
+                customInput.classList.remove('hidden');
+            } else {
+                customInput.classList.add('hidden');
+            }
+        }
+    }
+});
+
+// Expose functions
+window.toggleLike = toggleLike;
+window.openDislikeModal = openDislikeModal;
+window.confirmDislike = confirmDislike;

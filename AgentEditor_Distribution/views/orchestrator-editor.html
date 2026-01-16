@@ -115,7 +115,7 @@
             <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 flex items-center gap-8">
                 
                 <!-- Input Node -->
-                <div class="relative group">
+                <div class="relative group cursor-pointer" onclick="openNodeSettings('input')">
                     <div class="w-40 bg-white rounded-lg shadow-sm border border-gray-200 p-3 flex flex-col gap-2 hover:border-blue-500 hover:shadow-md transition-all">
                         <div class="flex items-center gap-2 border-b border-gray-100 pb-2">
                             <div class="w-6 h-6 rounded bg-gray-100 text-gray-600 flex items-center justify-center text-xs">
@@ -130,8 +130,24 @@
                     <div class="absolute top-1/2 -right-2 w-2 h-2 border-t-2 border-r-2 border-gray-300 transform rotate-45 -mt-1"></div>
                 </div>
 
+                <!-- Knowledge Base Node -->
+                <div class="relative group cursor-pointer" onclick="openNodeSettings('knowledge')">
+                    <div class="w-40 bg-white rounded-lg shadow-sm border border-gray-200 p-3 flex flex-col gap-2 hover:border-blue-500 hover:shadow-md transition-all">
+                        <div class="flex items-center gap-2 border-b border-gray-100 pb-2">
+                            <div class="w-6 h-6 rounded bg-blue-100 text-blue-600 flex items-center justify-center text-xs">
+                                <i class="fa-solid fa-book"></i>
+                            </div>
+                            <span class="text-sm font-medium text-gray-800">检索知识库</span>
+                        </div>
+                        <div class="text-xs text-gray-400">Query Retrieval</div>
+                    </div>
+                    <!-- Connector Line -->
+                    <div class="absolute top-1/2 -right-8 w-8 h-0.5 bg-gray-300"></div>
+                    <div class="absolute top-1/2 -right-2 w-2 h-2 border-t-2 border-r-2 border-gray-300 transform rotate-45 -mt-1"></div>
+                </div>
+
                 <!-- LLM Node -->
-                <div class="relative group">
+                <div class="relative group cursor-pointer" onclick="openNodeSettings('llm')">
                     <div class="w-40 bg-white rounded-lg shadow-sm border border-gray-200 p-3 flex flex-col gap-2 hover:border-blue-500 hover:shadow-md transition-all">
                         <div class="flex items-center gap-2 border-b border-gray-100 pb-2">
                             <div class="w-6 h-6 rounded bg-purple-100 text-purple-600 flex items-center justify-center text-xs">
@@ -147,7 +163,7 @@
                 </div>
 
                 <!-- Optimize Node (Logic) -->
-                <div class="relative group">
+                <div class="relative group cursor-pointer" onclick="openNodeSettings('optimize')">
                     <div class="w-40 bg-white rounded-lg shadow-sm border border-gray-200 p-3 flex flex-col gap-2 hover:border-blue-500 hover:shadow-md transition-all">
                         <div class="flex items-center gap-2 border-b border-gray-100 pb-2">
                             <div class="w-6 h-6 rounded bg-orange-100 text-orange-600 flex items-center justify-center text-xs">
@@ -163,7 +179,7 @@
                 </div>
 
                 <!-- Output Node -->
-                <div class="relative group">
+                <div class="relative group cursor-pointer" onclick="openNodeSettings('output')">
                     <div class="w-40 bg-white rounded-lg shadow-sm border border-gray-200 p-3 flex flex-col gap-2 hover:border-blue-500 hover:shadow-md transition-all">
                         <div class="flex items-center gap-2 border-b border-gray-100 pb-2">
                             <div class="w-6 h-6 rounded bg-gray-100 text-gray-600 flex items-center justify-center text-xs">
@@ -176,6 +192,20 @@
                 </div>
 
             </div>
+
+            <!-- Settings Drawer -->
+            <aside id="node-settings-drawer" class="absolute top-0 right-0 h-full w-[480px] bg-white shadow-lg border-l border-gray-200 transform translate-x-full transition-transform duration-300 flex flex-col z-20">
+                <div class="h-14 border-b border-gray-200 flex items-center justify-between px-4 bg-gray-50">
+                    <h3 class="font-medium text-gray-800" id="drawer-title">节点设置</h3>
+                    <button onclick="closeNodeSettings()" class="text-gray-400 hover:text-gray-600 transition-colors">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+                
+                <div class="flex-1 overflow-y-auto p-4" id="drawer-content">
+                    <!-- Dynamic Content -->
+                </div>
+            </aside>
         </main>
     </div>
 </div>

@@ -151,10 +151,6 @@
                     <h1 class="text-base font-bold text-gray-900 flex items-center gap-2 max-w-[200px] sm:max-w-md truncate" id="current-chat-title">
                         智能助手
                     </h1>
-                    <span class="text-xs text-green-500 flex items-center gap-1">
-                        <span class="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
-                        模型: GPT-4o
-                    </span>
                 </div>
             </div>
         </header>
@@ -561,9 +557,7 @@
             // Update Header
             const titleEl = document.getElementById('current-chat-title');
             if (titleEl) {
-                const agentAvatar = agent.avatar || 'fa-robot';
                 titleEl.innerHTML = `
-                    <i class="fa-solid ${agentAvatar} text-blue-600 mr-2"></i>
                     <span class="truncate">${session.title}</span>
                 `;
             }

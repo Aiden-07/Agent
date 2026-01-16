@@ -32,6 +32,9 @@ const DOC_NAMES = [
     '安全审计报告', '性能测试报告'
 ];
 
+const RANKS = ['总监', '经理', '助理'];
+const RESPONSIBILITIES = ['工厂长', 'Team长', '本部长'];
+
 function initKnowledgePage() {
     if (knowledgeData.length === 0) {
         knowledgeData = generateMockKnowledge(10);
@@ -66,7 +69,6 @@ function generateMockKnowledge(count) {
             name: name,
             tag: TAGS[Math.floor(Math.random() * TAGS.length)],
             docCount: Math.floor(Math.random() * 500) + 10,
-            status: Math.random() > 0.1 ? 'synced' : 'syncing',
             updatedAt: new Date(Date.now() - Math.floor(Math.random() * 1000000000)).toLocaleString(),
             creator: 'Admin',
             permission: PERMISSIONS[Math.floor(Math.random() * PERMISSIONS.length)]
@@ -86,6 +88,8 @@ function generateMockDocs(count) {
             size: `${(Math.random() * 10).toFixed(2)} MB`,
             status: Math.random() > 0.1 ? 'indexed' : 'indexing',
             updatedAt: new Date(Date.now() - Math.floor(Math.random() * 1000000000)).toLocaleString(),
+            rank: RANKS[Math.floor(Math.random() * RANKS.length)],
+            responsibility: RESPONSIBILITIES[Math.floor(Math.random() * RESPONSIBILITIES.length)],
             content: `This is the mock content for document...` 
         });
     }
@@ -143,9 +147,6 @@ function renderKnowledgeList() {
         const tr = document.createElement('tr');
         tr.className = 'hover:bg-gray-50 transition-colors';
         
-        const statusClass = item.status === 'synced' ? 'bg-green-50 text-green-600' : 'bg-yellow-50 text-yellow-600';
-        const statusText = item.status === 'synced' ? '已同步' : '同步中';
-
         tr.innerHTML = `
             <td class="px-6 py-4">
                 <div class="flex items-center gap-3">
@@ -159,12 +160,9 @@ function renderKnowledgeList() {
                 <span class="px-2 py-1 bg-gray-100 text-gray-600 rounded text-xs">${item.tag}</span>
             </td>
             <td class="px-6 py-4 text-sm text-gray-600">${item.docCount}</td>
-            <td class="px-6 py-4">
-                <span class="px-2 py-1 rounded-full text-xs font-medium ${statusClass}">${statusText}</span>
-            </td>
             <td class="px-6 py-4 text-xs text-gray-500">${item.updatedAt}</td>
             <td class="px-6 py-4 text-sm text-gray-600">${item.creator}</td>
-            <td class="px-6 py-4 text-sm text-gray-600">${item.permission}</td>
+            
             <td class="px-6 py-4 text-right">
                 <button onclick="window.openKnowledgeActions(event, '${item.id}')" class="p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors">
                     <i class="fa-solid fa-ellipsis"></i>
@@ -177,6 +175,20 @@ function renderKnowledgeList() {
 
 window.openKnowledgeActions = function(event, id) {
     window.showActionMenu(event, [
+        {
+            label: '配置权限',
+            icon: 'fa-solid fa-user-shield',
+            onClick: () => {
+                const item = knowledgeData.find(k => k.id === id);
+                if(item) {
+                     if (window.navigateToPermissionConfig) {
+                        window.navigateToPermissionConfig(id, 'knowledge_base', item.name);
+                    } else {
+                        console.error('navigateToPermissionConfig is not defined');
+                    }
+                }
+            }
+        },
         {
             label: '查看',
             icon: 'fa-solid fa-eye',
@@ -242,7 +254,6 @@ function submitCreateKb() {
         description: desc,
         tag: '未分类',
         docCount: 0,
-        status: 'synced',
         updatedAt: new Date().toLocaleString(),
         creator: 'Admin', // Current user
         permission: '私有',
@@ -270,6 +281,7 @@ function showKbDetail(kbId) {
     // Generate mock docs for this KB (if not already generated or if switching KBs)
     // In a real app, this would fetch from API
     // Generate more docs to test infinite scroll
+    // Force regeneration to apply new mock data schema (rank/responsibility)
     mockDocs = generateMockDocs(Math.floor(Math.random() * 40) + 30);
     mockTreeData = generateMockTree();
     
@@ -426,6 +438,18 @@ function renderDocList() {
             </td>
             <td class="px-6 py-4 text-gray-500">${doc.size}</td>
             <td class="px-6 py-4 text-gray-500">${doc.type}</td>
+            <td class="px-6 py-4">
+                <div class="cursor-pointer hover:bg-gray-100 -mx-2 px-2 py-1 rounded transition-colors group/edit" onclick="window.editDocField(this, '${doc.id}', 'rank')" title="点击编辑">
+                    <span>${doc.rank || '-'}</span>
+                    <i class="fa-solid fa-pen text-xs text-gray-300 ml-1 opacity-0 group-hover/edit:opacity-100"></i>
+                </div>
+            </td>
+            <td class="px-6 py-4">
+                <div class="cursor-pointer hover:bg-gray-100 -mx-2 px-2 py-1 rounded transition-colors group/edit" onclick="window.editDocField(this, '${doc.id}', 'responsibility')" title="点击编辑">
+                    <span>${doc.responsibility || '-'}</span>
+                    <i class="fa-solid fa-pen text-xs text-gray-300 ml-1 opacity-0 group-hover/edit:opacity-100"></i>
+                </div>
+            </td>
             <td class="px-6 py-4">
                 <span class="px-2.5 py-0.5 rounded-full text-xs font-medium ${statusClass}">${statusText}</span>
             </td>
@@ -609,6 +633,68 @@ function searchTreeDocs(query) {
     treeSearchQuery = query.toLowerCase();
     renderDocTree();
 }
+
+window.editDocField = function(el, docId, field) {
+    const doc = mockDocs.find(d => d.id === docId);
+    if (!doc) return;
+
+    const currentText = doc[field] || '';
+    let input;
+
+    if (field === 'rank') {
+        input = document.createElement('select');
+        input.className = 'w-full px-2 py-1 border border-blue-500 rounded text-sm focus:outline-none bg-white min-w-[80px]';
+        RANKS.forEach(r => {
+            const option = document.createElement('option');
+            option.value = r;
+            option.textContent = r;
+            if (r === currentText) option.selected = true;
+            input.appendChild(option);
+        });
+    } else if (field === 'responsibility') {
+        input = document.createElement('select');
+        input.className = 'w-full px-2 py-1 border border-blue-500 rounded text-sm focus:outline-none bg-white min-w-[100px]';
+        RESPONSIBILITIES.forEach(r => {
+            const option = document.createElement('option');
+            option.value = r;
+            option.textContent = r;
+            if (r === currentText) option.selected = true;
+            input.appendChild(option);
+        });
+    } else {
+        input = document.createElement('input');
+        input.type = 'text';
+        input.value = currentText;
+        input.className = 'w-full px-2 py-1 border border-blue-500 rounded text-sm focus:outline-none';
+    }
+
+    // Replace content
+    el.innerHTML = '';
+    el.onclick = null; // Disable click while editing
+    el.appendChild(input);
+    input.focus();
+
+    const save = () => {
+        const newVal = input.value.trim();
+        doc[field] = newVal;
+        
+        // Restore view
+        el.innerHTML = `
+            <span>${newVal || '-'}</span>
+            <i class="fa-solid fa-pen text-xs text-gray-300 ml-1 opacity-0 group-hover/edit:opacity-100"></i>
+        `;
+        // Re-bind click
+        el.onclick = () => window.editDocField(el, docId, field);
+    };
+
+    input.onblur = save;
+    input.onkeydown = (e) => {
+        if (e.key === 'Enter') {
+            input.blur();
+        }
+    };
+    input.onclick = (e) => e.stopPropagation();
+};
 
 // Expose functions to window for HTML onclick access
 window.selectDoc = selectDoc;

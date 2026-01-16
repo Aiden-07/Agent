@@ -151,10 +151,6 @@
                     <h1 class="text-base font-bold text-gray-900 flex items-center gap-2 max-w-[200px] sm:max-w-md truncate" id="current-chat-title">
                         智能助手
                     </h1>
-                    <span class="text-xs text-green-500 flex items-center gap-1">
-                        <span class="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
-                        模型: GPT-4o
-                    </span>
                 </div>
             </div>
         </header>
@@ -296,6 +292,32 @@
 
         // --- Core Functions ---
         
+        const AVATAR_OPTIONS = ['fa-robot', 'fa-brain', 'fa-wand-magic-sparkles', 'fa-bolt', 'fa-comment-dots', 'fa-lightbulb', 'fa-code', 'fa-pen-nib', 'fa-plane', 'fa-scale-balanced', 'fa-chart-line', 'fa-file-code', 'fa-language', 'fa-shield-halved', 'fa-file-lines', 'fa-database'];
+        const COLOR_OPTIONS = [
+            'bg-blue-100 text-blue-600', 'bg-green-100 text-green-600', 
+            'bg-purple-100 text-purple-600', 'bg-orange-100 text-orange-600', 
+            'bg-teal-100 text-teal-600', 'bg-pink-100 text-pink-600',
+            'bg-indigo-100 text-indigo-600', 'bg-cyan-100 text-cyan-600',
+            'bg-red-100 text-red-600', 'bg-yellow-100 text-yellow-600'
+        ];
+
+        function assignVisuals(agent, index) {
+            // Only assign if missing or if it's the generic default 'fa-robot' (to enforce variety)
+            // But we respect if user explicitly set it to 'fa-robot' via editor? 
+            // Since we can't distinguish, we assume 'fa-robot' + 'blue' is the unconfigured state we want to diversify.
+            // Or better: only if !agent.avatar.
+            
+            if (!agent.avatar || agent.avatar === 'fa-robot') {
+                const seed = (agent.id || '').split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) + index;
+                agent.avatar = AVATAR_OPTIONS[seed % AVATAR_OPTIONS.length];
+            }
+            
+            if (!agent.color || agent.color === 'bg-blue-100 text-blue-600') {
+                 const seed = (agent.id || '').split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) + index;
+                 agent.color = COLOR_OPTIONS[seed % COLOR_OPTIONS.length];
+            }
+        }
+
         function loadData() {
             // Load from localStorage or use defaults
             const editorData = localStorage.getItem('agentsData');
@@ -303,11 +325,37 @@
             
             if (editorData) {
                 agents = JSON.parse(editorData);
+                // Try to merge sessions from saved chat data to persist history
+                if (savedData) {
+                    try {
+                        const savedAgents = JSON.parse(savedData);
+                        agents.forEach(agent => {
+                            const saved = savedAgents.find(a => a.id === agent.id);
+                            if (saved && saved.sessions) {
+                                agent.sessions = saved.sessions;
+                            }
+                        });
+                    } catch (e) {
+                        console.error('Error merging saved sessions:', e);
+                    }
+                }
             } else if (savedData) {
                 agents = JSON.parse(savedData);
             } else {
                 agents = JSON.parse(JSON.stringify(DEFAULT_AGENTS));
             }
+
+            // Fix: Ensure sessions array exists for all agents to prevent crash
+            agents.forEach((agent, index) => {
+                if (!agent.sessions || !Array.isArray(agent.sessions)) agent.sessions = [];
+                // Fix: Ensure messages array exists for all sessions
+                agent.sessions.forEach(session => {
+                    if (!session.messages || !Array.isArray(session.messages)) session.messages = [];
+                });
+                
+                // Dynamic Visual Assignment for variety
+                assignVisuals(agent, index);
+            });
             
             // Load last state
             const lastState = JSON.parse(localStorage.getItem('vagent_chat_state') || '{}');
@@ -510,7 +558,6 @@
             const titleEl = document.getElementById('current-chat-title');
             if (titleEl) {
                 titleEl.innerHTML = `
-                    <i class="fa-solid ${agent.avatar} text-blue-600 mr-2"></i>
                     <span class="truncate">${session.title}</span>
                 `;
             }
@@ -552,10 +599,13 @@
                 agentDiv.className = `group flex items-center justify-between px-3 py-3 rounded-lg cursor-pointer transition-all mb-1 select-none ${isCurrentAgent ? 'bg-blue-50/50' : 'hover:bg-gray-100'}`;
                 agentDiv.onclick = () => switchAgent(agent.id);
 
+                const agentAvatar = agent.avatar || 'fa-robot';
+                const agentColor = agent.color || 'bg-blue-100 text-blue-600';
+
                 agentDiv.innerHTML = `
                     <div class="flex items-center gap-3 overflow-hidden">
-                        <div class="flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center ${agent.color}">
-                            <i class="fa-solid ${agent.avatar} text-sm"></i>
+                        <div class="flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center ${agentColor}">
+                            <i class="fa-solid ${agentAvatar} text-sm"></i>
                         </div>
                         <div class="font-medium text-gray-800 text-sm truncate">${agent.name}</div>
                         <span class="text-xs text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded-full">${agent.sessions.length}</span>
@@ -637,6 +687,8 @@
             if (!container) return;
             container.innerHTML = '';
 
+            if (!messages || !Array.isArray(messages)) return;
+
             // Welcome Timestamp
             const timeDiv = document.createElement('div');
             timeDiv.className = 'flex justify-center mb-6';
@@ -644,26 +696,37 @@
             container.appendChild(timeDiv);
 
             messages.forEach((msg, index) => {
+                if (!msg) return;
                 const isUser = msg.role === 'user';
                 const div = document.createElement('div');
                 div.className = `flex gap-4 ${isUser ? 'flex-row-reverse' : ''} animate-fade-in max-w-5xl mx-auto w-full group/msg`;
                 
                 // Format content (simple formatting)
                 let contentHtml;
+                const safeContent = msg.content || '';
+                
                 if (!isUser) {
                     // Use marked for AI response
-                    contentHtml = `<div class="markdown-content" id="msg-content-${index}">${marked.parse(msg.content)}</div>`;
+                    try {
+                        contentHtml = `<div class="markdown-content" id="msg-content-${index}">${marked.parse(safeContent)}</div>`;
+                    } catch (e) {
+                        contentHtml = `<div class="text-red-500">Error rendering content</div>`;
+                        console.error('Markdown parse error:', e);
+                    }
                 } else {
                     // Simple format for user
-                    contentHtml = msg.content
+                    contentHtml = safeContent
                         .replace(/\n/g, '<br>')
                         .replace(/```([\s\S]*?)```/g, '<div class="bg-gray-900 text-gray-200 p-3 rounded-lg my-2 font-mono text-xs overflow-x-auto">$1</div>');
                 }
 
                 // Get current agent avatar if assistant
                 const agent = getAgent(currentAgentId);
-                const avatarIcon = isUser ? 'fa-user' : (agent ? agent.avatar : 'fa-robot');
-                const avatarColor = isUser ? 'bg-gray-200 text-gray-600' : (agent ? agent.color : 'bg-blue-100 text-blue-600');
+                const agentAvatar = agent ? (agent.avatar || 'fa-robot') : 'fa-robot';
+                const agentColor = agent ? (agent.color || 'bg-blue-100 text-blue-600') : 'bg-blue-100 text-blue-600';
+                
+                const avatarIcon = isUser ? 'fa-user' : agentAvatar;
+                const avatarColor = isUser ? 'bg-gray-200 text-gray-600' : agentColor;
 
                 // Recommendations HTML
                 let recommendationsHtml = '';
@@ -692,6 +755,24 @@
                                     <span>${q}</span>
                                     <i class="fa-solid fa-angle-right text-[10px]"></i>
                                 </button>
+                            `).join('')}
+                        </div>
+                    `;
+                }
+
+                // Citations HTML
+                let citationsHtml = '';
+                if (!isUser && msg.citations && msg.citations.length > 0) {
+                    citationsHtml = `
+                        <div class="mt-4 pt-3 border-t border-gray-100 flex flex-col gap-2">
+                            <div class="text-xs text-gray-500 font-medium mb-1">参考文档：</div>
+                            ${msg.citations.map(doc => `
+                                <div onclick="openDocument('${doc.id}', '${doc.trackingId}')" 
+                                     class="citation-link flex items-center gap-2 p-2 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 cursor-pointer transition-colors text-xs border border-blue-100 group">
+                                    <i class="fa-solid fa-file-lines text-blue-500 group-hover:scale-110 transition-transform"></i>
+                                    <span class="font-medium">【《${doc.title}》】</span>
+                                    <i class="fa-solid fa-external-link-alt ml-auto opacity-50 text-[10px]"></i>
+                                </div>
                             `).join('')}
                         </div>
                     `;
@@ -740,6 +821,7 @@
                             : 'bg-white text-gray-800 border border-gray-100 rounded-tl-none'
                         }">
                             ${contentHtml}
+                            ${citationsHtml}
                         </div>
                         ${recommendationsHtml}
                         ${followupsHtml}
@@ -750,6 +832,12 @@
             });
 
             scrollToBottom();
+        }
+
+        function openDocument(docId, trackingId) {
+            console.log(`[Tracking] Document Click: ${docId}, TrackingID: ${trackingId}`);
+            const url = `knowledge-detail.html?id=${docId}&track=${trackingId}`;
+            window.open(url, '_blank');
         }
 
         function sendMessage(content = null) {
@@ -808,7 +896,7 @@
             div.id = 'typing-indicator';
             div.className = 'flex gap-4 max-w-[800px] mx-auto w-full';
             const agent = getAgent(currentAgentId);
-            const color = agent ? agent.color : 'bg-blue-100 text-blue-600';
+            const color = agent ? (agent.color || 'bg-blue-100 text-blue-600') : 'bg-blue-100 text-blue-600';
             
             div.innerHTML = `
                 <div class="w-9 h-9 rounded-full ${color} flex items-center justify-center flex-shrink-0">
@@ -939,6 +1027,10 @@
                 if (charIndex >= mockResponseFull.length) {
                     // Finished
                     aiResponse.followups = ['能提供具体的代码示例吗？', '这种方案有什么潜在风险？', '帮我总结成一个表格'];
+                    aiResponse.citations = [
+                        { id: 'doc-101', title: '用户需求规格说明书', trackingId: 'track-001' },
+                        { id: 'doc-102', title: '系统架构设计', trackingId: 'track-002' }
+                    ];
                     // Update final state
                     saveData();
                     renderMessages(session.messages); // Re-render to show followups/actions

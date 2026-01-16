@@ -5,10 +5,29 @@
 (function() {
     // Mock Data
     let users = [
-        { id: 1, name: 'Product Manager', phone: '13800000001', email: 'pm@vagent.ai', role: '管理员', status: 'normal', joinDate: '2023-10-01' },
-        { id: 2, name: 'John Doe', phone: '13900000002', email: 'john@vagent.ai', role: '开发者', status: 'normal', joinDate: '2023-11-15' },
-        { id: 3, name: 'Alice Smith', phone: '13700000003', email: 'alice@vagent.ai', role: '普通用户', status: 'resigned', joinDate: '2023-12-01' }
+        { id: 1, name: 'Product Manager', phone: '13800000001', email: 'pm@vagent.ai', role: ['管理员'], department: '产品部', status: 'normal', joinDate: '2023-10-01' },
+        { id: 2, name: 'John Doe', phone: '13900000002', email: 'john@vagent.ai', role: ['开发者', '普通用户'], department: '研发部', status: 'normal', joinDate: '2023-11-15' },
+        { id: 3, name: 'Alice Smith', phone: '13700000003', email: 'alice@vagent.ai', role: ['普通用户'], department: '运营部', status: 'resigned', joinDate: '2023-12-01' },
+        { id: 4, name: 'David Lee', phone: '13600000004', email: 'david@vagent.ai', role: ['开发者'], department: '研发部', status: 'normal', joinDate: '2024-01-10' },
+        { id: 5, name: 'Sarah Wilson', phone: '13500000005', email: 'sarah@vagent.ai', role: ['运营经理'], department: '运营部', status: 'normal', joinDate: '2024-01-15' },
+        { id: 6, name: 'Michael Brown', phone: '13400000006', email: 'michael@vagent.ai', role: ['普通用户'], department: '客服部', status: 'normal', joinDate: '2024-02-01' },
+        { id: 7, name: 'Emma Davis', phone: '13300000007', email: 'emma@vagent.ai', role: ['设计师'], department: '设计部', status: 'normal', joinDate: '2024-02-20' },
+        { id: 8, name: 'James Miller', phone: '13200000008', email: 'james@vagent.ai', role: ['开发者'], department: '研发部', status: 'normal', joinDate: '2024-03-05' },
+        { id: 9, name: 'Olivia Taylor', phone: '13100000009', email: 'olivia@vagent.ai', role: ['产品经理'], department: '产品部', status: 'normal', joinDate: '2024-03-10' },
+        { id: 10, name: 'William Anderson', phone: '13000000010', email: 'william@vagent.ai', role: ['测试工程师'], department: '测试部', status: 'normal', joinDate: '2024-03-15' },
+        { id: 11, name: 'Sophia Thomas', phone: '13800000011', email: 'sophia@vagent.ai', role: ['普通用户'], department: '客服部', status: 'locked', joinDate: '2024-03-20' },
+        { id: 12, name: 'Robert Jackson', phone: '13900000012', email: 'robert@vagent.ai', role: ['运维工程师'], department: '运维部', status: 'normal', joinDate: '2024-04-01' }
     ];
+
+    // Expose users for other modules
+    window.getAllUsers = function() {
+        return users;
+    };
+    
+    // Helper to get departments
+    window.getAllDepartments = function() {
+        return [...new Set(users.map(u => u.department).filter(Boolean))];
+    };
 
     let currentEditingId = null;
 
@@ -23,6 +42,22 @@
         renderUserTable();
         setupEventListeners();
         setupSmartContactInput();
+        setupRoleSelect();
+    }
+
+    function setupRoleSelect() {
+        const checkboxes = document.querySelectorAll('input[name="user-role"]');
+        checkboxes.forEach(cb => {
+            cb.addEventListener('change', updateRoleCount);
+        });
+    }
+
+    function updateRoleCount() {
+        const selectedCount = document.querySelectorAll('input[name="user-role"]:checked').length;
+        const countDisplay = document.getElementById('role-selected-count');
+        if (countDisplay) {
+            countDisplay.textContent = `已选: ${selectedCount}`;
+        }
     }
 
     function setupEventListeners() {
@@ -103,7 +138,19 @@
             const matchesSearch = user.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
                                   (user.email && user.email.toLowerCase().includes(searchTerm.toLowerCase())) ||
                                   (user.phone && user.phone.includes(searchTerm));
-            const matchesRole = selectedRole === '所有角色' || user.role === selectedRole;
+            
+            // Handle role filter (array support)
+            let matchesRole = false;
+            if (selectedRole === '所有角色') {
+                matchesRole = true;
+            } else {
+                if (Array.isArray(user.role)) {
+                    matchesRole = user.role.includes(selectedRole);
+                } else {
+                    matchesRole = user.role === selectedRole;
+                }
+            }
+            
             return matchesSearch && matchesRole;
         });
 
@@ -124,6 +171,15 @@
                 statusBadge = '<span class="bg-gray-100 text-gray-500 px-2 py-1 rounded-full text-xs font-medium">离职</span>';
             }
 
+            // Role Formatting
+            const roles = Array.isArray(user.role) ? user.role : [user.role];
+            let roleDisplay = '';
+            if (roles.length > 3) {
+                roleDisplay = `已选${roles.length}个角色`;
+            } else {
+                roleDisplay = roles.join(', ');
+            }
+
             // Avatar Initials
             const initials = user.name.substring(0, 2).toUpperCase();
             const avatarColor = user.status === 'normal' ? 'bg-blue-100 text-blue-600' : 'bg-gray-200 text-gray-500';
@@ -142,7 +198,12 @@
                 <td class="px-6 py-4 text-gray-600">${user.phone || '-'}</td>
                 <td class="px-6 py-4 text-gray-600">${user.email || '-'}</td>
                 <td class="px-6 py-4">
-                    <span class="bg-gray-100 text-gray-700 px-2 py-1 rounded text-xs font-medium">${user.role}</span>
+                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs bg-gray-100 text-gray-700">
+                        ${user.department || '无部门'}
+                    </span>
+                </td>
+                <td class="px-6 py-4">
+                    <span class="bg-gray-100 text-gray-700 px-2 py-1 rounded text-xs font-medium" title="${roles.join(', ')}">${roleDisplay}</span>
                 </td>
                 <td class="px-6 py-4">${statusBadge}</td>
                 <td class="px-6 py-4 text-right">
@@ -192,6 +253,13 @@
         
         // Reset Form
         document.getElementById('user-form').reset();
+        
+        // Reset Multi-select
+        const checkboxes = document.querySelectorAll('input[name="user-role"]');
+        checkboxes.forEach(cb => cb.checked = false);
+        const countDisplay = document.getElementById('role-selected-count');
+        if (countDisplay) countDisplay.textContent = '已选: 0';
+
         document.querySelectorAll('.error-msg').forEach(el => el.classList.add('hidden'));
         
         // UI State
@@ -217,9 +285,18 @@
 
         // Fill Form
         document.getElementById('user-name').value = user.name;
+        document.getElementById('user-department').value = user.department || '';
         document.getElementById('user-phone').value = user.phone || '';
         document.getElementById('user-email').value = user.email || '';
-        document.getElementById('user-role').value = user.role;
+        
+        // Handle Multi-select
+        const userRoles = Array.isArray(user.role) ? user.role : [user.role];
+        const checkboxes = document.querySelectorAll('input[name="user-role"]');
+        checkboxes.forEach(cb => {
+            cb.checked = userRoles.includes(cb.value);
+        });
+        const countDisplay = document.getElementById('role-selected-count');
+        if (countDisplay) countDisplay.textContent = `已选: ${userRoles.length}`;
         
         document.querySelectorAll('.error-msg').forEach(el => el.classList.add('hidden'));
 
@@ -235,7 +312,11 @@
     // --- Save User (Add/Edit) ---
     window.saveUser = function() {
         const name = document.getElementById('user-name').value.trim();
-        const role = document.getElementById('user-role').value;
+        const department = document.getElementById('user-department').value.trim();
+        
+        // Get Multi-select values
+        const selectedRoles = Array.from(document.querySelectorAll('input[name="user-role"]:checked')).map(cb => cb.value);
+        
         const password = document.getElementById('user-password').value;
         
         let phone = '';
@@ -250,6 +331,22 @@
             isValid = false;
         } else {
             hideError('user-name-error');
+        }
+
+        // Department
+        if (!department) {
+            showError('user-department-error', '请输入部门');
+            isValid = false;
+        } else {
+            hideError('user-department-error');
+        }
+
+        // Role
+        if (selectedRoles.length === 0) {
+            showError('user-role-error', '请至少选择一个角色');
+            isValid = false;
+        } else {
+            hideError('user-role-error');
         }
 
         if (currentEditingId) {
@@ -322,7 +419,7 @@
             if (userIndex > -1) {
                 users[userIndex] = { 
                     ...users[userIndex], 
-                    name, phone, email, role 
+                    name, department, phone, email, role: selectedRoles 
                 };
                 showToast('用户更新成功', 'success');
                 logOperation('更新用户', `更新了用户 ${name} 的信息`);
@@ -332,9 +429,10 @@
             const newUser = {
                 id: Date.now(),
                 name,
+                department,
                 phone,
                 email,
-                role,
+                role: selectedRoles,
                 password, // In real app, hash this
                 status: 'normal',
                 joinDate: new Date().toISOString().split('T')[0]

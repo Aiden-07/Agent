@@ -4,41 +4,134 @@
 
 (function() {
     // Mock Roles Data
+    // permissions: Functional permissions (list of IDs)
+    // dataPermissions: Data scope permissions { resourceId: scopeValue }
     let roles = [
-        { id: 1, name: '超级管理员', description: '拥有系统所有权限', userCount: 1, permissions: ['ALL'] },
-        { id: 2, name: '开发者', description: '负责智能体构建与调试', userCount: 5, permissions: ['agent.build', 'agent.operate'] },
-        { id: 3, name: '只读访客', description: '仅可查看数据报表', userCount: 0, permissions: ['dashboard.read'] }
+        { 
+            id: 1, 
+            name: '超级管理员', 
+            description: '拥有系统所有权限', 
+            userCount: 1, 
+            permissions: ['ALL'],
+            dataPermissions: { 'ALL': 'all' } 
+        },
+        { 
+            id: 2, 
+            name: '开发者', 
+            description: '负责智能体构建与调试', 
+            userCount: 5, 
+            permissions: [
+                'agent.list', 'agent.create', 'agent.edit',
+                'orchestrator.list', 'orchestrator.create'
+            ],
+            dataPermissions: {
+                'agent': 'dept',
+                'orchestrator': 'dept',
+                'parser': 'self',
+                'knowledge': 'self',
+                'component': 'all'
+            }
+        },
+        { 
+            id: 3, 
+            name: '只读访客', 
+            description: '仅可查看数据报表', 
+            userCount: 0, 
+            permissions: ['dashboard.read'],
+            dataPermissions: {
+                'agent': 'all' // Can see all agents but maybe only read-only based on functional perms
+            }
+        }
     ];
 
-    // Mock Permissions Tree (Multi-level)
+    // Granular Functional Permissions Tree
     const permissionTree = [
         {
-            id: 'build', label: '构建', children: [
-                { id: 'agent', label: '智能体' },
-                { id: 'orchestrator', label: '编排器' },
-                { id: 'parser', label: '解析器' },
-                {
-                    id: 'knowledge', label: '知识库', children: [
-                        { id: 'knowledge.detail', label: '知识库详情列表' }
-                    ]
-                },
-                { id: 'component', label: '组件' }
+            id: 'agent', label: '智能体管理', children: [
+                { id: 'agent.list', label: '查看列表' },
+                { id: 'agent.create', label: '新建智能体' },
+                { id: 'agent.edit', label: '编辑智能体' },
+                { id: 'agent.delete', label: '删除智能体' }
             ]
         },
         {
-            id: 'operate', label: '运营', children: [
-                { id: 'debug_eval', label: '调试与评测' }
+            id: 'orchestrator', label: '编排器管理', children: [
+                { id: 'orchestrator.list', label: '查看列表' },
+                { id: 'orchestrator.create', label: '新建编排器' },
+                { id: 'orchestrator.edit', label: '编辑编排器' },
+                { id: 'orchestrator.delete', label: '删除编排器' }
             ]
         },
         {
-            id: 'settings', label: '设置', children: [
-                { id: 'sys_setting', label: '系统设置' },
-                { id: 'user_mgmt', label: '用户管理' },
-                { id: 'role_mgmt', label: '角色管理' },
-                { id: 'menu_mgmt', label: '菜单管理' },
-                { id: 'sys_log', label: '系统日志' }
+            id: 'knowledge', label: '知识库管理', children: [
+                { id: 'knowledge.list', label: '查看列表' },
+                { id: 'knowledge.create', label: '新建知识库' },
+                { id: 'knowledge.edit', label: '编辑知识库' },
+                { id: 'knowledge.delete', label: '删除知识库' }
+            ]
+        },
+        {
+            id: 'parser', label: '解析器管理', children: [
+                { id: 'parser.list', label: '查看列表' },
+                { id: 'parser.create', label: '新建解析器' },
+                { id: 'parser.edit', label: '编辑解析器' },
+                { id: 'parser.delete', label: '删除解析器' }
+            ]
+        },
+        {
+            id: 'component', label: '组件管理', children: [
+                { id: 'component.list', label: '查看列表' },
+                { id: 'component.create', label: '新建组件' },
+                { id: 'component.edit', label: '编辑组件' },
+                { id: 'component.delete', label: '删除组件' }
+            ]
+        },
+        {
+            id: 'evaluation', label: '效果测评', children: [
+                { id: 'evaluation.list', label: '查看测评任务' },
+                { id: 'evaluation.create', label: '新建测评' },
+                { id: 'evaluation.report', label: '查看报告' }
+            ]
+        },
+        {
+            id: 'system', label: '系统设置', children: [
+                { id: 'sys.log', label: '操作日志', children: [
+                    { id: 'sys.log.list', label: '查看日志' }
+                ]}
+            ]
+        },
+        {
+            id: 'sys.user', label: '用户管理', children: [
+                { id: 'sys.user.list', label: '查看列表' },
+                { id: 'sys.user.create', label: '新建用户' },
+                { id: 'sys.user.edit', label: '编辑用户' },
+                { id: 'sys.user.delete', label: '删除用户' }
+            ]
+        },
+        {
+            id: 'sys.role', label: '角色管理', children: [
+                { id: 'sys.role.list', label: '查看列表' },
+                { id: 'sys.role.create', label: '新建角色' },
+                { id: 'sys.role.edit', label: '编辑角色' },
+                { id: 'sys.role.delete', label: '删除角色' }
             ]
         }
+    ];
+
+    // Data Permission Configuration
+    const dataResources = [
+        { id: 'agent', label: '智能体' },
+        { id: 'orchestrator', label: '编排器' },
+        { id: 'parser', label: '解析器' },
+        { id: 'knowledge', label: '知识库' },
+        { id: 'knowledge_graph', label: '知识图谱' },
+        { id: 'component', label: '组件' },
+        { id: 'evaluation', label: '效果测评' }
+    ];
+
+    const dataScopes = [
+        { value: 'all', label: '全部数据' },
+        { value: 'self_authorized', label: '仅本人创建' }
     ];
 
     let currentEditingRoleId = null;
@@ -89,7 +182,7 @@
                 permBadge = '<span class="bg-gray-100 text-gray-600 px-2 py-1 rounded text-xs">ALL ACCESS</span>';
             } else {
                 const count = countPermissions(role.permissions);
-                permBadge = `<span class="bg-blue-50 text-blue-600 px-2 py-1 rounded text-xs">${count} 项权限</span>`;
+                permBadge = `<span class="bg-blue-50 text-blue-600 px-2 py-1 rounded text-xs">${count} 项功能权限</span>`;
             }
 
             // Action Button logic
@@ -114,7 +207,6 @@
     }
 
     function countPermissions(perms) {
-        // Simple count for now, could be recursive based on tree but raw count is fine
         return perms.length;
     }
 
@@ -195,7 +287,8 @@
                 name: name,
                 description: desc,
                 userCount: 0,
-                permissions: []
+                permissions: [],
+                dataPermissions: {}
             };
             roles.push(newRole);
             showToast('角色创建成功', 'success');
@@ -205,34 +298,70 @@
         renderRoleTable();
     };
 
-    // --- Permissions ---
+    // --- Permissions Modal Logic ---
+
+    window.switchPermTab = function(tabName) {
+        const funcBtn = document.getElementById('tab-btn-func');
+        const dataBtn = document.getElementById('tab-btn-data');
+        const funcContent = document.getElementById('perm-content-func');
+        const dataContent = document.getElementById('perm-content-data');
+
+        if (tabName === 'func') {
+            funcBtn.classList.add('text-blue-600', 'border-blue-600');
+            funcBtn.classList.remove('text-gray-500', 'border-transparent');
+            dataBtn.classList.remove('text-blue-600', 'border-blue-600');
+            dataBtn.classList.add('text-gray-500', 'border-transparent');
+            
+            funcContent.classList.remove('hidden');
+            funcContent.classList.add('block');
+            dataContent.classList.remove('block');
+            dataContent.classList.add('hidden');
+        } else {
+            dataBtn.classList.add('text-blue-600', 'border-blue-600');
+            dataBtn.classList.remove('text-gray-500', 'border-transparent');
+            funcBtn.classList.remove('text-blue-600', 'border-blue-600');
+            funcBtn.classList.add('text-gray-500', 'border-transparent');
+            
+            dataContent.classList.remove('hidden');
+            dataContent.classList.add('block');
+            funcContent.classList.remove('block');
+            funcContent.classList.add('hidden');
+        }
+    };
+
     window.openPermissionModal = function(roleId) {
         currentPermRoleId = roleId;
         const role = roles.find(r => r.id === roleId);
         if (!role) return;
 
         document.getElementById('perm-role-name').textContent = role.name;
+        
+        // Render both tabs
         renderPermissionTree(role.permissions);
+        renderDataPermissions(role.dataPermissions || {});
+        
+        // Reset to first tab
+        switchPermTab('func');
+        
         openModal('permission-modal');
     };
 
+    // 1. Functional Permissions Tree
     function renderPermissionTree(currentPerms) {
         const container = document.getElementById('permission-tree');
         if (!container) return;
         container.innerHTML = '';
-        container.className = 'space-y-1'; // Minimal spacing for clean tree look
+        container.className = 'space-y-1';
 
-        // Recursive render
         const treeRoot = createTreeList(permissionTree, currentPerms);
         container.appendChild(treeRoot);
         
-        // Post-render: Update indeterminate states based on children
         updateAllParentStates();
     }
 
     function createTreeList(nodes, currentPerms, level = 0) {
         const ul = document.createElement('ul');
-        ul.className = level === 0 ? '' : 'pl-6 border-l border-gray-100 ml-2'; // Indentation guide
+        ul.className = level === 0 ? '' : 'pl-6 border-l border-gray-100 ml-2';
 
         nodes.forEach(node => {
             const li = document.createElement('li');
@@ -241,11 +370,10 @@
             const hasChildren = node.children && node.children.length > 0;
             const isChecked = currentPerms.includes('ALL') || currentPerms.includes(node.id);
             
-            // Row Container
+            // Row
             const row = document.createElement('div');
             row.className = 'flex items-center py-2 hover:bg-gray-50 rounded px-2 transition-colors cursor-pointer group';
             row.onclick = (e) => {
-                // Clicking row toggles checkbox, unless clicking expander or the checkbox itself
                 if (e.target.type !== 'checkbox' && !e.target.closest('.tree-expander')) {
                     const cb = row.querySelector('input[type="checkbox"]');
                     cb.checked = !cb.checked;
@@ -253,7 +381,7 @@
                 }
             };
 
-            // 1. Expander (or spacer)
+            // Expander
             const expander = document.createElement('span');
             expander.className = 'tree-expander w-6 h-6 flex items-center justify-center text-gray-400 mr-1 transition-transform cursor-pointer hover:text-gray-600';
             if (hasChildren) {
@@ -263,26 +391,23 @@
                     toggleTreeNode(e.currentTarget);
                 };
             } else {
-                expander.innerHTML = ''; // Spacer
+                expander.innerHTML = '';
             }
 
-            // 2. Checkbox
+            // Checkbox
             const checkbox = document.createElement('input');
             checkbox.type = 'checkbox';
             checkbox.value = node.id;
             checkbox.className = 'perm-checkbox w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 cursor-pointer mr-3';
             checkbox.checked = isChecked;
             checkbox.dataset.id = node.id;
-            // Recursively collect all descendant IDs for the 'all' check logic
-            const descendantIds = getAllDescendantIds(node);
-            checkbox.dataset.descendants = JSON.stringify(descendantIds);
             
             checkbox.onchange = (e) => {
                 e.stopPropagation();
                 handlePermissionChange(e.target);
             };
 
-            // 3. Label
+            // Label
             const label = document.createElement('span');
             label.className = 'text-gray-700 text-sm font-medium';
             label.textContent = node.label;
@@ -292,10 +417,12 @@
             row.appendChild(label);
             li.appendChild(row);
 
-            // 4. Children
+            // Children
             if (hasChildren) {
                 const childrenContainer = createTreeList(node.children, currentPerms, level + 1);
-                childrenContainer.className += ' overflow-hidden transition-all duration-300'; // For animation
+                // Default expanded for better UX on deeper trees? Or keep collapsed?
+                // Let's keep collapsed by default except first level maybe? 
+                // For now, simple implementation: default visible.
                 li.appendChild(childrenContainer);
             }
 
@@ -305,23 +432,11 @@
         return ul;
     }
 
-    function getAllDescendantIds(node) {
-        let ids = [];
-        if (node.children) {
-            node.children.forEach(child => {
-                ids.push(child.id);
-                ids = ids.concat(getAllDescendantIds(child));
-            });
-        }
-        return ids;
-    }
-
-    // --- Tree Interactions ---
-
+    // Tree Helpers
     window.toggleTreeNode = function(expander) {
         const icon = expander.querySelector('i');
         const row = expander.parentElement;
-        const childrenUl = row.nextElementSibling; // The UL containing children
+        const childrenUl = row.nextElementSibling;
 
         if (childrenUl) {
             if (childrenUl.style.display === 'none' || childrenUl.classList.contains('hidden')) {
@@ -340,7 +455,7 @@
         const isChecked = checkbox.checked;
         const li = checkbox.closest('li');
         
-        // 1. Cascade Down: Check/Uncheck all children
+        // Cascade Down
         const childrenContainer = li.querySelector('ul');
         if (childrenContainer) {
             const childCheckboxes = childrenContainer.querySelectorAll('input[type="checkbox"]');
@@ -350,7 +465,7 @@
             });
         }
 
-        // 2. Cascade Up: Update parent indeterminate state
+        // Cascade Up
         updateAncestors(li);
     }
 
@@ -358,13 +473,12 @@
         const parentUl = liElement.parentElement;
         if (!parentUl) return;
         
-        const parentLi = parentUl.closest('li'); // Grandparent LI
-        if (!parentLi) return; // Reached root
+        const parentLi = parentUl.closest('li');
+        if (!parentLi) return;
 
-        const parentRow = parentLi.querySelector('div'); // The row containing parent checkbox
+        const parentRow = parentLi.querySelector('div');
         const parentCheckbox = parentRow.querySelector('input[type="checkbox"]');
         
-        // Check siblings
         const siblings = parentUl.querySelectorAll(':scope > li > div > input[type="checkbox"]');
         let checkedCount = 0;
         let indeterminateCount = 0;
@@ -385,17 +499,12 @@
             parentCheckbox.indeterminate = true;
         }
 
-        // Recursively go up
         updateAncestors(parentLi);
     }
 
     function updateAllParentStates() {
-        // Find all lowest-level inputs and trigger update upwards? 
-        // Or simpler: iterate all nodes with children bottom-up.
-        // Actually, just running updateAncestors for all leaf nodes is safe.
         const checkboxes = document.querySelectorAll('#permission-tree input[type="checkbox"]');
         checkboxes.forEach(cb => {
-            // If it's a leaf node (no children UL sibling in its LI), trigger update up
             const li = cb.closest('li');
             if (!li.querySelector('ul')) {
                 updateAncestors(li);
@@ -403,27 +512,89 @@
         });
     }
 
+    // 2. Data Permissions Table
+    function renderDataPermissions(currentDataPerms) {
+        const tbody = document.getElementById('data-perm-table-body');
+        if (!tbody) return;
+        tbody.innerHTML = '';
+
+        dataResources.forEach(res => {
+            const tr = document.createElement('tr');
+            tr.className = 'hover:bg-gray-50';
+
+            const nameTd = document.createElement('td');
+            nameTd.className = 'px-6 py-4 font-medium text-gray-800';
+            nameTd.textContent = res.label;
+
+            const scopeTd = document.createElement('td');
+            scopeTd.className = 'px-6 py-4';
+            
+            const scopeContainer = document.createElement('div');
+            scopeContainer.className = 'flex gap-4';
+
+            dataScopes.forEach(scope => {
+                const label = document.createElement('label');
+                label.className = 'inline-flex items-center cursor-pointer';
+                
+                const radio = document.createElement('input');
+                radio.type = 'radio';
+                radio.name = `data_perm_${res.id}`;
+                radio.value = scope.value;
+                radio.className = 'form-radio h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500';
+                
+                // Check logic: if exists in map, use it. If 'ALL' role, default to all?
+                // For now just use map. Default to 'self' if not set? Or none?
+                // Let's assume if not set, no selection (or implicit None/Self). 
+                // For UI, if value matches, check it.
+                const currentVal = currentDataPerms[res.id];
+                if (currentVal === scope.value || (!currentVal && scope.value === 'all')) {
+                    radio.checked = true;
+                }
+                
+                const span = document.createElement('span');
+                span.className = 'ml-2 text-sm text-gray-700';
+                span.textContent = scope.label;
+
+                label.appendChild(radio);
+                label.appendChild(span);
+                scopeContainer.appendChild(label);
+            });
+
+            scopeTd.appendChild(scopeContainer);
+            tr.appendChild(nameTd);
+            tr.appendChild(scopeTd);
+            tbody.appendChild(tr);
+        });
+    }
+
+    // Save
     window.savePermissions = function() {
         if (!currentPermRoleId) return;
         const role = roles.find(r => r.id === currentPermRoleId);
         if (!role) return;
 
+        // 1. Collect Functional Perms
         const checkboxes = document.querySelectorAll('.perm-checkbox');
         const selectedPerms = [];
-        
         checkboxes.forEach(cb => {
             if (cb.checked) {
                 selectedPerms.push(cb.value);
-            } else if (cb.indeterminate) {
-                // Optional: Store indeterminate nodes if backend needs to know partial selection
-                // For now we only store explicitly selected items or implied items
             }
         });
-        
-        // Optimization: If a node is selected, and we know its children are auto-included, 
-        // we might just store the parent ID. But for this mock, storing all checked IDs is safest.
-        
         role.permissions = selectedPerms;
+
+        // 2. Collect Data Perms
+        const newDataPerms = {};
+        dataResources.forEach(res => {
+            const radios = document.getElementsByName(`data_perm_${res.id}`);
+            for (let radio of radios) {
+                if (radio.checked) {
+                    newDataPerms[res.id] = radio.value;
+                    break;
+                }
+            }
+        });
+        role.dataPermissions = newDataPerms;
         
         showToast('权限配置已保存', 'success');
         closeModal('permission-modal');
@@ -435,11 +606,6 @@
         const role = roles.find(r => r.id === roleId);
         if (!role) return;
 
-        // Check Association (Mock Check)
-        // In real app, we would check against users list
-        // Since we can't easily access `users` from user-mgmt.js here without exposing it,
-        // we use the mock `userCount` property on the role itself which simulates this.
-        
         if (role.userCount > 0) {
             showToast('该角色正在被使用，无法删除', 'error');
             return;
@@ -450,7 +616,6 @@
         
         if (msgEl) msgEl.textContent = `确认删除角色 "${role.name}"？此操作无法撤销。`;
         
-        // Unbind previous listeners to avoid duplicates
         const newBtn = confirmBtn.cloneNode(true);
         confirmBtn.parentNode.replaceChild(newBtn, confirmBtn);
         

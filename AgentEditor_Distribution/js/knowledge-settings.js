@@ -69,9 +69,22 @@ function loadKbSettings(id) {
     if (parserSelect) {
         parserSelect.value = kb.parser || 'default';
     }
-    
-    // Prompt Settings Removed
 
+
+    // Prompt Settings
+    const promptEnable = document.getElementById('kb-custom-prompt-enable');
+    const promptTemplate = document.getElementById('kb-prompt-template');
+    const promptContainer = document.getElementById('kb-prompt-container');
+    
+    if (promptEnable && promptTemplate) {
+        promptEnable.checked = kb.promptEnabled || false;
+        promptTemplate.value = kb.promptTemplate || '';
+        if (kb.promptEnabled) {
+            promptContainer.classList.remove('hidden');
+        } else {
+            promptContainer.classList.add('hidden');
+        }
+    }
     
     renderTags(kb.tags || []);
     renderCustomFields();
@@ -284,9 +297,10 @@ window.saveKbSettings = function() {
             kb.description = document.getElementById('kb-setting-desc').value;
             kb.autoParse = document.getElementById('kb-auto-parse').checked;
             kb.parser = document.getElementById('kb-parser-select').value;
-            
-            // Prompt Settings Removed
 
+            // Prompt
+            kb.promptEnabled = document.getElementById('kb-custom-prompt-enable').checked;
+            kb.promptTemplate = document.getElementById('kb-prompt-template').value;
             
             // Update other fields...
         }

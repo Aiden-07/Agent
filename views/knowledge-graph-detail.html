@@ -1,0 +1,82 @@
+<div id="kg-detail-view" class="space-y-6 animate-fade-in">
+    <!-- Header & Breadcrumb -->
+    <div class="flex flex-col gap-4">
+        <div class="flex items-center gap-2 text-sm text-gray-500">
+            <a href="javascript:void(0)" onclick="switchView('knowledge-graph')" class="hover:text-blue-600 transition-colors">知识图谱</a>
+            <i class="fa-solid fa-chevron-right text-xs"></i>
+            <span class="text-gray-800 font-medium">知识管理</span>
+        </div>
+    </div>
+
+    <!-- Filters & Actions -->
+    <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-wrap items-center gap-3">
+        <!-- Search by Name -->
+        <div class="relative w-64">
+            <i class="fa-solid fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+            <input type="text" id="kg-detail-search" oninput="filterKgDetailList()" placeholder="搜索文档名称..." class="pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-full">
+        </div>
+
+        <!-- Filter by Knowledge Base -->
+        <div class="relative w-48">
+            <select id="kg-detail-filter-kb" onchange="filterKgDetailList()" class="w-full pl-3 pr-8 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none bg-white">
+                <option value="">所有知识库</option>
+                <!-- Options populated dynamically -->
+            </select>
+            <i class="fa-solid fa-chevron-down absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 text-xs pointer-events-none"></i>
+        </div>
+
+        <!-- Filter by Status -->
+        <div class="relative w-40">
+            <select id="kg-detail-filter-status" onchange="filterKgDetailList()" class="w-full pl-3 pr-8 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none bg-white">
+                <option value="">所有状态</option>
+                <option value="building">构建中</option>
+                <option value="success">构建成功</option>
+                <option value="failed">构建失败</option>
+            </select>
+            <i class="fa-solid fa-chevron-down absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 text-xs pointer-events-none"></i>
+        </div>
+
+        <!-- Import Button -->
+        <button class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 shadow-sm ml-auto">
+            <i class="fa-solid fa-upload"></i>
+            导入新知识
+        </button>
+    </div>
+
+    <!-- Document List -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden flex-1 flex flex-col min-h-0">
+        <div class="overflow-auto flex-1">
+            <table class="w-full text-sm text-left">
+                <thead class="bg-gray-50 text-gray-500 font-medium border-b border-gray-100 sticky top-0 z-10">
+                    <tr>
+                        <th class="px-6 py-4 min-w-[80px] w-20">序号</th>
+                        <th class="px-6 py-4 min-w-[160px]">文档名称</th>
+                        <th class="px-6 py-4 min-w-[120px]">所在知识库</th>
+                        <th class="px-6 py-4 w-24 whitespace-nowrap">大小</th>
+                        <th class="px-6 py-4 w-24 whitespace-nowrap">类型</th>
+                        <th class="px-6 py-4 w-32 whitespace-nowrap">构建状态</th>
+                        <th class="px-6 py-4 w-40 whitespace-nowrap">导入时间</th>
+                        <th class="px-6 py-4 w-40 whitespace-nowrap">成功构建时间</th>
+                        <th class="px-6 py-4 w-24 text-center sticky right-0 bg-gray-50">操作</th>
+                    </tr>
+                </thead>
+                <tbody id="kg-detail-list-body" class="divide-y divide-gray-100">
+                    <!-- Dynamic Content -->
+                </tbody>
+            </table>
+            
+            <!-- Loading State -->
+            <div id="kg-detail-loading" class="hidden py-8 text-center text-gray-500">
+                 <i class="fa-solid fa-spinner fa-spin mr-2"></i> 加载中...
+            </div>
+    
+            <!-- Empty State -->
+            <div id="kg-detail-empty" class="hidden py-12 text-center text-gray-400">
+                <div class="mb-2">
+                    <i class="fa-regular fa-file-lines text-4xl text-gray-300"></i>
+                </div>
+                <p>暂无文档数据</p>
+            </div>
+        </div>
+    </div>
+</div>

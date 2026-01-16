@@ -12,6 +12,8 @@ const routes = {
     'orchestrator-editor': { title: '编排器编辑', file: 'views/orchestrator-editor.html', fullscreen: true },
     'parser': { title: '解析器', file: 'views/parser.html' },
     'knowledge': { title: '知识库', file: 'views/knowledge.html' },
+    'knowledge-graph': { title: '知识图谱', file: 'views/knowledge-graph.html' },
+    'knowledge-graph-detail': { title: '图谱详情', file: 'views/knowledge-graph-detail.html' },
     'knowledge-settings': { title: '知识库设置', file: 'views/knowledge-settings.html' },
     'knowledge-testing': { title: '命中测试', file: 'views/knowledge-testing.html' },
     'components': { title: '组件', file: 'views/components.html' },
@@ -134,6 +136,17 @@ async function loadView(viewName, params = null) {
         if (viewName === 'agent-editor' && typeof window.initAgentEditor === 'function') {
              window.initAgentEditor(params);
         }
+        
+        // Init Knowledge Graph Page
+        if (viewName === 'knowledge-graph' && typeof window.initKnowledgeGraphPage === 'function') {
+            window.initKnowledgeGraphPage();
+        }
+
+        // Init Knowledge Graph Detail Page
+        if (viewName === 'knowledge-graph-detail' && typeof window.initKnowledgeGraphDetail === 'function') {
+            window.initKnowledgeGraphDetail(params);
+        }
+
 
     } catch (error) {
         console.error('Error loading view:', error);
@@ -163,7 +176,7 @@ function switchView(viewName, params = null) {
 function handleHashChange() {
     const hash = window.location.hash.slice(1); // Remove '#'
     if (!hash) {
-        switchView('dashboard');
+        switchView('agent');
         return;
     }
 
@@ -236,7 +249,7 @@ function updateNavState(viewName) {
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
-    // If no hash, default to dashboard (handled by handleHashChange)
+    // If no hash, default to agent (handled by handleHashChange)
     handleHashChange();
 });
 

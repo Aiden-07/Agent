@@ -198,6 +198,11 @@
                 <td class="px-6 py-4 text-gray-600">${user.phone || '-'}</td>
                 <td class="px-6 py-4 text-gray-600">${user.email || '-'}</td>
                 <td class="px-6 py-4">
+                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs bg-gray-100 text-gray-700">
+                        ${user.department || '无部门'}
+                    </span>
+                </td>
+                <td class="px-6 py-4">
                     <span class="bg-gray-100 text-gray-700 px-2 py-1 rounded text-xs font-medium" title="${roles.join(', ')}">${roleDisplay}</span>
                 </td>
                 <td class="px-6 py-4">${statusBadge}</td>
@@ -280,6 +285,7 @@
 
         // Fill Form
         document.getElementById('user-name').value = user.name;
+        document.getElementById('user-department').value = user.department || '';
         document.getElementById('user-phone').value = user.phone || '';
         document.getElementById('user-email').value = user.email || '';
         
@@ -306,6 +312,7 @@
     // --- Save User (Add/Edit) ---
     window.saveUser = function() {
         const name = document.getElementById('user-name').value.trim();
+        const department = document.getElementById('user-department').value.trim();
         
         // Get Multi-select values
         const selectedRoles = Array.from(document.querySelectorAll('input[name="user-role"]:checked')).map(cb => cb.value);
@@ -324,6 +331,14 @@
             isValid = false;
         } else {
             hideError('user-name-error');
+        }
+
+        // Department
+        if (!department) {
+            showError('user-department-error', '请输入部门');
+            isValid = false;
+        } else {
+            hideError('user-department-error');
         }
 
         // Role
@@ -404,7 +419,7 @@
             if (userIndex > -1) {
                 users[userIndex] = { 
                     ...users[userIndex], 
-                    name, phone, email, role: selectedRoles 
+                    name, department, phone, email, role: selectedRoles 
                 };
                 showToast('用户更新成功', 'success');
                 logOperation('更新用户', `更新了用户 ${name} 的信息`);
@@ -414,6 +429,7 @@
             const newUser = {
                 id: Date.now(),
                 name,
+                department,
                 phone,
                 email,
                 role: selectedRoles,

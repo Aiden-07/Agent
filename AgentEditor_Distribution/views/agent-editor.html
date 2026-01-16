@@ -402,84 +402,7 @@
                                 </div>
                             </div>
 
-                            <hr class="border-gray-100">
-
-                            <!-- 5. Background Settings -->
-                            <div class="space-y-3">
-                                <div class="flex items-center justify-between">
-                                    <div class="flex flex-col">
-                                        <span class="text-sm font-bold text-gray-700">背景图设置</span>
-                                        <span class="text-xs text-gray-400 mt-0.5">自定义对话背景</span>
-                                    </div>
-                                    <label class="relative inline-flex items-center cursor-pointer">
-                                        <input type="checkbox" id="background-check" onchange="toggleExperienceFeature('background')" class="sr-only peer">
-                                        <div class="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
-                                    </label>
-                                </div>
-
-                                <div id="background-settings-section" class="hidden pl-4 border-l-2 border-gray-100 space-y-4 mt-2">
-                                    <!-- Image Upload -->
-                                    <div>
-                                        <div class="mb-2 flex items-center justify-between">
-                                            <span class="text-sm text-gray-600">上传图片</span>
-                                            <span class="text-[10px] text-gray-400">JPG/PNG/WEBP, Max 2MB</span>
-                                        </div>
-                                        <div class="w-full aspect-video rounded-lg border-2 border-dashed border-gray-200 hover:border-blue-300 hover:bg-blue-50/50 transition-all relative group cursor-pointer overflow-hidden bg-gray-50" onclick="document.getElementById('bg-upload-input').click()">
-                                            <input type="file" id="bg-upload-input" class="hidden" accept="image/jpeg,image/png,image/webp" onchange="handleBackgroundUpload(this)">
-                                            
-                                            <!-- Placeholder -->
-                                            <div id="bg-upload-placeholder" class="absolute inset-0 flex flex-col items-center justify-center text-gray-400">
-                                                <i class="fa-solid fa-cloud-arrow-up text-2xl mb-2"></i>
-                                                <span class="text-xs">点击上传背景图</span>
-                                                <span class="text-[10px] mt-1 opacity-70">建议: 750x1334 (对话) 或 1920x1080 (全局)</span>
-                                            </div>
-
-                                            <!-- Preview -->
-                                            <div id="bg-preview-container" class="hidden absolute inset-0 w-full h-full">
-                                                <img id="bg-image-preview" src="" class="w-full h-full object-cover">
-                                                <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2" onclick="event.stopPropagation()">
-                                                    <button onclick="document.getElementById('bg-upload-input').click()" class="p-2 bg-white/20 hover:bg-white/40 rounded-full text-white backdrop-blur-sm transition-colors" title="更换">
-                                                        <i class="fa-solid fa-rotate"></i>
-                                                    </button>
-                                                    <button onclick="removeBackground()" class="p-2 bg-red-500/80 hover:bg-red-600 rounded-full text-white backdrop-blur-sm transition-colors" title="删除">
-                                                        <i class="fa-solid fa-trash"></i>
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <!-- Scope Selection -->
-                                    <div>
-                                        <div class="mb-2">
-                                            <span class="text-sm text-gray-600">生效范围</span>
-                                        </div>
-                                        <div class="flex gap-4">
-                                            <label class="flex items-center gap-2 cursor-pointer">
-                                                <input type="radio" name="bg_scope" id="bg-scope-chat" value="chat" checked onchange="toggleExperienceFeature('bg-scope-chat')" class="w-4 h-4 text-blue-600 focus:ring-blue-500 border-gray-300">
-                                                <span class="text-sm text-gray-700">仅对话区域</span>
-                                            </label>
-                                            <label class="flex items-center gap-2 cursor-pointer">
-                                                <input type="radio" name="bg_scope" id="bg-scope-global" value="global" onchange="toggleExperienceFeature('bg-scope-global')" class="w-4 h-4 text-blue-600 focus:ring-blue-500 border-gray-300">
-                                                <span class="text-sm text-gray-700">全局页面</span>
-                                            </label>
-                                        </div>
-                                    </div>
-
-                                    <!-- Opacity Slider -->
-                                    <div>
-                                        <div class="mb-2 flex items-center justify-between">
-                                            <span class="text-sm text-gray-600">不透明度</span>
-                                            <span id="bg-opacity-value" class="text-xs font-mono text-gray-500">100%</span>
-                                        </div>
-                                        <input type="range" id="bg-opacity-slider" min="20" max="100" value="100" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600" oninput="updateBackgroundOpacity(this.value)">
-                                    </div>
-                                </div>
-                            </div>
-
-                            <hr class="border-gray-100">
-
-                            <!-- 6. Translation Settings -->
+                            <!-- 5. Translation Settings -->
                             <div class="space-y-3">
                                 <div class="flex items-center justify-between">
                                     <div class="flex flex-col">
@@ -515,6 +438,109 @@
                                 <button onclick="restoreExperienceDefaults()" class="text-xs text-red-400 hover:text-red-600 flex items-center gap-1.5 transition-colors px-3 py-1.5 rounded-lg hover:bg-red-50">
                                     <i class="fa-solid fa-rotate-left"></i> 恢复默认配置
                                 </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Section: Theme Style -->
+                    <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden transition-all hover:shadow-md group">
+                        <div class="px-4 py-3 flex items-center justify-between cursor-pointer border-b border-gray-50 bg-white hover:bg-gray-50 transition-colors" onclick="toggleSection('theme-content', this)">
+                            <div class="flex items-center gap-2">
+                                <h3 class="text-base font-bold text-gray-800">主题风格</h3>
+                            </div>
+                            <div class="flex items-center gap-3 transition-opacity">
+                                <i class="fa-solid fa-chevron-down text-gray-400 text-xs transition-transform duration-200" style="transform: rotate(-90deg)"></i>
+                            </div>
+                        </div>
+
+                        <div id="theme-content" class="p-4 space-y-4 hidden">
+                            <!-- Theme Color -->
+                            <div class="space-y-3">
+                                <div class="flex items-center justify-between">
+                                    <div class="flex flex-col">
+                                        <span class="text-sm font-bold text-gray-700">主题色</span>
+                                        <span class="text-xs text-gray-400 mt-0.5">设置智能体的主题颜色</span>
+                                    </div>
+                                    <div class="flex items-center gap-2">
+                                        <div id="theme-color-preview" class="w-6 h-6 rounded-full border border-gray-200 shadow-sm"></div>
+                                        <input type="color" id="theme-color-input" onchange="updateThemeColor(this.value)" class="w-8 h-8 p-0 border-0 rounded-lg cursor-pointer bg-transparent">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <hr class="border-gray-100">
+
+                            <!-- Background Settings -->
+                            <div class="space-y-3">
+                                <div class="flex items-center justify-between">
+                                    <div class="flex flex-col">
+                                        <span class="text-sm font-bold text-gray-700">背景图设置</span>
+                                        <span class="text-xs text-gray-400 mt-0.5">自定义对话背景</span>
+                                    </div>
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" id="background-check" onchange="toggleThemeFeature('background')" class="sr-only peer">
+                                        <div class="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
+                                    </label>
+                                </div>
+
+                                <div id="background-settings-section" class="hidden pl-4 border-l-2 border-gray-100 space-y-4 mt-2">
+                                    <!-- Image Upload -->
+                                    <div>
+                                        <div class="mb-2 flex items-center justify-between">
+                                            <span class="text-sm text-gray-600">上传图片</span>
+                                            <span class="text-[10px] text-gray-400">JPG/PNG/WEBP, Max 2MB</span>
+                                        </div>
+                                        <div class="w-full h-32 rounded-lg border-2 border-dashed border-gray-200 hover:border-blue-300 hover:bg-blue-50/50 transition-all relative group cursor-pointer overflow-hidden bg-gray-50" onclick="document.getElementById('bg-upload-input').click()">
+                                            <input type="file" id="bg-upload-input" class="hidden" accept="image/jpeg,image/png,image/webp" onchange="handleBackgroundUpload(this)">
+                                            
+                                            <!-- Placeholder -->
+                                            <div id="bg-upload-placeholder" class="absolute inset-0 flex flex-col items-center justify-center text-gray-400">
+                                                <i class="fa-solid fa-cloud-arrow-up text-2xl mb-2"></i>
+                                                <span class="text-xs">点击上传背景图</span>
+                                                <span class="text-[10px] mt-1 opacity-70">建议: 750x1334 (对话) 或 1920x1080 (全局)</span>
+                                            </div>
+
+                                            <!-- Preview -->
+                                            <div id="bg-preview-container" class="hidden absolute inset-0 w-full h-full">
+                                                <img id="bg-image-preview" src="" class="w-full h-full object-cover">
+                                                <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2" onclick="event.stopPropagation()">
+                                                    <button onclick="document.getElementById('bg-upload-input').click()" class="p-2 bg-white/20 hover:bg-white/40 rounded-full text-white backdrop-blur-sm transition-colors" title="更换">
+                                                        <i class="fa-solid fa-rotate"></i>
+                                                    </button>
+                                                    <button onclick="removeBackground()" class="p-2 bg-red-500/80 hover:bg-red-600 rounded-full text-white backdrop-blur-sm transition-colors" title="删除">
+                                                        <i class="fa-solid fa-trash"></i>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Scope Selection -->
+                                    <div>
+                                        <div class="mb-2">
+                                            <span class="text-sm text-gray-600">生效范围</span>
+                                        </div>
+                                        <div class="flex gap-4">
+                                            <label class="flex items-center gap-2 cursor-pointer">
+                                                <input type="radio" name="bg_scope" id="bg-scope-chat" value="chat" checked onchange="toggleThemeFeature('bg-scope-chat')" class="w-4 h-4 text-blue-600 focus:ring-blue-500 border-gray-300">
+                                                <span class="text-sm text-gray-700">仅对话区域</span>
+                                            </label>
+                                            <label class="flex items-center gap-2 cursor-pointer">
+                                                <input type="radio" name="bg_scope" id="bg-scope-global" value="global" onchange="toggleThemeFeature('bg-scope-global')" class="w-4 h-4 text-blue-600 focus:ring-blue-500 border-gray-300">
+                                                <span class="text-sm text-gray-700">全局页面</span>
+                                            </label>
+                                        </div>
+                                    </div>
+
+                                    <!-- Opacity Slider -->
+                                    <div>
+                                        <div class="mb-2 flex items-center justify-between">
+                                            <span class="text-sm text-gray-600">不透明度</span>
+                                            <span id="bg-opacity-value" class="text-xs font-mono text-gray-500">100%</span>
+                                        </div>
+                                        <input type="range" id="bg-opacity-slider" min="20" max="100" value="100" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600" oninput="updateBackgroundOpacity(this.value)">
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -714,13 +740,18 @@
                         <thead class="bg-gray-50">
                             <tr>
                                 <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">会话ID</th>
-                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">用户</th>
-                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">智能体</th>
-                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">状态</th>
                                 <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">会话主题</th>
-                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">消息数</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">用户</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">用户ID</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">用户部门</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">所属平台</th>
                                 <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">创建时间</th>
-                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">最后更新</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">更新时间</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">消息数</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">复制</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">重新生成</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">翻译</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">总结</th>
                                 <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">操作</th>
                             </tr>
                         </thead>
@@ -744,86 +775,33 @@
         <div id="tab-content-analytics" class="hidden absolute inset-0 overflow-y-auto p-8 bg-gray-50">
             <div class="max-w-6xl mx-auto space-y-6">
                 <!-- Overview Cards -->
-                <div class="grid grid-cols-4 gap-4">
+                <div class="grid grid-cols-3 gap-4">
                     <div class="bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
                         <div class="text-xs text-gray-500 mb-1">今日对话数</div>
                         <div class="text-2xl font-bold text-gray-900">1,204</div>
-                        <div class="text-xs text-green-500 mt-1">↑ 12% 较昨日</div>
                     </div>
                     <div class="bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
                         <div class="text-xs text-gray-500 mb-1">消耗 Token</div>
                         <div class="text-2xl font-bold text-gray-900">842k</div>
-                        <div class="text-xs text-gray-500 mt-1">-- 持平</div>
-                    </div>
-                    <div class="bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
-                        <div class="text-xs text-gray-500 mb-1">平均响应时间</div>
-                        <div class="text-2xl font-bold text-gray-900">1.2s</div>
-                        <div class="text-xs text-green-500 mt-1">↓ 0.3s 较昨日</div>
                     </div>
                     <div class="bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
                         <div class="text-xs text-gray-500 mb-1">用户满意度</div>
-                        <div class="text-2xl font-bold text-gray-900">4.8</div>
-                        <div class="text-xs text-green-500 mt-1">⭐⭐⭐⭐⭐</div>
+                        <div class="text-2xl font-bold text-gray-900">96%</div>
                     </div>
                 </div>
 
                 <!-- Charts Area -->
-                <div class="grid grid-cols-2 gap-6">
-                    <!-- Chart 1: Daily Conversations -->
+                <div class="grid grid-cols-1 gap-6">
+                    <!-- Chart 1: Department Usage Distribution -->
                     <div class="bg-white p-6 rounded-xl border border-gray-100 shadow-sm">
-                        <h3 class="text-base font-medium text-gray-900 mb-6">近7日对话趋势</h3>
-                        <div class="h-64 flex items-end justify-between gap-2 px-4">
-                            <!-- Mock Bars -->
-                            <div class="w-full bg-blue-100 rounded-t hover:bg-blue-200 transition-colors relative group" style="height: 40%">
-                                <div class="absolute -top-6 left-1/2 -translate-x-1/2 text-xs text-gray-500 hidden group-hover:block">402</div>
-                            </div>
-                            <div class="w-full bg-blue-100 rounded-t hover:bg-blue-200 transition-colors relative group" style="height: 55%">
-                                <div class="absolute -top-6 left-1/2 -translate-x-1/2 text-xs text-gray-500 hidden group-hover:block">550</div>
-                            </div>
-                            <div class="w-full bg-blue-100 rounded-t hover:bg-blue-200 transition-colors relative group" style="height: 35%">
-                                <div class="absolute -top-6 left-1/2 -translate-x-1/2 text-xs text-gray-500 hidden group-hover:block">350</div>
-                            </div>
-                            <div class="w-full bg-blue-100 rounded-t hover:bg-blue-200 transition-colors relative group" style="height: 70%">
-                                <div class="absolute -top-6 left-1/2 -translate-x-1/2 text-xs text-gray-500 hidden group-hover:block">700</div>
-                            </div>
-                            <div class="w-full bg-blue-100 rounded-t hover:bg-blue-200 transition-colors relative group" style="height: 60%">
-                                <div class="absolute -top-6 left-1/2 -translate-x-1/2 text-xs text-gray-500 hidden group-hover:block">600</div>
-                            </div>
-                            <div class="w-full bg-blue-100 rounded-t hover:bg-blue-200 transition-colors relative group" style="height: 85%">
-                                <div class="absolute -top-6 left-1/2 -translate-x-1/2 text-xs text-gray-500 hidden group-hover:block">850</div>
-                            </div>
-                            <div class="w-full bg-blue-500 rounded-t shadow-lg relative group" style="height: 95%">
-                                <div class="absolute -top-6 left-1/2 -translate-x-1/2 text-xs font-bold text-blue-600">Today</div>
-                            </div>
-                        </div>
-                        <div class="flex justify-between text-xs text-gray-400 mt-2 px-2">
-                            <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span>
-                        </div>
+                        <h3 class="text-base font-medium text-gray-900 mb-6">部门使用分布</h3>
+                        <div id="analytics-chart-dept" class="h-96 w-full"></div>
                     </div>
 
-                    <!-- Chart 2: User Sentiment -->
+                    <!-- Chart 2: User Feedback Distribution -->
                     <div class="bg-white p-6 rounded-xl border border-gray-100 shadow-sm">
                         <h3 class="text-base font-medium text-gray-900 mb-6">用户反馈分布</h3>
-                        <div class="h-64 flex items-center justify-center">
-                            <!-- CSS Pie Chart Mockup -->
-                            <div class="relative w-48 h-48 rounded-full bg-green-500" style="background: conic-gradient(#3b82f6 0% 65%, #ef4444 65% 75%, #e5e7eb 75% 100%);">
-                                <div class="absolute inset-0 m-auto w-32 h-32 bg-white rounded-full flex flex-col items-center justify-center">
-                                    <span class="text-2xl font-bold text-gray-900">85%</span>
-                                    <span class="text-xs text-gray-500">好评率</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="flex justify-center gap-6 mt-4">
-                            <div class="flex items-center gap-2 text-xs text-gray-600">
-                                <div class="w-3 h-3 rounded-full bg-blue-500"></div> 点赞 (65%)
-                            </div>
-                            <div class="flex items-center gap-2 text-xs text-gray-600">
-                                <div class="w-3 h-3 rounded-full bg-red-500"></div> 点踩 (10%)
-                            </div>
-                            <div class="flex items-center gap-2 text-xs text-gray-600">
-                                <div class="w-3 h-3 rounded-full bg-gray-200"></div> 未评价 (25%)
-                            </div>
-                        </div>
+                        <div id="analytics-chart-feedback" class="h-96 w-full"></div>
                     </div>
                 </div>
             </div>
@@ -930,6 +908,50 @@
                     <!-- Footer -->
                     <div class="bg-gray-50 px-4 py-3 sm:px-6 border-t border-gray-100 flex justify-end">
                         <button type="button" onclick="closeModal('log-detail-modal')" class="inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto">关闭</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Dislike Reason Modal -->
+    <div id="dislike-reason-modal" class="fixed inset-0 z-[60] hidden" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+        <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onclick="closeModal('dislike-reason-modal')"></div>
+        <div class="fixed inset-0 z-10 w-screen overflow-y-auto">
+            <div class="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
+                <div class="relative transform overflow-hidden rounded-lg bg-white text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-md">
+                    <div class="bg-white px-4 pb-4 pt-5 sm:p-6 sm:pb-4">
+                        <div class="sm:flex sm:items-start">
+                            <div class="mx-auto flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10">
+                                <i class="fa-regular fa-thumbs-down text-red-600"></i>
+                            </div>
+                            <div class="mt-3 text-center sm:ml-4 sm:mt-0 sm:text-left w-full">
+                                <h3 class="text-base font-semibold leading-6 text-gray-900" id="modal-title">请告诉我们原因</h3>
+                                <div class="mt-4 space-y-3">
+                                    <div class="flex items-center gap-2">
+                                        <input type="radio" name="dislike-reason" id="reason-1" value="回答不准确" class="h-4 w-4 border-gray-300 text-blue-600 focus:ring-blue-500">
+                                        <label for="reason-1" class="text-sm text-gray-700">回答不准确</label>
+                                    </div>
+                                    <div class="flex items-center gap-2">
+                                        <input type="radio" name="dislike-reason" id="reason-2" value="内容不相关" class="h-4 w-4 border-gray-300 text-blue-600 focus:ring-blue-500">
+                                        <label for="reason-2" class="text-sm text-gray-700">内容不相关</label>
+                                    </div>
+                                    <div class="flex items-center gap-2">
+                                        <input type="radio" name="dislike-reason" id="reason-3" value="逻辑错误" class="h-4 w-4 border-gray-300 text-blue-600 focus:ring-blue-500">
+                                        <label for="reason-3" class="text-sm text-gray-700">逻辑错误</label>
+                                    </div>
+                                    <div class="flex items-center gap-2">
+                                        <input type="radio" name="dislike-reason" id="reason-4" value="other" class="h-4 w-4 border-gray-300 text-blue-600 focus:ring-blue-500">
+                                        <label for="reason-4" class="text-sm text-gray-700">其他原因</label>
+                                    </div>
+                                    <textarea id="dislike-reason-custom" rows="3" class="hidden mt-2 w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6" placeholder="请输入具体原因..."></textarea>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-gray-50 px-4 py-3 sm:flex sm:flex-row-reverse sm:px-6">
+                        <button type="button" onclick="confirmDislike()" class="inline-flex w-full justify-center rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 sm:ml-3 sm:w-auto">提交反馈</button>
+                        <button type="button" onclick="closeModal('dislike-reason-modal')" class="mt-3 inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto">取消</button>
                     </div>
                 </div>
             </div>

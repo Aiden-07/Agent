@@ -86,51 +86,153 @@ let hasMore = true;
 let currentSearch = '';
 let currentFilter = 'all';
 
+// Fixed Mock Data
+const FIXED_AGENT_LIST = [
+    {
+        id: 'AGT-FIX-001',
+        name: '电商客服助手',
+        model: 'GPT-4o',
+        description: '专业的电商客服，擅长处理售后问题和产品咨询，支持多轮对话和情绪安抚。',
+        knowledgeBase: ['产品文档库', '话术规范'],
+        creator: 'Admin',
+        createdAt: '2024/05/20 10:00:00',
+        timestamp: 1716170400000,
+        updatedAt: '2024/05/21 14:30:00',
+        status: 'running',
+        hot: 9527
+    },
+    {
+        id: 'AGT-FIX-002',
+        name: 'Python 代码审查员',
+        model: 'Claude 3.5 Sonnet',
+        description: '资深 Python 开发工程师，专注于代码质量审查、性能优化建议和安全漏洞扫描。',
+        knowledgeBase: ['技术规范', '最佳实践'],
+        creator: 'User_1001',
+        createdAt: '2024/05/18 09:15:00',
+        timestamp: 1715994900000,
+        updatedAt: '2024/05/20 11:20:00',
+        status: 'running',
+        hot: 8843
+    },
+    {
+        id: 'AGT-FIX-003',
+        name: '英文翻译专家',
+        model: 'GPT-4 Turbo',
+        description: '精通中英互译，擅长科技、法律、文学等多种文风的翻译，信达雅兼备。',
+        knowledgeBase: ['专业术语库'],
+        creator: 'User_1002',
+        createdAt: '2024/05/15 16:45:00',
+        timestamp: 1715762700000,
+        updatedAt: '2024/05/19 09:10:00',
+        status: 'running',
+        hot: 7210
+    },
+    {
+        id: 'AGT-FIX-004',
+        name: 'SQL 查询生成器',
+        model: 'DeepSeek V2',
+        description: '根据自然语言描述生成复杂的 SQL 查询语句，支持 MySQL、PostgreSQL 和 Oracle。',
+        knowledgeBase: ['数据库Schema', 'SQL优化指南'],
+        creator: 'User_1001',
+        createdAt: '2024/05/12 11:30:00',
+        timestamp: 1715484600000,
+        updatedAt: '2024/05/18 15:55:00',
+        status: 'stopped',
+        hot: 6532
+    },
+    {
+        id: 'AGT-FIX-005',
+        name: '周报自动生成助手',
+        model: 'GPT-4o',
+        description: '根据本周工作记录自动生成结构清晰、重点突出的周报，支持自定义模板。',
+        knowledgeBase: ['员工手册'],
+        creator: 'User_1003',
+        createdAt: '2024/05/10 08:50:00',
+        timestamp: 1715302200000,
+        updatedAt: '2024/05/17 18:20:00',
+        status: 'running',
+        hot: 5421
+    },
+    {
+        id: 'AGT-FIX-006',
+        name: '产品文案润色',
+        model: 'Claude 3.5 Sonnet',
+        description: '为产品营销文案提供润色建议，提升吸引力和转化率，支持多种营销风格。',
+        knowledgeBase: ['市场分析报告', '广告法合规库'],
+        creator: 'Admin',
+        createdAt: '2024/05/08 14:20:00',
+        timestamp: 1715149200000,
+        updatedAt: '2024/05/15 10:40:00',
+        status: 'running',
+        hot: 4980
+    },
+    {
+        id: 'AGT-FIX-007',
+        name: '旅游行程规划师',
+        model: 'GPT-4 Turbo',
+        description: '根据预算、时间和兴趣爱好，为您定制个性化的全球旅游行程规划。',
+        knowledgeBase: ['全球景点库', '签证指南'],
+        creator: 'User_1002',
+        createdAt: '2024/05/05 13:10:00',
+        timestamp: 1714885800000,
+        updatedAt: '2024/05/12 09:30:00',
+        status: 'stopped',
+        hot: 3215
+    },
+    {
+        id: 'AGT-FIX-008',
+        name: '法律咨询顾问',
+        model: 'DeepSeek V2',
+        description: '提供基础的法律咨询服务，涵盖劳动法、合同法、婚姻法等常见领域。',
+        knowledgeBase: ['民法典', '劳动法'],
+        creator: 'Admin',
+        createdAt: '2024/05/01 09:00:00',
+        timestamp: 1714525200000,
+        updatedAt: '2024/05/10 16:15:00',
+        status: 'running',
+        hot: 2890
+    },
+    {
+        id: 'AGT-FIX-009',
+        name: '前端组件生成器',
+        model: 'Claude 3.5 Sonnet',
+        description: '根据描述生成 React/Vue 组件代码，支持 TailwindCSS 样式。',
+        knowledgeBase: ['技术规范', 'UI组件库'],
+        creator: 'User_1001',
+        createdAt: '2024/04/28 10:30:00',
+        timestamp: 1714271400000,
+        updatedAt: '2024/05/08 11:50:00',
+        status: 'running',
+        hot: 2560
+    },
+    {
+        id: 'AGT-FIX-010',
+        name: '招聘简历筛选助手',
+        model: 'GPT-4o',
+        description: '自动分析简历与职位的匹配度，提取关键信息并生成面试建议。',
+        knowledgeBase: ['岗位JD库', '人才画像'],
+        creator: 'User_1003',
+        createdAt: '2024/04/25 15:00:00',
+        timestamp: 1714028400000,
+        updatedAt: '2024/05/05 14:20:00',
+        status: 'running',
+        hot: 2100
+    }
+];
+
 // Generate initial mock data
 function generateMockAgents(count) {
-    const newAgents = [];
-    for (let i = 0; i < count; i++) {
-        const id = window.generateId ? window.generateId('AGT') : `AGT-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
-        // Pick a name from the list cyclically or randomly
-        let name;
-        if (i < AGENT_NAMES.length) {
-             name = AGENT_NAMES[i % AGENT_NAMES.length];
-        } else {
-             name = `${AGENT_NAMES[i % AGENT_NAMES.length]} ${Math.floor(i / AGENT_NAMES.length) + 1}`;
-        }
-
-        const createdAtDate = new Date(Date.now() - Math.floor(Math.random() * 30 * 24 * 60 * 60 * 1000));
-        
-        newAgents.push({
-            id: id,
-            name: name,
-            model: MODELS[Math.floor(Math.random() * MODELS.length)],
-            // Generate random multiple knowledge bases (1-3)
-            knowledgeBase: (() => {
-                const shuffled = [...KBS].sort(() => 0.5 - Math.random());
-                const count = Math.floor(Math.random() * 3) + 1; // 1 to 3
-                return shuffled.slice(0, count);
-            })(),
-            creator: CREATORS[Math.floor(Math.random() * CREATORS.length)],
-            createdAt: createdAtDate.toLocaleString(),
-            timestamp: createdAtDate.getTime(), // Added for sorting
-            updatedAt: new Date(createdAtDate.getTime() + Math.floor(Math.random() * 10 * 24 * 60 * 60 * 1000)).toLocaleString(),
-            hot: Math.floor(Math.random() * 10000),
-            status: Math.random() > 0.2 ? 'running' : 'stopped' // 80% running
-        });
-    }
-    return newAgents;
+    // Return fixed list regardless of count to ensure consistency
+    // If count is larger than list, we could loop, but for now just return the fixed list.
+    return JSON.parse(JSON.stringify(FIXED_AGENT_LIST));
 }
 
 // Initialize
 function initAgentPage() {
     console.log('Initializing Agent Page...');
     
-    // Reset state if needed, or keep it to persist during session
-    // For now, let's check if we already have data, if not generate some
-    if (agentsData.length === 0) {
-        agentsData = generateMockAgents(10); // Changed from 25 to 10
-    }
+    // Always reset to fixed data on initialization to prevent stale/random data persistence
+    agentsData = generateMockAgents(10); 
     
     // Reset view state
     currentPage = 1;
@@ -198,12 +300,14 @@ function loadMoreAgents() {
         // But logic is simpler if we just filter existing data. 
         // Let's create more data on the fly to append to `agentsData` so the list grows.
         
-        const newItems = generateMockAgents(5); 
-        agentsData = [...agentsData, ...newItems]; // Append to master list
+        // Disable infinite scroll of random data as per user request for "Fixed Batch"
+        // const newItems = generateMockAgents(5); 
+        // agentsData = [...agentsData, ...newItems]; // Append to master list
         
-        renderAgentList(false); // Append/Re-render
+        // renderAgentList(false); // Append/Re-render
         
         isLoading = false;
+        hasMore = false; // Stop loading more
         if (loader) loader.classList.add('hidden');
     }, 800);
 }
@@ -310,9 +414,14 @@ function renderAgentList(reset = false) {
 window.openAgentActions = function(event, id) {
     window.showActionMenu(event, [
         {
-            label: '配置权限',
+            label: '权限配置',
             icon: 'fa-solid fa-user-shield',
-            onClick: () => openPermissionModal(id)
+            onClick: () => {
+                const agent = agentsData.find(a => a.id === id);
+                if (window.navigateToPermissionConfig) {
+                    window.navigateToPermissionConfig(id, 'agent', agent ? agent.name : 'Unknown Agent');
+                }
+            }
         },
         {
             label: '编辑',
@@ -398,13 +507,6 @@ function confirmDelete() {
         agentToDeleteId = null;
     }
 }
-
-// Bind confirm delete button (Global listener in case element is recreated, though modal is static in views/agent.html? No, modal is part of view, so it is re-injected)
-// Since modal is part of the view, we need to bind the click event AFTER view load or use inline onclick.
-// The HTML uses onclick="createNewAgent()" and onclick="confirmDelete()" but wait, confirmDelete is button id="confirm-delete-btn".
-// In `views/agent.html`: <button id="confirm-delete-btn" ...>删除</button>
-// So we need to bind it in initAgentPage or use onclick in HTML.
-// Let's add onclick to the button in HTML to be safe and consistent with createNewAgent.
 
 // Toggle Status
 function toggleAgentStatus(id) {
@@ -692,6 +794,7 @@ function initAgentEditor(params) {
             
             // Init Experience Config
             initExperienceConfig(agent);
+            initThemeConfig(agent);
 
             // Update Header Info
             const nameDisplay = document.getElementById('agent-name-display');
@@ -726,6 +829,7 @@ function initAgentEditor(params) {
         if (headerAvatar) headerAvatar.innerHTML = '<i class="fa-solid fa-robot"></i>';
         
         initExperienceConfig(null);
+        initThemeConfig(null);
     }
     
     loadResources();
@@ -762,6 +866,11 @@ function switchEditorTab(tabName) {
                 if (t === 'logs' && window.renderLogList) {
                     window.renderLogList();
                 }
+                // Special handling for analytics tab
+                if (t === 'analytics' && window.renderAnalytics) {
+                    // Delay slightly to ensure container is visible for size calculation
+                    setTimeout(() => window.renderAnalytics(), 50);
+                }
             }
         } else {
             if (btn) {
@@ -790,9 +899,11 @@ let currentLogFilter = 'all';
 
 function generateMockLogs(count) {
     const logs = [];
-    const users = ['User_A', 'User_B', 'User_C', 'Admin'];
-    const topics = ['如何重置密码', '查询订单状态', '产品使用咨询', '系统报错反馈'];
+    const users = ['陈思宇', '林志强', '王晓明', '张雅婷', '李子涵', '刘伟', '赵丽华', '孙建国', '周梦琪', '吴嘉豪', '郑雨萱', '徐浩然'];
+    const departments = ['研发部', '产品部', '市场部', '销售部', '人力资源部', '财务部', '客服部'];
+    const topics = ['如何重置密码', '查询订单状态', '产品使用咨询', '系统报错反馈', 'API接入问题', '账号权限申请', '数据导出请求'];
     const statuses = ['active', 'closed'];
+    const platforms = ['WEB', 'OGW'];
     
     for (let i = 0; i < count; i++) {
         const date = new Date(Date.now() - Math.floor(Math.random() * 7 * 24 * 60 * 60 * 1000));
@@ -802,7 +913,13 @@ function generateMockLogs(count) {
         logs.push({
             id: `sess_${Math.floor(Math.random() * 100000000)}`,
             user: users[Math.floor(Math.random() * users.length)],
-            agentName: '我的智能体', // Should match current agent name but hardcoded for now or use context
+            userId: `u_${Math.floor(Math.random() * 100000)}`,
+            department: departments[Math.floor(Math.random() * departments.length)],
+            platform: platforms[Math.floor(Math.random() * platforms.length)],
+            copyCount: Math.floor(Math.random() * 200),
+            regenerateCount: Math.floor(Math.random() * 50),
+            translateCount: Math.floor(Math.random() * 30),
+            summarizeCount: Math.floor(Math.random() * 20),
             status: status,
             topic: topics[Math.floor(Math.random() * topics.length)],
             messageCount: msgCount,
@@ -826,14 +943,193 @@ function generateMockChatContent(count) {
     ];
     
     for (let i = 0; i < count; i++) {
-        content.push(interactions[i % interactions.length]);
+        const baseMsg = interactions[i % interactions.length];
+        const msg = {
+            ...baseMsg,
+            id: `msg_${Date.now()}_${i}`,
+            likeCount: 0, // Counts are hidden but we keep structure
+            dislikeCount: 0,
+            userAction: null, // 'like', 'dislike', or null
+            dislikeReason: null
+        };
+        
+        // Randomly assign some initial state for AI messages
+        if (msg.role === 'ai') {
+            const rand = Math.random();
+            // 80% chance to have an interaction for demo purposes (high density)
+            if (rand > 0.2) {
+                // Of the interactions: 60% like, 40% dislike
+                if (Math.random() > 0.4) {
+                    msg.userAction = 'like';
+                    msg.likeCount = 1;
+                } else {
+                    msg.userAction = 'dislike';
+                    msg.dislikeCount = 1;
+                    
+                    // Assign random reason
+                    const reasons = [
+                        '回答不准确',
+                        '内容不相关',
+                        '逻辑错误',
+                        '信息过时',
+                        '语气不当',
+                        '代码无法运行'
+                    ];
+                    msg.dislikeReason = reasons[Math.floor(Math.random() * reasons.length)];
+                }
+            }
+        }
+        
+        content.push(msg);
     }
     return content;
 }
 
+// --- Analytics Logic ---
+
+function renderAnalytics() {
+    if (typeof echarts === 'undefined') {
+        console.warn('ECharts is not loaded');
+        return;
+    }
+
+    // 1. Department Usage Chart (Bar)
+    const deptChartDom = document.getElementById('analytics-chart-dept');
+    if (deptChartDom) {
+        // Dispose existing instance if any to prevent memory leaks or reuse issues
+        const existingInstance = echarts.getInstanceByDom(deptChartDom);
+        if (existingInstance) {
+            existingInstance.dispose();
+        }
+
+        const deptChart = echarts.init(deptChartDom);
+        const deptOption = {
+            tooltip: {
+                trigger: 'axis',
+                axisPointer: {
+                    type: 'shadow'
+                }
+            },
+            grid: {
+                left: '3%',
+                right: '4%',
+                bottom: '3%',
+                containLabel: true
+            },
+            xAxis: [
+                {
+                    type: 'category',
+                    data: ['研发部', '产品部', '市场部', '销售部', '客服部', '人力资源', '财务部'],
+                    axisTick: {
+                        alignWithLabel: true
+                    }
+                }
+            ],
+            yAxis: [
+                {
+                    type: 'value'
+                }
+            ],
+            series: [
+                {
+                    name: '使用次数',
+                    type: 'bar',
+                    barWidth: '60%',
+                    data: [320, 280, 220, 180, 150, 90, 60],
+                    itemStyle: {
+                        color: '#3b82f6'
+                    }
+                }
+            ]
+        };
+        deptChart.setOption(deptOption);
+        
+        // Handle resize
+        window.addEventListener('resize', () => {
+            deptChart.resize();
+        });
+    }
+
+    // 2. User Feedback Chart (Pie)
+    const feedbackChartDom = document.getElementById('analytics-chart-feedback');
+    if (feedbackChartDom) {
+        // Dispose existing instance
+        const existingInstance = echarts.getInstanceByDom(feedbackChartDom);
+        if (existingInstance) {
+            existingInstance.dispose();
+        }
+
+        const feedbackChart = echarts.init(feedbackChartDom);
+        const feedbackOption = {
+            tooltip: {
+                trigger: 'item',
+                formatter: '{b}: {c} ({d}%)'
+            },
+            legend: {
+                bottom: '5%',
+                left: 'center',
+                itemGap: 20,
+                textStyle: {
+                    color: '#666'
+                }
+            },
+            color: ['#22c55e', '#ef4444', '#9ca3af'],
+            series: [
+                {
+                    name: '反馈分布',
+                    type: 'pie',
+                    radius: '70%',
+                    center: ['50%', '45%'],
+                    itemStyle: {
+                        borderRadius: 8,
+                        borderColor: '#fff',
+                        borderWidth: 2,
+                        shadowBlur: 10,
+                        shadowColor: 'rgba(0, 0, 0, 0.05)'
+                    },
+                    label: {
+                        show: true,
+                        formatter: '{b}\n{d}%',
+                        color: '#4b5563',
+                        fontSize: 14,
+                        lineHeight: 20
+                    },
+                    emphasis: {
+                        label: {
+                            show: true,
+                            fontSize: 16,
+                            fontWeight: 'bold'
+                        },
+                        itemStyle: {
+                            shadowBlur: 10,
+                            shadowOffsetX: 0,
+                            shadowColor: 'rgba(0, 0, 0, 0.2)'
+                        }
+                    },
+                    data: [
+                        { value: 735, name: '点赞' },
+                        { value: 102, name: '点踩' },
+                        { value: 367, name: '未评价' }
+                    ]
+                }
+            ]
+        };
+        feedbackChart.setOption(feedbackOption);
+        
+        // Handle resize
+        window.addEventListener('resize', () => {
+            feedbackChart.resize();
+        });
+    }
+}
+
+// Expose
+window.renderAnalytics = renderAnalytics;
+window.renderLogList = renderLogList;
+
 function renderLogList(reset = false) {
     if (reset || logsData.length === 0) {
-        logsData = generateMockLogs(15);
+        logsData = generateMockLogs(20); // Generate 20 items as requested
         
         // Bind search/filter events if not already bound
         const searchInput = document.getElementById('log-search');
@@ -863,6 +1159,7 @@ function renderLogList(reset = false) {
     const filtered = logsData.filter(log => {
         const matchesSearch = log.id.toLowerCase().includes(currentLogSearch) || 
                               log.user.toLowerCase().includes(currentLogSearch) ||
+                              log.department.toLowerCase().includes(currentLogSearch) ||
                               log.topic.toLowerCase().includes(currentLogSearch);
         const matchesStatus = currentLogFilter === 'all' || log.status === currentLogFilter;
         return matchesSearch && matchesStatus;
@@ -891,6 +1188,9 @@ function renderLogList(reset = false) {
                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-blue-600 font-mono">
                     ${log.id}
                 </td>
+                <td class="px-6 py-4 text-sm text-gray-900 max-w-xs truncate" title="${log.topic}">
+                    ${log.topic}
+                </td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     <div class="flex items-center gap-2">
                         <div class="w-6 h-6 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center text-xs">
@@ -899,25 +1199,39 @@ function renderLogList(reset = false) {
                         ${log.user}
                     </div>
                 </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    ${log.agentName}
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 font-mono">
+                    ${log.userId}
                 </td>
-                <td class="px-6 py-4 whitespace-nowrap">
-                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusClass}">
-                        ${statusText}
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs bg-gray-100 text-gray-700">
+                        ${log.department || '无部门'}
                     </span>
                 </td>
-                <td class="px-6 py-4 text-sm text-gray-900 max-w-xs truncate" title="${log.topic}">
-                    ${log.topic}
-                </td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    ${log.messageCount}
+                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs ${log.platform === 'WEB' ? 'bg-blue-50 text-blue-700 border border-blue-100' : 'bg-purple-50 text-purple-700 border border-purple-100'}">
+                        ${log.platform || 'WEB'}
+                    </span>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     ${log.createdAt}
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     ${log.updatedAt}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    ${log.messageCount}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    ${(log.copyCount || 0).toLocaleString()}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    ${(log.regenerateCount || 0).toLocaleString()}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    ${(log.translateCount || 0).toLocaleString()}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    ${(log.summarizeCount || 0).toLocaleString()}
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <button onclick="openLogDetailModal('${log.id}')" class="text-blue-600 hover:text-blue-900">查看</button>
@@ -938,17 +1252,47 @@ function openLogDetailModal(logId) {
     const contentContainer = document.getElementById('log-detail-content');
     contentContainer.innerHTML = '';
 
-    log.content.forEach(msg => {
+    log.content.forEach((msg, index) => {
         const isUser = msg.role === 'user';
         const div = document.createElement('div');
-        div.className = isUser ? 'flex gap-3 flex-row-reverse mb-4' : 'flex gap-3 mb-4';
+        div.className = isUser ? 'flex gap-3 flex-row-reverse mb-6' : 'flex gap-3 mb-6';
         
+        let feedbackHtml = '';
+        if (!isUser) {
+            const isLiked = msg.userAction === 'like';
+            const isDisliked = msg.userAction === 'dislike';
+            
+            if (isLiked) {
+                feedbackHtml = `
+                    <div class="flex items-center gap-2 mt-2 ml-1">
+                        <div class="flex items-center gap-1 text-xs text-green-600 font-medium select-none cursor-default">
+                            <i class="fa-solid fa-thumbs-up"></i>
+                        </div>
+                    </div>
+                `;
+            } else if (isDisliked) {
+                feedbackHtml = `
+                    <div class="flex items-center gap-2 mt-2 ml-1">
+                        <div class="flex items-center gap-1 text-xs text-red-600 font-medium select-none cursor-default">
+                            <i class="fa-solid fa-thumbs-down"></i>
+                        </div>
+                        <span class="text-xs text-red-500 bg-red-50 px-2 py-0.5 rounded border border-red-100 select-none">
+                            ${msg.dislikeReason || '未知原因'}
+                        </span>
+                    </div>
+                `;
+            }
+        }
+
         div.innerHTML = `
             <div class="w-8 h-8 rounded-full ${isUser ? 'bg-gray-200 text-gray-600' : 'bg-blue-100 text-blue-600'} flex items-center justify-center text-xs flex-shrink-0">
                 <i class="fa-solid fa-${isUser ? 'user' : 'robot'}"></i>
             </div>
-            <div class="${isUser ? 'bg-blue-600 text-white rounded-tr-none' : 'bg-white text-gray-800 border border-gray-100 rounded-tl-none'} rounded-2xl px-4 py-2.5 text-sm max-w-[80%] shadow-sm">
-                ${msg.text}
+            <div class="max-w-[80%]">
+                <div class="${isUser ? 'bg-blue-600 text-white rounded-tr-none' : 'bg-white text-gray-800 border border-gray-100 rounded-tl-none'} rounded-2xl px-4 py-2.5 text-sm shadow-sm">
+                    ${msg.text}
+                </div>
+                ${feedbackHtml}
             </div>
         `;
         contentContainer.appendChild(div);
@@ -1035,8 +1379,178 @@ function handleAvatarSelect(input) {
     input.value = '';
 }
 
-// --- Experience Config Logic ---
-let experienceConfig = {};
+function openCropModal(imageUrl) {
+    const image = document.getElementById('crop-image');
+    if (!image) return;
+    
+    image.src = imageUrl;
+    openModal('crop-modal');
+    
+    // Destroy previous instance if any
+    if (cropperInstance) {
+        cropperInstance.destroy();
+    }
+    
+    // Init Cropper
+    // Use timeout to ensure modal is visible for correct calculation
+    setTimeout(() => {
+        cropperInstance = new Cropper(image, {
+            aspectRatio: 1,
+            viewMode: 1,
+            dragMode: 'move',
+            autoCropArea: 0.8,
+            restore: false,
+            guides: true,
+            center: true,
+            highlight: false,
+            cropBoxMovable: true,
+            cropBoxResizable: true,
+            toggleDragModeOnDblclick: false,
+        });
+    }, 200);
+}
+
+function confirmCrop() {
+    if (!cropperInstance) return;
+    
+    // Get cropped canvas
+    const canvas = cropperInstance.getCroppedCanvas({
+        width: 200,
+        height: 200,
+    });
+    
+    currentAvatarDataUrl = canvas.toDataURL('image/png');
+    
+    // Update Preview in Edit Modal
+    const avatarPreview = document.getElementById('edit-agent-avatar-preview');
+    updateAvatarPreview(avatarPreview, currentAvatarDataUrl);
+    
+    closeModal('crop-modal');
+}
+
+function saveAgentInfo() {
+    const nameInput = document.getElementById('edit-agent-name');
+    const descInput = document.getElementById('edit-agent-desc');
+    
+    const newName = nameInput.value.trim();
+    if (!newName) {
+        showToast('请输入智能体名称', 'error');
+        return;
+    }
+
+    // Update Data if existing
+    if (currentEditorAgentId) {
+        const agent = agentsData.find(a => a.id === currentEditorAgentId);
+        if (agent) {
+            agent.name = newName;
+            agent.description = descInput.value.trim();
+            agent.avatar = currentAvatarDataUrl;
+            agent.updatedAt = new Date().toLocaleString();
+        }
+    }
+
+    // Update UI
+    const nameDisplay = document.getElementById('agent-name-display');
+    const descDisplay = document.getElementById('agent-desc-display');
+    const editorTitle = document.getElementById('editor-title');
+    const headerAvatarContainer = document.getElementById('editor-agent-avatar');
+    
+    if (nameDisplay) nameDisplay.textContent = newName;
+    if (descDisplay) descDisplay.textContent = descInput.value.trim() || '暂无描述';
+    if (editorTitle) editorTitle.textContent = currentEditorAgentId ? `编辑智能体: ${newName}` : newName;
+    
+    // Update main avatar logic
+    if (headerAvatarContainer) {
+        if (currentAvatarDataUrl) {
+            headerAvatarContainer.innerHTML = `<img src="${currentAvatarDataUrl}" class="w-full h-full object-cover rounded-xl">`;
+        } else {
+             headerAvatarContainer.innerHTML = '<i class="fa-solid fa-robot"></i>';
+        }
+    }
+
+    // Also update the hidden/main form inputs if they exist (to keep sync)
+    const mainNameInput = document.getElementById('agent-name');
+    if (mainNameInput) {
+        mainNameInput.value = newName;
+        // Store description in dataset for later save
+        mainNameInput.dataset.description = descInput.value.trim();
+    }
+
+    closeModal('edit-agent-info-modal');
+    showToast('基本信息已更新');
+}
+
+window.openEditAgentInfoModal = openEditAgentInfoModal;
+window.handleAvatarSelect = handleAvatarSelect;
+window.confirmCrop = confirmCrop;
+window.saveAgentInfo = saveAgentInfo;
+
+// --- Version Control & Publishing ---
+
+function publishAgent() {
+    if (!currentEditorAgentId) {
+        showToast('请先保存智能体基本信息', 'error');
+        return;
+    }
+    
+    const agent = agentsData.find(a => a.id === currentEditorAgentId);
+    if (!agent) return;
+
+    // Capture current config
+    const nameInput = document.getElementById('agent-name');
+    const modelInput = document.getElementById('agent-model');
+    const promptInput = document.getElementById('agent-prompt');
+    
+    const config = {
+        name: nameInput ? nameInput.value : agent.name,
+        model: modelInput ? modelInput.value : agent.model,
+        prompt: promptInput ? promptInput.value : agent.prompt,
+        knowledge: [...editorResources.knowledge],
+        relatedAgents: [...editorResources.agent],
+        orchestrators: [...editorResources.orchestrator]
+    };
+
+    // Update agent current config
+    agent.name = config.name;
+    agent.model = config.model;
+    agent.prompt = config.prompt;
+    agent.knowledge = config.knowledge;
+    agent.relatedAgents = config.relatedAgents;
+    agent.orchestrators = config.orchestrators;
+    agent.updatedAt = new Date().toLocaleString();
+    agent.timestamp = Date.now();
+
+    // Create version
+    if (!agent.versions) agent.versions = [];
+    const versionId = `v${agent.versions.length + 1}.0`;
+    agent.versions.unshift({
+        id: versionId,
+        timestamp: Date.now(),
+        date: new Date().toLocaleString(),
+        creator: 'Admin', // Mock
+        config: { ...config },
+        desc: `Updates to prompt and model configuration` // Mock description
+    });
+
+    // Show Success Modal
+    openModal('publish-success-modal');
+}
+
+function confirmPublish() {
+    const isPublishToMarket = document.getElementById('publish-to-market-check').checked;
+    
+    closeModal('publish-success-modal');
+    
+    if (isPublishToMarket) {
+        showToast('发布成功！已同步至组件广场');
+    } else {
+        showToast('发布成功！');
+    }
+}
+
+// --- Permission Management (Removed) ---
+
+// --- Experience Configuration Logic ---
 
 function initExperienceConfig(agent) {
     // Default Config
@@ -1095,7 +1609,7 @@ function initExperienceConfig(agent) {
     if (feedbackCheck) feedbackCheck.checked = experienceConfig.feedback?.enabled || false;
     if (feedbackMandatory) feedbackMandatory.checked = experienceConfig.feedback?.mandatory || false;
     if (feedbackCustom) feedbackCustom.checked = experienceConfig.feedback?.custom || false;
-
+    
     if (translationCheck) translationCheck.checked = experienceConfig.translation?.enabled || false;
     if (translationLang) translationLang.value = experienceConfig.translation?.targetLang || 'en';
     
@@ -1110,6 +1624,84 @@ function initExperienceConfig(agent) {
     renderFeedbackOptions();
 }
 
+function initThemeConfig(agent) {
+    // Default Config
+    themeConfig = {
+        background: { enabled: false, image: null, scope: 'chat', opacity: 100 },
+        themeColor: '#2563EB' // Default Blue-600
+    };
+
+    if (agent) {
+        // Migration Logic: Check if old experience background exists
+        if (agent.experience && agent.experience.background) {
+            themeConfig.background = JSON.parse(JSON.stringify(agent.experience.background));
+        }
+        
+        // Load from theme if exists (overwrites migration)
+        if (agent.theme) {
+             if (agent.theme.background) themeConfig.background = {...themeConfig.background, ...agent.theme.background};
+             if (agent.theme.themeColor) themeConfig.themeColor = agent.theme.themeColor;
+        }
+    }
+    
+    // Render UI
+    const backgroundCheck = document.getElementById('background-check');
+    const backgroundScopeChat = document.getElementById('bg-scope-chat');
+    const backgroundScopeGlobal = document.getElementById('bg-scope-global');
+    const backgroundOpacity = document.getElementById('bg-opacity-slider');
+    const backgroundOpacityValue = document.getElementById('bg-opacity-value');
+    
+    // Theme Color UI
+    const themeColorInput = document.getElementById('theme-color-input');
+    const themeColorPreview = document.getElementById('theme-color-preview');
+    
+    if (backgroundCheck) backgroundCheck.checked = themeConfig.background?.enabled || false;
+    if (backgroundScopeChat && themeConfig.background?.scope === 'chat') backgroundScopeChat.checked = true;
+    if (backgroundScopeGlobal && themeConfig.background?.scope === 'global') backgroundScopeGlobal.checked = true;
+    if (backgroundOpacity) {
+        backgroundOpacity.value = themeConfig.background?.opacity || 100;
+        if (backgroundOpacityValue) backgroundOpacityValue.textContent = `${backgroundOpacity.value}%`;
+    }
+    
+    if (themeColorInput) themeColorInput.value = themeConfig.themeColor || '#2563EB';
+    if (themeColorPreview) themeColorPreview.style.backgroundColor = themeConfig.themeColor || '#2563EB';
+
+    updateBackgroundPreview(themeConfig.background?.image);
+    
+    // Toggle UI
+    toggleThemeFeature('background', false);
+}
+
+function toggleThemeFeature(type, save = true) {
+     if (type === 'background') {
+        const check = document.getElementById('background-check');
+        const section = document.getElementById('background-settings-section');
+        if (check && section) {
+            const enabled = check.checked;
+            if (enabled) {
+                section.classList.remove('hidden');
+                applyBackgroundToPreview();
+            } else {
+                section.classList.add('hidden');
+                clearBackgroundFromPreview();
+            }
+            themeConfig.background.enabled = enabled;
+        }
+    } else if (type === 'bg-scope-chat' || type === 'bg-scope-global') {
+        themeConfig.background.scope = type === 'bg-scope-chat' ? 'chat' : 'global';
+        applyBackgroundToPreview();
+    }
+    
+    if (save) saveAgentConfig(true);
+}
+
+function updateThemeColor(color) {
+    themeConfig.themeColor = color;
+    const preview = document.getElementById('theme-color-preview');
+    if (preview) preview.style.backgroundColor = color;
+    saveAgentConfig(true);
+}
+
 function toggleExperienceFeature(type, save = true) {
     if (type === 'feedback') {
         const check = document.getElementById('feedback-check');
@@ -1120,12 +1712,6 @@ function toggleExperienceFeature(type, save = true) {
             else section.classList.add('hidden');
             experienceConfig.feedback.enabled = enabled;
         }
-    } else if (type === 'feedback-mandatory') {
-        const check = document.getElementById('feedback-mandatory-check');
-        if (check) experienceConfig.feedback.mandatory = check.checked;
-    } else if (type === 'feedback-custom') {
-        const check = document.getElementById('feedback-custom-check');
-        if (check) experienceConfig.feedback.custom = check.checked;
     } else if (type === 'translation') {
         const check = document.getElementById('translation-check');
         const section = document.getElementById('translation-settings-section');
@@ -1165,7 +1751,7 @@ function toggleExperienceFeature(type, save = true) {
 function addQuestion(type) {
     const list = type === 'welcome' ? experienceConfig.welcomeQuestions.list : experienceConfig.responseQuestions.list;
     
-    // Limit check (Welcome: 8, Response: 5)
+    // Limit check (Welcome: 8, Response: 5 as per standard UI practice, though UI text says 1-8 for welcome)
     const limit = type === 'welcome' ? 8 : 5;
     if (list.length >= limit) {
         showToast(`最多只能添加 ${limit} 个推荐问题`, 'warning');
@@ -1237,6 +1823,133 @@ function removeFeedbackOption(index) {
     experienceConfig.feedback.options.splice(index, 1);
     renderFeedbackOptions();
     saveAgentConfig(true);
+}
+
+// --- Background Settings Logic ---
+
+function handleBackgroundUpload(input) {
+    if (!input.files || !input.files[0]) return;
+    
+    const file = input.files[0];
+    
+    // Validate type
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+        showToast('仅支持 JPG, PNG, WEBP 格式', 'error');
+        input.value = '';
+        return;
+    }
+    
+    // Validate size (2MB)
+    if (file.size > 2 * 1024 * 1024) {
+        showToast('图片大小不能超过 2MB', 'error');
+        input.value = '';
+        return;
+    }
+    
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const dataUrl = e.target.result;
+        themeConfig.background.image = dataUrl;
+        updateBackgroundPreview(dataUrl);
+        applyBackgroundToPreview();
+        saveAgentConfig(true);
+    };
+    reader.readAsDataURL(file);
+}
+
+function updateBackgroundPreview(url) {
+    const previewEl = document.getElementById('bg-image-preview');
+    const placeholder = document.getElementById('bg-upload-placeholder');
+    const imageContainer = document.getElementById('bg-preview-container');
+    
+    if (url) {
+        if (placeholder) placeholder.classList.add('hidden');
+        if (imageContainer) imageContainer.classList.remove('hidden');
+        if (previewEl) previewEl.src = url;
+    } else {
+        if (placeholder) placeholder.classList.remove('hidden');
+        if (imageContainer) imageContainer.classList.add('hidden');
+        if (previewEl) previewEl.src = '';
+    }
+}
+
+function removeBackground() {
+    themeConfig.background.image = null;
+    document.getElementById('bg-upload-input').value = '';
+    updateBackgroundPreview(null);
+    applyBackgroundToPreview();
+    saveAgentConfig(true);
+}
+
+function updateBackgroundOpacity(value) {
+    themeConfig.background.opacity = parseInt(value);
+    const label = document.getElementById('bg-opacity-value');
+    if (label) label.textContent = `${value}%`;
+    applyBackgroundToPreview();
+    saveAgentConfig(true); // Maybe debounce this in real app
+}
+
+function applyBackgroundToPreview() {
+    // Apply to editor preview
+    const previewContainer = document.getElementById('preview-chat-container');
+    const previewWrapper = previewContainer ? previewContainer.parentElement : null;
+    
+    if (!previewContainer || !themeConfig.background.enabled || !themeConfig.background.image) {
+        clearBackgroundFromPreview();
+        return;
+    }
+
+    const { image, scope, opacity } = themeConfig.background;
+    const styleString = `url('${image}')`;
+    const opacityVal = opacity / 100;
+    
+    // Reset first
+    if (previewWrapper) previewWrapper.style.backgroundImage = 'none';
+    previewContainer.style.backgroundImage = 'none';
+    previewContainer.style.backgroundColor = ''; // clear any bg color override if needed
+    
+    // Apply
+    if (scope === 'global') {
+        if (previewWrapper) {
+            previewWrapper.style.backgroundImage = styleString;
+            previewWrapper.style.backgroundSize = 'cover';
+            previewWrapper.style.backgroundPosition = 'center';
+            previewWrapper.style.position = 'relative';
+            // Opacity is tricky for background image only without affecting content. 
+            // Usually requires a pseudo-element overlay. 
+            // For simplicity here, we might just set opacity on a pseudo element? 
+            // Or use a background-color with alpha if it was color.
+            // Since it's an image, standard CSS 'opacity' property affects content too.
+            // Best practice is pseudo element.
+            // Let's assume for this preview we use a simple approach: 
+            // We can't easily do opacity on bg image only via JS inline styles without structure change.
+            // Alternative: Use a before element class, but we are using inline styles for dynamic image.
+            // Let's skip strict opacity visual in Editor Preview for now OR simply not support opacity perfectly in preview 
+            // UNLESS we inject a style tag.
+            // Actually, we can use linear-gradient hack for opacity:
+            // linear-gradient(rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0.5)), url(...)
+            
+            const overlayAlpha = 1 - opacityVal;
+            const overlayColor = `rgba(255, 255, 255, ${overlayAlpha})`;
+            previewWrapper.style.backgroundImage = `linear-gradient(${overlayColor}, ${overlayColor}), ${styleString}`;
+        }
+    } else {
+        // Chat scope
+        const overlayAlpha = 1 - opacityVal;
+        const overlayColor = `rgba(255, 255, 255, ${overlayAlpha})`;
+        previewContainer.style.backgroundImage = `linear-gradient(${overlayColor}, ${overlayColor}), ${styleString}`;
+        previewContainer.style.backgroundSize = 'cover';
+        previewContainer.style.backgroundPosition = 'center';
+        previewContainer.style.backgroundAttachment = 'local'; // Scrolls with content
+    }
+}
+
+function clearBackgroundFromPreview() {
+    const previewContainer = document.getElementById('preview-chat-container');
+    const previewWrapper = previewContainer ? previewContainer.parentElement : null;
+    
+    if (previewContainer) previewContainer.style.backgroundImage = '';
+    if (previewWrapper) previewWrapper.style.backgroundImage = '';
 }
 
 // --- Variable Picker Logic ---
@@ -1411,532 +2124,137 @@ window.selectVariable = selectVariable;
 window.onVariableSearchInput = onVariableSearchInput;
 window.addFeedbackOption = addFeedbackOption;
 window.removeFeedbackOption = removeFeedbackOption;
+window.handleBackgroundUpload = handleBackgroundUpload;
+window.removeBackground = removeBackground;
+window.updateBackgroundOpacity = updateBackgroundOpacity;
+window.updateThemeColor = updateThemeColor;
+window.toggleThemeFeature = toggleThemeFeature;
 
+// --- Feedback Logic ---
 
-function openCropModal(imageUrl) {
-    const image = document.getElementById('crop-image');
-    if (!image) return;
+let currentDislikeLogId = null;
+let currentDislikeMsgId = null;
+
+function toggleLike(logId, msgId) {
+    const log = logsData.find(l => l.id === logId);
+    if (!log) return;
     
-    image.src = imageUrl;
-    openModal('crop-modal');
-    
-    // Destroy previous instance if any
-    if (cropperInstance) {
-        cropperInstance.destroy();
-    }
-    
-    // Init Cropper
-    // Use timeout to ensure modal is visible for correct calculation
-    setTimeout(() => {
-        cropperInstance = new Cropper(image, {
-            aspectRatio: 1,
-            viewMode: 1,
-            dragMode: 'move',
-            autoCropArea: 0.8,
-            restore: false,
-            guides: true,
-            center: true,
-            highlight: false,
-            cropBoxMovable: true,
-            cropBoxResizable: true,
-            toggleDragModeOnDblclick: false,
-        });
-    }, 200);
-}
+    const msg = log.content.find(m => m.id === msgId);
+    if (!msg) return;
 
-function confirmCrop() {
-    if (!cropperInstance) return;
-    
-    // Get cropped canvas
-    const canvas = cropperInstance.getCroppedCanvas({
-        width: 200,
-        height: 200,
-    });
-    
-    currentAvatarDataUrl = canvas.toDataURL('image/png');
-    
-    // Update Preview in Edit Modal
-    const avatarPreview = document.getElementById('edit-agent-avatar-preview');
-    updateAvatarPreview(avatarPreview, currentAvatarDataUrl);
-    
-    closeModal('crop-modal');
-}
-
-function saveAgentInfo() {
-    const nameInput = document.getElementById('edit-agent-name');
-    const descInput = document.getElementById('edit-agent-desc');
-    
-    const newName = nameInput.value.trim();
-    if (!newName) {
-        showToast('请输入智能体名称', 'error');
-        return;
-    }
-
-    // Update Data if existing
-    if (currentEditorAgentId) {
-        const agent = agentsData.find(a => a.id === currentEditorAgentId);
-        if (agent) {
-            agent.name = newName;
-            agent.description = descInput.value.trim();
-            agent.avatar = currentAvatarDataUrl;
-            agent.updatedAt = new Date().toLocaleString();
-        }
-    }
-
-    // Update UI
-    const nameDisplay = document.getElementById('agent-name-display');
-    const descDisplay = document.getElementById('agent-desc-display');
-    const editorTitle = document.getElementById('editor-title');
-    const headerAvatarContainer = document.getElementById('editor-agent-avatar');
-    
-    if (nameDisplay) nameDisplay.textContent = newName;
-    if (descDisplay) descDisplay.textContent = descInput.value.trim() || '暂无描述';
-    if (editorTitle) editorTitle.textContent = currentEditorAgentId ? `编辑智能体: ${newName}` : newName;
-    
-    // Update main avatar logic
-    if (headerAvatarContainer) {
-        if (currentAvatarDataUrl) {
-            headerAvatarContainer.innerHTML = `<img src="${currentAvatarDataUrl}" class="w-full h-full object-cover rounded-xl">`;
-        } else {
-             headerAvatarContainer.innerHTML = '<i class="fa-solid fa-robot"></i>';
-        }
-    }
-
-    // Also update the hidden/main form inputs if they exist (to keep sync)
-    const mainNameInput = document.getElementById('agent-name');
-    if (mainNameInput) {
-        mainNameInput.value = newName;
-        // Store description in dataset for later save
-        mainNameInput.dataset.description = descInput.value.trim();
-    }
-
-    closeModal('edit-agent-info-modal');
-    showToast('基本信息已更新');
-}
-
-window.openEditAgentInfoModal = openEditAgentInfoModal;
-window.handleAvatarSelect = handleAvatarSelect;
-window.confirmCrop = confirmCrop;
-window.saveAgentInfo = saveAgentInfo;
-
-// --- Version Control & Publishing ---
-
-function publishAgent() {
-    if (!currentEditorAgentId) {
-        showToast('请先保存智能体基本信息', 'error');
-        return;
-    }
-    
-    const agent = agentsData.find(a => a.id === currentEditorAgentId);
-    if (!agent) return;
-
-    // Capture current config
-    const nameInput = document.getElementById('agent-name');
-    const modelInput = document.getElementById('agent-model');
-    const promptInput = document.getElementById('agent-prompt');
-    
-    const config = {
-        name: nameInput ? nameInput.value : agent.name,
-        model: modelInput ? modelInput.value : agent.model,
-        prompt: promptInput ? promptInput.value : agent.prompt,
-        knowledge: [...editorResources.knowledge],
-        relatedAgents: [...editorResources.agent],
-        orchestrators: [...editorResources.orchestrator]
-    };
-
-    // Update agent current config
-    agent.name = config.name;
-    agent.model = config.model;
-    agent.prompt = config.prompt;
-    agent.knowledge = config.knowledge;
-    agent.relatedAgents = config.relatedAgents;
-    agent.orchestrators = config.orchestrators;
-    agent.updatedAt = new Date().toLocaleString();
-    agent.timestamp = Date.now();
-
-    // Create version
-    if (!agent.versions) agent.versions = [];
-    const versionId = `v${agent.versions.length + 1}.0`;
-    agent.versions.unshift({
-        id: versionId,
-        timestamp: Date.now(),
-        date: new Date().toLocaleString(),
-        creator: 'Admin', // Mock
-        config: { ...config },
-        desc: `Updates to prompt and model configuration` // Mock description
-    });
-
-    // Show Success Modal
-    openModal('publish-success-modal');
-}
-
-function confirmPublish() {
-    const isPublishToMarket = document.getElementById('publish-to-market-check').checked;
-    
-    closeModal('publish-success-modal');
-    
-    if (isPublishToMarket) {
-        showToast('发布成功！已同步至组件广场');
+    if (msg.userAction === 'like') {
+        // Cancel Like
+        msg.userAction = null;
+        msg.likeCount--;
     } else {
-        showToast('发布成功！');
+        // Like (and cancel dislike if exists)
+        if (msg.userAction === 'dislike') {
+            msg.dislikeCount--;
+            msg.dislikeReason = null; // Clear reason
+        }
+        msg.userAction = 'like';
+        msg.likeCount++;
     }
+    
+    // Re-render
+    openLogDetailModal(logId);
+    showToast('操作成功');
 }
 
-// --- Permission Management ---
-
-let currentPermissionAgentId = null;
-let permissionChanges = {
-    manage: [],
-    edit: [],
-    view: []
-};
-
-// Mock Users and Depts
-const mockUsers = [
-    { id: 'u1', name: '张三', dept: '研发部', avatar: 'https://ui-avatars.com/api/?name=ZS&background=0D8ABC&color=fff' },
-    { id: 'u2', name: '李四', dept: '产品部', avatar: 'https://ui-avatars.com/api/?name=LS&background=0D8ABC&color=fff' },
-    { id: 'u3', name: '王五', dept: '运营部', avatar: 'https://ui-avatars.com/api/?name=WW&background=0D8ABC&color=fff' },
-    { id: 'u4', name: '赵六', dept: '研发部', avatar: 'https://ui-avatars.com/api/?name=ZL&background=0D8ABC&color=fff' },
-    { id: 'u5', name: '陈七', dept: '市场部', avatar: 'https://ui-avatars.com/api/?name=CQ&background=0D8ABC&color=fff' }
-];
-
-const mockDepts = [
-    { id: 'd1', name: '研发部', count: 12 },
-    { id: 'd2', name: '产品部', count: 5 },
-    { id: 'd3', name: '运营部', count: 8 },
-    { id: 'd4', name: '市场部', count: 6 },
-    { id: 'd5', name: '设计部', count: 4 }
-];
-
-function openPermissionModal(agentId) {
-    console.log('Opening permission modal for agent:', agentId);
-    currentPermissionAgentId = agentId;
-    const agent = agentsData.find(a => a.id === agentId);
+function openDislikeModal(logId, msgId) {
+    const log = logsData.find(l => l.id === logId);
+    if (!log) return;
     
-    if (!agent) {
-        console.error('Agent not found:', agentId);
-        showToast('未找到智能体数据', 'error');
+    const msg = log.content.find(m => m.id === msgId);
+    if (!msg) return;
+
+    // If already disliked, we might want to just cancel it or edit reason?
+    // Let's assume clicking again cancels it for simplicity, OR opens modal to edit.
+    // If we want to toggle:
+    if (msg.userAction === 'dislike') {
+        msg.userAction = null;
+        msg.dislikeCount--;
+        msg.dislikeReason = null; // Clear reason
+        openLogDetailModal(logId);
+        showToast('已取消点踩');
         return;
     }
 
-    // Init permissions if not exist
-    if (!agent.permissions) {
-        agent.permissions = {
-            manage: [],
-            edit: [],
-            view: []
-        };
-    }
-
-    // Clone to local state
-    permissionChanges = JSON.parse(JSON.stringify(agent.permissions));
+    currentDislikeLogId = logId;
+    currentDislikeMsgId = msgId;
     
-    const modalTitle = document.getElementById('permission-modal-title');
-    const modal = document.getElementById('permission-modal');
+    // Reset Modal
+    const radios = document.getElementsByName('dislike-reason');
+    radios.forEach(r => r.checked = false);
+    document.getElementById('dislike-reason-custom').value = '';
+    document.getElementById('dislike-reason-custom').classList.add('hidden');
+    
+    openModal('dislike-reason-modal');
+}
 
-    if (!modal || !modalTitle) {
-        console.error('Permission modal elements not found in DOM');
-        alert('页面资源未完全加载，请尝试刷新页面');
+function confirmDislike() {
+    if (!currentDislikeLogId || !currentDislikeMsgId) return;
+
+    const radios = document.getElementsByName('dislike-reason');
+    let selectedReason = null;
+    for (const r of radios) {
+        if (r.checked) {
+            selectedReason = r.value;
+            break;
+        }
+    }
+    
+    if (!selectedReason) {
+        showToast('请选择原因', 'warning');
         return;
     }
-
-    // Set Title
-    modalTitle.textContent = `权限配置 - ${agent.name}`;
     
-    try {
-        renderPermissionUI();
-        openModal('permission-modal');
-    } catch (e) {
-        console.error('Error rendering permission UI:', e);
-        showToast('界面渲染出错', 'error');
-    }
-}
-
-function getPermissionTree(role) {
-    const common = [
-        { name: '使用智能体', checked: true },
-        { name: '查看会话日志', checked: role !== 'view' },
-    ];
-    
-    const edit = [
-        { name: '修改基础信息', checked: true },
-        { name: '配置提示词', checked: true },
-        { name: '管理知识库', checked: true },
-        { name: '发布版本', checked: true },
-    ];
-    
-    const manage = [
-        { name: '管理成员权限', checked: true },
-        { name: '删除智能体', checked: true },
-    ];
-    
-    let items = [];
-    if (role === 'view') items = [...common];
-    else if (role === 'edit') items = [...common, ...edit];
-    else if (role === 'manage') items = [...common, ...edit, ...manage];
-    
-    // Grouping for "Multi-level" feel
-    return `
-        <div class="mt-2 mb-3 bg-white p-2 rounded border border-gray-100 text-xs">
-            <div class="font-medium text-gray-500 mb-1 flex items-center justify-between cursor-pointer hover:bg-gray-50 rounded px-1 transition-colors" onclick="togglePermTree('${role}')">
-                <span class="flex items-center gap-1"><i class="fa-solid fa-shield-alt text-gray-400"></i> 权限详情</span>
-                <i class="fa-solid fa-chevron-down transition-transform duration-200" id="perm-arrow-${role}"></i>
-            </div>
-            <div id="perm-tree-${role}" class="hidden space-y-2 pl-1 pt-2 border-t border-gray-50 mt-1">
-                ${items.map(item => `
-                    <label class="flex items-center gap-2 text-gray-700 cursor-not-allowed opacity-80">
-                        <input type="checkbox" class="rounded text-blue-600 focus:ring-blue-500 w-3.5 h-3.5 border-gray-300" ${item.checked ? 'checked' : ''} disabled>
-                        <span>${item.name}</span>
-                    </label>
-                `).join('')}
-            </div>
-        </div>
-    `;
-}
-
-window.togglePermTree = function(role) {
-    const tree = document.getElementById(`perm-tree-${role}`);
-    const arrow = document.getElementById(`perm-arrow-${role}`);
-    if (tree && arrow) {
-        if (tree.classList.contains('hidden')) {
-            tree.classList.remove('hidden');
-            arrow.classList.add('rotate-180');
-        } else {
-            tree.classList.add('hidden');
-            arrow.classList.remove('rotate-180');
-        }
-    }
-}
-
-function renderPermissionUI() {
-    ['manage', 'edit', 'view'].forEach(role => {
-        const container = document.getElementById(`role-list-${role}`);
-        if (!container) return;
-        
-        // Find or create permission tree container
-        const parent = container.parentElement;
-        let treeContainer = parent.querySelector(`.perm-tree-container`);
-        
-        if (!treeContainer) {
-            treeContainer = document.createElement('div');
-            treeContainer.className = 'perm-tree-container';
-            treeContainer.innerHTML = getPermissionTree(role);
-            parent.insertBefore(treeContainer, container);
-        } else {
-            // Update tree content in case logic changes (optional, but safer)
-            treeContainer.innerHTML = getPermissionTree(role);
-        }
-
-        container.innerHTML = '';
-        
-        const members = permissionChanges[role] || [];
-        
-        if (members.length === 0) {
-            container.innerHTML = '<span class="text-sm text-gray-400 italic py-1 pl-1">暂无成员</span>';
+    if (selectedReason === 'other') {
+        const customReason = document.getElementById('dislike-reason-custom').value.trim();
+        if (!customReason) {
+            showToast('请输入具体原因', 'warning');
             return;
         }
-
-        members.forEach(member => {
-            const el = document.createElement('div');
-            el.className = 'flex items-center gap-2 bg-gray-100 rounded-full pl-1 pr-3 py-1 border border-gray-200 group hover:bg-gray-200 transition-colors';
-            
-            let iconHtml = '';
-            if (member.type === 'dept' || member.dept === 'dept') { // Handle both formats if any
-                 iconHtml = `<span class="w-6 h-6 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center text-xs"><i class="fa-solid fa-sitemap"></i></span>`;
-            } else {
-                iconHtml = `<img src="${member.avatar || 'https://ui-avatars.com/api/?name=' + member.name}" class="w-6 h-6 rounded-full object-cover">`;
+        selectedReason = customReason;
+    }
+    
+    // Update Data
+    const log = logsData.find(l => l.id === currentDislikeLogId);
+    if (log) {
+        const msg = log.content.find(m => m.id === currentDislikeMsgId);
+        if (msg) {
+            if (msg.userAction === 'like') {
+                msg.likeCount--;
             }
-
-            el.innerHTML = `
-                ${iconHtml}
-                <span class="text-sm text-gray-700">${member.name}</span>
-                <button onclick="removePermissionMember('${role}', '${member.id}')" class="text-gray-400 hover:text-red-500 ml-1 transition-colors opacity-0 group-hover:opacity-100">
-                    <i class="fa-solid fa-times-circle"></i>
-                </button>
-            `;
-            container.appendChild(el);
-        });
-    });
-}
-
-function removePermissionMember(role, memberId) {
-    if (!permissionChanges[role]) return;
-    permissionChanges[role] = permissionChanges[role].filter(m => m.id !== memberId);
-    renderPermissionUI();
-}
-
-function savePermissions() {
-    if (!currentPermissionAgentId) return;
-    const agent = agentsData.find(a => a.id === currentPermissionAgentId);
-    if (agent) {
-        agent.permissions = JSON.parse(JSON.stringify(permissionChanges));
-        showToast('权限配置已保存');
-        closeModal('permission-modal');
-        // Log operation (mock)
-        console.log(`Permissions updated for Agent ${agent.name}`, agent.permissions);
-    }
-}
-
-// Member Selector Logic
-let currentSelectorRole = null;
-let currentSelectorTab = 'user'; // 'user' or 'dept'
-let selectorSelected = []; // Temporary selection in selector
-
-function openMemberSelector(role) {
-    currentSelectorRole = role;
-    selectorSelected = []; // Reset selection
-    currentSelectorTab = 'user'; // Reset tab
-    
-    // Bind search input event dynamically
-    const memberSearch = document.getElementById('member-search-input');
-    if (memberSearch) {
-        memberSearch.value = ''; // Clear search
-        // Remove old listener to avoid duplicates? 
-        // cloneNode is a cheap way to strip listeners, but might break other things.
-        // Better: just assign oninput property which overwrites.
-        memberSearch.oninput = updateSelectorUI;
-    }
-
-    updateSelectorUI();
-    openModal('member-selector-modal');
-}
-
-function switchSelectorTab(tab) {
-    currentSelectorTab = tab;
-    updateSelectorUI();
-}
-
-function updateSelectorUI() {
-    // Update Tabs Style
-    const userTab = document.getElementById('tab-selector-user');
-    const deptTab = document.getElementById('tab-selector-dept');
-    
-    if (currentSelectorTab === 'user') {
-        userTab.className = 'flex-1 py-2 text-sm font-medium text-blue-600 border-b-2 border-blue-600 bg-blue-50/50';
-        deptTab.className = 'flex-1 py-2 text-sm font-medium text-gray-500 hover:text-gray-700';
-    } else {
-        userTab.className = 'flex-1 py-2 text-sm font-medium text-gray-500 hover:text-gray-700';
-        deptTab.className = 'flex-1 py-2 text-sm font-medium text-blue-600 border-b-2 border-blue-600 bg-blue-50/50';
-    }
-    
-    // Render List
-    const listContainer = document.getElementById('member-selector-list');
-    listContainer.innerHTML = '';
-    
-    const data = currentSelectorTab === 'user' ? mockUsers : mockDepts;
-    const searchTerm = (document.getElementById('member-search-input').value || '').toLowerCase();
-    
-    data.filter(item => item.name.toLowerCase().includes(searchTerm)).forEach(item => {
-        const isSelected = selectorSelected.some(s => s.id === item.id);
-        
-        const div = document.createElement('div');
-        div.className = `flex items-center justify-between p-2 rounded cursor-pointer transition-colors ${isSelected ? 'bg-blue-50 border border-blue-100' : 'hover:bg-gray-50 border border-transparent'}`;
-        div.onclick = () => toggleSelectorItem(item);
-        
-        let leftContent = '';
-        if (currentSelectorTab === 'user') {
-            leftContent = `
-                <div class="flex items-center gap-3">
-                    <img src="${item.avatar}" class="w-8 h-8 rounded-full">
-                    <div>
-                        <div class="text-sm font-medium text-gray-800">${item.name}</div>
-                        <div class="text-xs text-gray-500">${item.dept}</div>
-                    </div>
-                </div>
-            `;
-        } else {
-            leftContent = `
-                <div class="flex items-center gap-3">
-                    <div class="w-8 h-8 rounded bg-indigo-100 text-indigo-600 flex items-center justify-center">
-                        <i class="fa-solid fa-sitemap"></i>
-                    </div>
-                    <div>
-                        <div class="text-sm font-medium text-gray-800">${item.name}</div>
-                        <div class="text-xs text-gray-500">${item.count} 人</div>
-                    </div>
-                </div>
-            `;
-        }
-        
-        div.innerHTML = `
-            ${leftContent}
-            <div class="w-5 h-5 rounded-full border ${isSelected ? 'bg-blue-600 border-blue-600 text-white' : 'border-gray-300'} flex items-center justify-center">
-                ${isSelected ? '<i class="fa-solid fa-check text-xs"></i>' : ''}
-            </div>
-        `;
-        
-        listContainer.appendChild(div);
-    });
-    
-    // Update Preview Area
-    const previewArea = document.getElementById('selected-preview-area');
-    const countSpan = document.getElementById('selected-count');
-    
-    countSpan.textContent = selectorSelected.length;
-    previewArea.innerHTML = '';
-    
-    selectorSelected.forEach(item => {
-        const tag = document.createElement('div');
-        tag.className = 'flex items-center gap-1 bg-blue-50 text-blue-700 px-2 py-0.5 rounded text-xs border border-blue-100';
-        tag.innerHTML = `
-            <span>${item.name}</span>
-            <i class="fa-solid fa-times cursor-pointer hover:text-blue-900" onclick="event.stopPropagation(); toggleSelectorItem({id: '${item.id}'})"></i>
-        `;
-        previewArea.appendChild(tag);
-    });
-}
-
-function toggleSelectorItem(item) {
-    const idx = selectorSelected.findIndex(s => s.id === item.id);
-    if (idx >= 0) {
-        selectorSelected.splice(idx, 1);
-    } else {
-        // Need full item data if adding
-        const fullItem = [...mockUsers, ...mockDepts].find(i => i.id === item.id);
-        if (fullItem) {
-            selectorSelected.push({
-                id: fullItem.id,
-                name: fullItem.name,
-                type: fullItem.dept ? 'user' : 'dept', // heuristic
-                avatar: fullItem.avatar
-            });
+            msg.userAction = 'dislike';
+            msg.dislikeCount++;
+            msg.dislikeReason = selectedReason;
         }
     }
-    updateSelectorUI();
+    
+    closeModal('dislike-reason-modal');
+    openLogDetailModal(currentDislikeLogId);
+    showToast('反馈已提交');
+    
+    currentDislikeLogId = null;
+    currentDislikeMsgId = null;
 }
 
-function confirmMemberSelection() {
-    if (!currentSelectorRole) return;
-    
-    // Merge selection into permissionChanges
-    // Filter out duplicates
-    const currentMembers = permissionChanges[currentSelectorRole] || [];
-    
-    selectorSelected.forEach(newItem => {
-        if (!currentMembers.some(existing => existing.id === newItem.id)) {
-            currentMembers.push(newItem);
+// Bind radio change for custom reason visibility
+document.addEventListener('change', (e) => {
+    if (e.target.name === 'dislike-reason') {
+        const customInput = document.getElementById('dislike-reason-custom');
+        if (customInput) {
+            if (e.target.value === 'other') {
+                customInput.classList.remove('hidden');
+            } else {
+                customInput.classList.add('hidden');
+            }
         }
-    });
-    
-    permissionChanges[currentSelectorRole] = currentMembers;
-    
-    renderPermissionUI();
-    closeModal('member-selector-modal');
-}
+    }
+});
 
-// Bind Search Input - Moved to openMemberSelector
-// document.addEventListener('DOMContentLoaded', () => {
-//    const memberSearch = document.getElementById('member-search-input');
-//    if (memberSearch) {
-//        memberSearch.addEventListener('input', updateSelectorUI);
-//    }
-// });
-
-window.openPermissionModal = openPermissionModal;
-window.renderPermissionUI = renderPermissionUI;
-window.removePermissionMember = removePermissionMember;
-window.savePermissions = savePermissions;
-window.openMemberSelector = openMemberSelector;
-window.switchSelectorTab = switchSelectorTab;
-window.toggleSelectorItem = toggleSelectorItem;
-window.confirmMemberSelection = confirmMemberSelection;
+// Expose functions
+window.toggleLike = toggleLike;
+window.openDislikeModal = openDislikeModal;
+window.confirmDislike = confirmDislike;

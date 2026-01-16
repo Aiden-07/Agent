@@ -1,6 +1,0 @@
-@echo off
-echo Starting Agent Editor...
-start AgentEditor.exe
-echo Waiting for server to start...
-timeout /t 2 >nul
-start http://localhost:8000
