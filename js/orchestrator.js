@@ -113,7 +113,9 @@ function renderOrchestratorList() {
                         <i class="fa-solid fa-diagram-project"></i>
                     </div>
                     <div>
-                        <div class="font-medium text-gray-900">${item.name}</div>
+                        <button type="button" class="font-medium text-gray-900 text-left cursor-pointer hover:text-blue-600" onclick="window.editOrchestrator && window.editOrchestrator('${item.id}')">
+                            ${item.name}
+                        </button>
                         <div class="text-xs text-gray-500 truncate max-w-[150px]" title="${item.description}">${item.description}</div>
                     </div>
                 </div>
