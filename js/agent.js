@@ -601,6 +601,7 @@ let editorResources = {
 let experienceConfig;
 let themeConfig;
 let agentI18nConfig;
+let agentI18nModalInitialSelectedCount = 0;
 
 function loadResources() {
     // Check and load Knowledge Data
@@ -1701,12 +1702,17 @@ function initAgentI18nConfig(agent) {
             agentI18nConfig.customInfo = JSON.parse(JSON.stringify(agent.i18n.customInfo));
         }
     }
+    if (!Array.isArray(agentI18nConfig.languages) || !agentI18nConfig.languages.length) {
+        agentI18nConfig.languages = ['zh'];
+    } else if (!agentI18nConfig.languages.includes('zh')) {
+        agentI18nConfig.languages = ['zh', ...agentI18nConfig.languages];
+    }
     const switchEl = document.getElementById('agent-i18n-switch');
     const displayEl = document.getElementById('agent-i18n-display');
     if (switchEl) switchEl.checked = !!agentI18nConfig.enabled;
     if (displayEl) {
-        if (agentI18nConfig.enabled) displayEl.classList.remove('opacity-50', 'pointer-events-none');
-        else displayEl.classList.add('opacity-50', 'pointer-events-none');
+        if (agentI18nConfig.enabled) displayEl.classList.remove('hidden');
+        else displayEl.classList.add('hidden');
     }
     updateAgentI18nSelectedLanguagesUI();
 }
@@ -1743,11 +1749,8 @@ function toggleAgentI18n() {
     }
     agentI18nConfig.enabled = !!enabled;
     if (displayEl) {
-        if (enabled) {
-            displayEl.classList.remove('opacity-50', 'pointer-events-none');
-        } else {
-            displayEl.classList.add('opacity-50', 'pointer-events-none');
-        }
+        if (enabled) displayEl.classList.remove('hidden');
+        else displayEl.classList.add('hidden');
     }
     if (enabled && (!agentI18nConfig.languages || !agentI18nConfig.languages.length)) {
         openAgentI18nLanguagesModal();
@@ -1756,6 +1759,8 @@ function toggleAgentI18n() {
 }
 
 function openAgentI18nLanguagesModal() {
+    const langs = agentI18nConfig && Array.isArray(agentI18nConfig.languages) ? agentI18nConfig.languages : [];
+    agentI18nModalInitialSelectedCount = langs.filter(code => code !== 'zh').length;
     const searchInput = document.getElementById('agent-i18n-search');
     if (searchInput) {
         searchInput.value = '';
@@ -1765,6 +1770,22 @@ function openAgentI18nLanguagesModal() {
     }
     renderAgentI18nLanguageList('');
     openModal('agent-i18n-modal');
+}
+
+function cancelAgentI18nSelection() {
+    if (!agentI18nConfig) {
+        closeModal('agent-i18n-modal');
+        return;
+    }
+    if (agentI18nModalInitialSelectedCount === 0) {
+        const switchEl = document.getElementById('agent-i18n-switch');
+        const displayEl = document.getElementById('agent-i18n-display');
+        if (switchEl) switchEl.checked = false;
+        agentI18nConfig.enabled = false;
+        if (displayEl) displayEl.classList.add('hidden');
+        saveAgentConfig(true);
+    }
+    closeModal('agent-i18n-modal');
 }
 
 function openAgentI18nModalFromDisplay() {
@@ -1788,6 +1809,7 @@ function renderAgentI18nLanguageList(keyword) {
         return l.code.toLowerCase().includes(kw) || l.label.toLowerCase().includes(kw);
     }).forEach(lang => {
         const id = `agent-i18n-lang-${lang.code}`;
+        const isFixed = lang.code === 'zh';
         const wrapper = document.createElement('div');
         wrapper.className = 'flex items-center justify-between px-3 py-2 rounded-lg border border-gray-100 hover:border-blue-300 hover:bg-blue-50/40 cursor-pointer';
         const left = document.createElement('div');
@@ -1805,11 +1827,13 @@ function renderAgentI18nLanguageList(keyword) {
         input.type = 'checkbox';
         input.id = id;
         input.className = 'w-4 h-4 text-blue-600 border-gray-300 rounded';
-        input.checked = selected.includes(lang.code);
+        input.checked = isFixed || selected.includes(lang.code);
+        if (isFixed) input.disabled = true;
         right.appendChild(input);
         wrapper.appendChild(left);
         wrapper.appendChild(right);
         wrapper.onclick = function (e) {
+            if (isFixed) return;
             if (e.target.tagName !== 'INPUT') {
                 input.checked = !input.checked;
             }
@@ -2364,6 +2388,7 @@ window.openAgentI18nModalFromDisplay = openAgentI18nModalFromDisplay;
 window.openAgentI18nCustomModal = openAgentI18nCustomModal;
 window.confirmAgentI18nSelection = confirmAgentI18nSelection;
 window.confirmAgentI18nCustom = confirmAgentI18nCustom;
+window.cancelAgentI18nSelection = cancelAgentI18nSelection;
 
 // --- Feedback Logic ---
 

@@ -13,6 +13,8 @@
     <script src="../js/utils.js"></script>
     <script src="../js/parser.js"></script>
     <script src="../js/components.js"></script>
+    <script src="../js/agent.js"></script>
+    <script src="../js/knowledge.js"></script>
     <!-- We might need other scripts if we test more -->
 
     <!-- Test Suite -->
@@ -37,6 +39,8 @@
             await testMobilePositioning();
             await testParserPage();
             await testComponentsPage();
+            await testI18nConfig();
+            await testRetrievalSettings();
         }
 
         async function testParserPage() {
@@ -237,6 +241,88 @@
             }
             
             btn.remove();
+        }
+
+        async function testI18nConfig() {
+            console.log('Testing I18n Config...');
+
+            const i18nSwitch = document.createElement('input');
+            i18nSwitch.type = 'checkbox';
+            i18nSwitch.id = 'agent-i18n-switch';
+            document.body.appendChild(i18nSwitch);
+
+            const i18nDisplay = document.createElement('div');
+            i18nDisplay.id = 'agent-i18n-display';
+            i18nDisplay.className = 'hidden';
+            document.body.appendChild(i18nDisplay);
+
+            const modal = document.createElement('div');
+            modal.id = 'agent-i18n-modal';
+            modal.className = 'hidden';
+            document.body.appendChild(modal);
+
+            window.agentI18nConfig = { enabled: false, languages: ['zh'] };
+            window.saveAgentConfig = function() {};
+
+            try {
+                window.initAgentI18nConfig(window.agentI18nConfig);
+                assert(i18nSwitch.checked === false, 'I18n switch should be off when disabled');
+                assert(i18nDisplay.classList.contains('hidden'), 'I18n display should be hidden when disabled');
+
+                window.toggleAgentI18n();
+                assert(window.agentI18nConfig.enabled === true, 'I18n config should be enabled after toggle');
+                assert(i18nDisplay.classList.contains('hidden') === false, 'I18n display should be visible when enabled');
+
+                window.openAgentI18nLanguagesModal();
+                assert(modal.classList.contains('hidden') === false, 'I18n modal should be visible after open');
+
+                window.agentI18nModalInitialSelectedCount = 0;
+                window.cancelAgentI18nSelection();
+                assert(window.agentI18nConfig.enabled === false, 'I18n config should be disabled after cancel with no selection');
+                assert(i18nSwitch.checked === false, 'I18n switch should be off after cancel with no selection');
+                assert(i18nDisplay.classList.contains('hidden'), 'I18n display should be hidden after cancel with no selection');
+            } catch (e) {
+                assert(false, 'Exception during testI18nConfig: ' + e.message);
+                console.error(e);
+            }
+
+            i18nSwitch.remove();
+            i18nDisplay.remove();
+            modal.remove();
+        }
+
+        async function testRetrievalSettings() {
+            console.log('Testing Retrieval Settings...');
+
+            const select = document.createElement('select');
+            select.id = 'create-kb-retrieval-mode';
+            document.body.appendChild(select);
+
+            const optionEmpty = document.createElement('option');
+            optionEmpty.value = '';
+            select.appendChild(optionEmpty);
+
+            const container = document.createElement('div');
+            container.id = 'create-kb-retrieval-config';
+            document.body.appendChild(container);
+
+            try {
+                select.value = 'vector';
+                select.dispatchEvent(new Event('change', { bubbles: true }));
+                assert(container.innerHTML.includes('create-kb-rerank-model'), 'Vector mode should render rerank model field');
+                assert(container.innerHTML.includes('create-kb-top-k'), 'Vector mode should render Top K field');
+                assert(container.innerHTML.includes('create-kb-score-threshold'), 'Vector mode should render score threshold field');
+
+                select.value = 'hybrid';
+                select.dispatchEvent(new Event('change', { bubbles: true }));
+                assert(container.innerHTML.includes('create-kb-weight'), 'Hybrid mode should render weight field');
+            } catch (e) {
+                assert(false, 'Exception during testRetrievalSettings: ' + e.message);
+                console.error(e);
+            }
+
+            select.remove();
+            container.remove();
         }
 
         // Run Tests

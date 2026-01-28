@@ -215,10 +215,77 @@ window.openKnowledgeActions = function(event, id) {
     ]);
 }
 
+function renderCreateKbRetrievalConfig(mode) {
+    const container = document.getElementById('create-kb-retrieval-config');
+    if (!container) return;
+
+    let html = '';
+
+    if (mode === 'vector' || mode === 'fulltext') {
+        html = `
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                    <label class="block text-xs text-gray-600 mb-1">Rerank 模型</label>
+                    <select id="create-kb-rerank-model" name="create-kb-rerank-model" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-sm">
+                        <option value="">请选择模型</option>
+                        <option value="rerank-model-1">rerank-model-1</option>
+                        <option value="rerank-model-2">rerank-model-2</option>
+                        <option value="rerank-model-3">rerank-model-3</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs text-gray-600 mb-1">Top K</label>
+                    <input id="create-kb-top-k" name="create-kb-top-k" type="number" min="1" max="10" step="1" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm" placeholder="1-10">
+                </div>
+                <div>
+                    <label class="block text-xs text-gray-600 mb-1">Score 阈值</label>
+                    <input id="create-kb-score-threshold" name="create-kb-score-threshold" type="number" min="0" max="1" step="0.01" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm" placeholder="0-1">
+                </div>
+            </div>
+        `;
+    } else if (mode === 'hybrid') {
+        html = `
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div>
+                    <label class="block text-xs text-gray-600 mb-1">Rerank 模型</label>
+                    <select id="create-kb-rerank-model" name="create-kb-rerank-model" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-sm">
+                        <option value="">请选择模型</option>
+                        <option value="rerank-model-1">rerank-model-1</option>
+                        <option value="rerank-model-2">rerank-model-2</option>
+                        <option value="rerank-model-3">rerank-model-3</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs text-gray-600 mb-1">权重</label>
+                    <input id="create-kb-weight" name="create-kb-weight" type="number" min="0" max="1" step="0.01" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm" placeholder="0-1">
+                </div>
+                <div>
+                    <label class="block text-xs text-gray-600 mb-1">Top K</label>
+                    <input id="create-kb-top-k" name="create-kb-top-k" type="number" min="1" max="10" step="1" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm" placeholder="1-10">
+                </div>
+                <div>
+                    <label class="block text-xs text-gray-600 mb-1">Score 阈值</label>
+                    <input id="create-kb-score-threshold" name="create-kb-score-threshold" type="number" min="0" max="1" step="0.01" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm" placeholder="0-1">
+                </div>
+            </div>
+        `;
+    }
+
+    container.innerHTML = html;
+}
+
+document.addEventListener('change', function(event) {
+    const target = event.target;
+    if (target && target.id === 'create-kb-retrieval-mode') {
+        renderCreateKbRetrievalConfig(target.value);
+    }
+});
+
 function submitCreateKb() {
     const nameEl = document.getElementById('create-kb-name');
     const descEl = document.getElementById('create-kb-desc');
     const parserEl = document.getElementById('create-kb-parser');
+    const retrievalModeEl = document.getElementById('create-kb-retrieval-mode');
     const nameErrorEl = document.getElementById('create-kb-name-error');
     const descErrorEl = document.getElementById('create-kb-desc-error');
     
@@ -247,7 +314,17 @@ function submitCreateKb() {
     
     if (!isValid) return;
     
-    // Create new KB
+    const retrievalMode = retrievalModeEl ? retrievalModeEl.value : '';
+    const rerankModelEl = document.getElementById('create-kb-rerank-model');
+    const topKEl = document.getElementById('create-kb-top-k');
+    const scoreThresholdEl = document.getElementById('create-kb-score-threshold');
+    const weightEl = document.getElementById('create-kb-weight');
+
+    const rerankModel = rerankModelEl ? rerankModelEl.value : '';
+    const topK = topKEl && topKEl.value ? parseInt(topKEl.value, 10) : null;
+    const scoreThreshold = scoreThresholdEl && scoreThresholdEl.value ? parseFloat(scoreThresholdEl.value) : null;
+    const weight = weightEl && weightEl.value ? parseFloat(weightEl.value) : null;
+
     const newKb = {
         id: window.generateId ? window.generateId('KB') : `KB-${Date.now()}`,
         name: name,
@@ -258,7 +335,12 @@ function submitCreateKb() {
         creator: 'Admin', // Current user
         permission: '私有',
         parser: parserEl.value,
-        chunkSize: 500
+        chunkSize: 500,
+        retrievalMode: retrievalMode,
+        retrievalRerankModel: rerankModel,
+        retrievalTopK: topK,
+        retrievalScoreThreshold: scoreThreshold,
+        retrievalWeight: weight
     };
     
     knowledgeData.unshift(newKb);
@@ -268,7 +350,14 @@ function submitCreateKb() {
     // Clear Form
     nameEl.value = '';
     descEl.value = '';
-    parserEl.value = 'general';
+    parserEl.value = 'embedding-2';
+    if (retrievalModeEl) {
+        retrievalModeEl.value = '';
+    }
+    const retrievalConfigEl = document.getElementById('create-kb-retrieval-config');
+    if (retrievalConfigEl) {
+        retrievalConfigEl.innerHTML = '';
+    }
     
     // Redirect to detail view (document list)
     showKbDetail(newKb.id, 'list');
