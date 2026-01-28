@@ -598,6 +598,10 @@ let editorResources = {
     plugin: []
 };
 
+let experienceConfig;
+let themeConfig;
+let agentI18nConfig;
+
 function loadResources() {
     // Check and load Knowledge Data
     if (typeof knowledgeData !== 'undefined' && knowledgeData.length === 0) {
@@ -741,10 +745,8 @@ function saveAgentConfig(silent = false) {
             agent.orchestrators = config.orchestrators;
             agent.updatedAt = new Date().toLocaleString();
             agent.timestamp = Date.now();
-            
-            // Save experience config
             agent.experience = JSON.parse(JSON.stringify(experienceConfig));
-            agent.i18nCustom = JSON.parse(JSON.stringify(agentI18nCustomConfig));
+            agent.i18n = JSON.parse(JSON.stringify(agentI18nConfig));
         }
     } else {
         // Create new (if not already created via modal? Logic is user creates via modal then edits)
@@ -796,12 +798,6 @@ function initAgentEditor(params) {
             // Init Experience Config
             initExperienceConfig(agent);
             initThemeConfig(agent);
-
-            if (agent.i18nCustom) {
-                agentI18nCustomConfig = JSON.parse(JSON.stringify(agent.i18nCustom));
-            } else {
-                agentI18nCustomConfig = {};
-            }
 
             // Update Header Info
             const nameDisplay = document.getElementById('agent-name-display');
@@ -1556,15 +1552,8 @@ function confirmPublish() {
 }
 
 // --- Permission Management (Removed) ---
-//
+
 // --- Experience Configuration Logic ---
-let experienceConfig = {
-    welcomeMsg: '',
-    welcomeQuestions: { enabled: false, list: [] },
-    responseQuestions: { enabled: false, list: [] },
-    feedback: { enabled: false, mandatory: false, custom: false, options: ['内容不准确', '答非所问', '逻辑混乱'] },
-    translation: { enabled: false, targetLang: 'en' }
-};
 
 function initExperienceConfig(agent) {
     // Default Config
@@ -1686,6 +1675,231 @@ function initThemeConfig(agent) {
     toggleThemeFeature('background', false);
 }
 
+function getAgentI18nLanguages() {
+    return [
+        { code: 'zh', label: '中文 (Chinese)' },
+        { code: 'en', label: '英语 (English)' },
+        { code: 'ja', label: '日语 (Japanese)' },
+        { code: 'ko', label: '韩语 (Korean)' },
+        { code: 'fr', label: '法语 (French)' },
+        { code: 'de', label: '德语 (German)' },
+        { code: 'es', label: '西班牙语 (Spanish)' }
+    ];
+}
+
+function initAgentI18nConfig(agent) {
+    agentI18nConfig = {
+        enabled: false,
+        languages: [],
+        customInfo: {}
+    };
+    if (agent && agent.i18n) {
+        if (typeof agent.i18n.enabled === 'boolean') agentI18nConfig.enabled = agent.i18n.enabled;
+        if (Array.isArray(agent.i18n.languages)) agentI18nConfig.languages = [...agent.i18n.languages];
+        if (agent.i18n.customInfo && typeof agent.i18n.customInfo === 'object') {
+            agentI18nConfig.customInfo = JSON.parse(JSON.stringify(agent.i18n.customInfo));
+        }
+    }
+    const switchEl = document.getElementById('agent-i18n-switch');
+    const displayEl = document.getElementById('agent-i18n-display');
+    if (switchEl) switchEl.checked = !!agentI18nConfig.enabled;
+    if (displayEl) {
+        if (agentI18nConfig.enabled) displayEl.classList.remove('opacity-50', 'pointer-events-none');
+        else displayEl.classList.add('opacity-50', 'pointer-events-none');
+    }
+    updateAgentI18nSelectedLanguagesUI();
+}
+
+function updateAgentI18nSelectedLanguagesUI() {
+    const container = document.getElementById('agent-i18n-selected-languages');
+    if (!container) return;
+    container.innerHTML = '';
+    const langs = agentI18nConfig && Array.isArray(agentI18nConfig.languages) ? agentI18nConfig.languages : [];
+    if (!langs.length) {
+        const span = document.createElement('span');
+        span.className = 'text-gray-400';
+        span.textContent = '暂无选中语言';
+        container.appendChild(span);
+        return;
+    }
+    const all = getAgentI18nLanguages();
+    langs.forEach(code => {
+        const meta = all.find(l => l.code === code);
+        const label = meta ? meta.label : code;
+        const span = document.createElement('span');
+        span.className = 'px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-100';
+        span.textContent = label;
+        container.appendChild(span);
+    });
+}
+
+function toggleAgentI18n() {
+    const switchEl = document.getElementById('agent-i18n-switch');
+    const displayEl = document.getElementById('agent-i18n-display');
+    const enabled = switchEl && switchEl.checked;
+    if (!agentI18nConfig) {
+        agentI18nConfig = { enabled: false, languages: [], customInfo: {} };
+    }
+    agentI18nConfig.enabled = !!enabled;
+    if (displayEl) {
+        if (enabled) {
+            displayEl.classList.remove('opacity-50', 'pointer-events-none');
+        } else {
+            displayEl.classList.add('opacity-50', 'pointer-events-none');
+        }
+    }
+    if (enabled && (!agentI18nConfig.languages || !agentI18nConfig.languages.length)) {
+        openAgentI18nLanguagesModal();
+    }
+    saveAgentConfig(true);
+}
+
+function openAgentI18nLanguagesModal() {
+    const searchInput = document.getElementById('agent-i18n-search');
+    if (searchInput) {
+        searchInput.value = '';
+        searchInput.oninput = function (e) {
+            renderAgentI18nLanguageList(e.target.value);
+        };
+    }
+    renderAgentI18nLanguageList('');
+    openModal('agent-i18n-modal');
+}
+
+function openAgentI18nModalFromDisplay() {
+    const switchEl = document.getElementById('agent-i18n-switch');
+    if (switchEl && !switchEl.checked) {
+        switchEl.checked = true;
+        toggleAgentI18n();
+    }
+    openAgentI18nLanguagesModal();
+}
+
+function renderAgentI18nLanguageList(keyword) {
+    const container = document.getElementById('agent-i18n-language-list');
+    if (!container) return;
+    const all = getAgentI18nLanguages();
+    const selected = agentI18nConfig && Array.isArray(agentI18nConfig.languages) ? agentI18nConfig.languages : [];
+    const kw = (keyword || '').toLowerCase();
+    container.innerHTML = '';
+    all.filter(l => {
+        if (!kw) return true;
+        return l.code.toLowerCase().includes(kw) || l.label.toLowerCase().includes(kw);
+    }).forEach(lang => {
+        const id = `agent-i18n-lang-${lang.code}`;
+        const wrapper = document.createElement('div');
+        wrapper.className = 'flex items-center justify-between px-3 py-2 rounded-lg border border-gray-100 hover:border-blue-300 hover:bg-blue-50/40 cursor-pointer';
+        const left = document.createElement('div');
+        left.className = 'flex flex-col';
+        const labelEl = document.createElement('span');
+        labelEl.className = 'text-sm text-gray-800';
+        labelEl.textContent = lang.label;
+        const codeEl = document.createElement('span');
+        codeEl.className = 'text-xs text-gray-400';
+        codeEl.textContent = lang.code;
+        left.appendChild(labelEl);
+        left.appendChild(codeEl);
+        const right = document.createElement('div');
+        const input = document.createElement('input');
+        input.type = 'checkbox';
+        input.id = id;
+        input.className = 'w-4 h-4 text-blue-600 border-gray-300 rounded';
+        input.checked = selected.includes(lang.code);
+        right.appendChild(input);
+        wrapper.appendChild(left);
+        wrapper.appendChild(right);
+        wrapper.onclick = function (e) {
+            if (e.target.tagName !== 'INPUT') {
+                input.checked = !input.checked;
+            }
+        };
+        container.appendChild(wrapper);
+    });
+}
+
+function confirmAgentI18nSelection() {
+    const all = getAgentI18nLanguages();
+    const selectedCodes = [];
+    all.forEach(lang => {
+        const input = document.getElementById(`agent-i18n-lang-${lang.code}`);
+        if (input && input.checked) selectedCodes.push(lang.code);
+    });
+    if (!agentI18nConfig) {
+        agentI18nConfig = { enabled: true, languages: [], customInfo: {} };
+    }
+    const existingCustom = agentI18nConfig.customInfo || {};
+    const nextCustom = {};
+    selectedCodes.forEach(code => {
+        if (existingCustom[code]) nextCustom[code] = existingCustom[code];
+    });
+    agentI18nConfig.languages = selectedCodes;
+    agentI18nConfig.customInfo = nextCustom;
+    updateAgentI18nSelectedLanguagesUI();
+    closeModal('agent-i18n-modal');
+    saveAgentConfig(true);
+}
+
+function openAgentI18nCustomModal() {
+    if (!agentI18nConfig || !agentI18nConfig.languages || !agentI18nConfig.languages.length) {
+        showToast('请先选择语言', 'warning');
+        return;
+    }
+    const container = document.getElementById('agent-i18n-custom-columns');
+    if (!container) return;
+    const langs = agentI18nConfig.languages;
+    const custom = agentI18nConfig.customInfo || {};
+    container.innerHTML = '';
+    const gridTemplate = langs.length <= 3 ? `repeat(${langs.length}, minmax(0, 1fr))` : `repeat(${langs.length}, minmax(220px, 1fr))`;
+    container.style.gridTemplateColumns = gridTemplate;
+    const all = getAgentI18nLanguages();
+    langs.forEach(code => {
+        const meta = all.find(l => l.code === code);
+        const title = meta ? meta.label : code;
+        const values = custom[code] || {};
+        const column = document.createElement('div');
+        column.className = 'bg-white border border-gray-100 rounded-lg p-4 space-y-3';
+        column.innerHTML = `
+            <div class="flex items-center justify-between mb-2">
+                <span class="text-sm font-medium text-gray-900">${title}</span>
+                <span class="text-xs text-gray-400">${code}</span>
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1">名称</label>
+                <input type="text" id="agent-i18n-name-${code}" value="${values.name || ''}" class="w-full px-3 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1">描述</label>
+                <textarea id="agent-i18n-desc-${code}" rows="2" class="w-full px-3 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 resize-none">${values.description || ''}</textarea>
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1">欢迎语</label>
+                <textarea id="agent-i18n-welcome-${code}" rows="2" class="w-full px-3 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 resize-none">${values.welcomeMsg || ''}</textarea>
+            </div>
+        `;
+        container.appendChild(column);
+    });
+    openModal('agent-i18n-custom-modal');
+}
+
+function confirmAgentI18nCustom() {
+    if (!agentI18nConfig) return;
+    const langs = agentI18nConfig.languages || [];
+    const nextCustom = {};
+    langs.forEach(code => {
+        const nameInput = document.getElementById(`agent-i18n-name-${code}`);
+        const descInput = document.getElementById(`agent-i18n-desc-${code}`);
+        const welcomeInput = document.getElementById(`agent-i18n-welcome-${code}`);
+        nextCustom[code] = {
+            name: nameInput ? nameInput.value : '',
+            description: descInput ? descInput.value : '',
+            welcomeMsg: welcomeInput ? welcomeInput.value : ''
+        };
+    });
+    agentI18nConfig.customInfo = nextCustom;
+    closeModal('agent-i18n-custom-modal');
+    saveAgentConfig(true);
+}
+
 function toggleThemeFeature(type, save = true) {
      if (type === 'background') {
         const check = document.getElementById('background-check');
@@ -1762,534 +1976,6 @@ function toggleExperienceFeature(type, save = true) {
     if (save) saveAgentConfig(true);
 }
 
-// --- Advanced Settings: Internationalization ---
-
-let agentI18nConfig = {
-    enabled: false,
-    languages: []
-};
-
-let agentI18nCustomConfig = {};
-
-window.agentI18nConfig = agentI18nConfig;
-window.agentI18nCustomConfig = agentI18nCustomConfig;
-
-const AGENT_I18N_LANGUAGES = [
-    { code: 'zh-CN', name: '简体中文' },
-    { code: 'en', name: 'English' },
-    { code: 'ja', name: '日本語' },
-    { code: 'ko', name: '한국어' },
-    { code: 'fr', name: 'Français' },
-    { code: 'de', name: 'Deutsch' }
-];
-
-function toggleAgentI18n(fromToggle = true) {
-    const toggle = document.getElementById('agent-i18n-toggle');
-    if (!toggle) return;
-
-    const enabled = toggle.checked;
-    if (enabled && fromToggle) {
-        openAgentI18nModal();
-    } else if (!enabled && fromToggle) {
-        agentI18nConfig.enabled = false;
-        agentI18nConfig.languages = [];
-        saveAgentConfig(true);
-    }
-}
-
-function syncAgentI18nCustomColumnHeights() {
-    const modal = document.getElementById('agent-i18n-custom-modal');
-    const columns = document.getElementById('agent-i18n-custom-columns');
-    if (!modal || !columns) return;
-    if (modal.classList.contains('hidden')) return;
-
-    const colEls = Array.from(columns.children);
-    colEls.forEach(col => {
-        col.style.height = '';
-    });
-
-    if (colEls.length <= 1) {
-        columns.classList.remove('ring-1', 'ring-blue-100');
-        return;
-    }
-
-    let maxHeight = 0;
-    colEls.forEach(col => {
-        const h = col.offsetHeight;
-        if (h > maxHeight) maxHeight = h;
-    });
-
-    let desync = false;
-    colEls.forEach(col => {
-        if (Math.abs(col.offsetHeight - maxHeight) > 1) desync = true;
-    });
-
-    if (desync) {
-        colEls.forEach(col => {
-            col.style.height = maxHeight + 'px';
-        });
-        columns.classList.add('ring-1', 'ring-blue-100');
-    } else {
-        columns.classList.remove('ring-1', 'ring-blue-100');
-    }
-
-    const firstCol = colEls[0];
-    if (firstCol) {
-        const welcomeDisplay = firstCol.querySelector('.min-h-\\[40px\\]');
-        if (welcomeDisplay) {
-            const targetHeight = welcomeDisplay.offsetHeight;
-            const welcomeAreas = columns.querySelectorAll('textarea[data-field="welcomeMsg"]');
-            welcomeAreas.forEach(area => {
-                area.style.height = targetHeight + 'px';
-            });
-        }
-    }
-}
-
-function scheduleAgentI18nCustomHeightSync() {
-    if (window.__agentI18nHeightSyncRaf) {
-        cancelAnimationFrame(window.__agentI18nHeightSyncRaf);
-    }
-    window.__agentI18nHeightSyncRaf = requestAnimationFrame(syncAgentI18nCustomColumnHeights);
-
-    if (!window.__agentI18nHeightSyncResizeBound) {
-        window.__agentI18nHeightSyncResizeBound = true;
-        window.addEventListener('resize', scheduleAgentI18nCustomHeightSync);
-    }
-}
-
-function openAgentI18nCustomModal() {
-    const modal = document.getElementById('agent-i18n-custom-modal');
-    const columns = document.getElementById('agent-i18n-custom-columns');
-    if (!modal || !columns) return;
-
-    columns.innerHTML = '';
-
-    const selectedCodes = Array.isArray(agentI18nConfig.languages) ? agentI18nConfig.languages.slice() : [];
-
-    if (!selectedCodes.length) {
-        columns.style.gridTemplateColumns = '';
-        const empty = document.createElement('div');
-        empty.className = 'text-xs text-gray-400 p-3';
-        empty.textContent = '暂无选中语言，请先在上方选择语言后再配置自定义信息。';
-        columns.appendChild(empty);
-        modal.classList.remove('hidden');
-        return;
-    }
-
-    const selectedLangs = AGENT_I18N_LANGUAGES.filter(l => selectedCodes.includes(l.code));
-
-    const sorted = selectedLangs.sort((a, b) => {
-        if (a.code === 'zh-CN') return -1;
-        if (b.code === 'zh-CN') return 1;
-        return 0;
-    });
-
-    let baseName = '';
-    const editNameInput = document.getElementById('edit-agent-name');
-    const nameInput = document.getElementById('agent-name');
-    if (editNameInput) {
-        baseName = editNameInput.value.trim();
-    } else if (nameInput) {
-        baseName = nameInput.value.trim();
-    }
-
-    let exp = null;
-    if (typeof experienceConfig !== 'undefined' && experienceConfig) {
-        exp = experienceConfig;
-    }
-
-    let welcomeMsg = '';
-    const welcomeInput = document.getElementById('welcome-msg-input');
-    if (welcomeInput) {
-        welcomeMsg = welcomeInput.value.trim();
-    } else if (exp && typeof exp.welcomeMsg === 'string') {
-        welcomeMsg = exp.welcomeMsg.trim();
-    }
-    const welcomeQuestions = exp && exp.welcomeQuestions && Array.isArray(exp.welcomeQuestions.list) ? exp.welcomeQuestions.list : [];
-    const responseQuestions = exp && exp.responseQuestions && Array.isArray(exp.responseQuestions.list) ? exp.responseQuestions.list : [];
-    const feedbackOptions = exp && exp.feedback && Array.isArray(exp.feedback.options) ? exp.feedback.options : [];
-
-    const showNameRow = true;
-    const showWelcomeRow = true;
-    const showWelcomeQuestionsRow = !!(exp && exp.welcomeQuestions && exp.welcomeQuestions.enabled && welcomeQuestions.length > 0);
-    const showResponseQuestionsRow = !!(exp && exp.responseQuestions && exp.responseQuestions.enabled);
-    const showFeedbackRow = !!(exp && exp.feedback && exp.feedback.enabled && feedbackOptions.length > 0);
-
-    sorted.forEach((lang, index) => {
-        const active = index === 0;
-        const col = document.createElement('div');
-        col.className = `min-w-[240px] flex-1 rounded-lg border ${
-            active ? 'border-blue-500 bg-blue-50/40' : 'border-gray-200 bg-gray-50'
-        }`;
-
-        let bodyHtml = '';
-
-        if (active) {
-            const sections = [];
-
-            if (showNameRow) {
-                sections.push(`
-                    <div class="space-y-1">
-                        <div class="flex items-center justify-between">
-                            <span class="text-xs font-medium text-gray-500">智能体名称</span>
-                        </div>
-                        <div class="px-2 py-1.5 bg-white rounded border border-gray-200 text-xs text-gray-800 break-words min-h-[32px] flex items-center">${baseName || '未配置'}</div>
-                    </div>
-                `);
-            }
-
-            if (showWelcomeRow) {
-                sections.push(`
-                    <div class="space-y-1">
-                        <div class="flex items-center justify-between">
-                            <span class="text-xs font-medium text-gray-500">欢迎语</span>
-                        </div>
-                        <div class="px-2 py-1.5 bg-white rounded border border-gray-200 text-xs text-gray-800 break-words min-h-[40px]">${welcomeMsg || '未配置'}</div>
-                    </div>
-                `);
-            }
-
-            if (showWelcomeQuestionsRow) {
-                const items = welcomeQuestions.map(q => `<li class="px-2 py-1 bg-white rounded border border-gray-200 text-xs text-gray-800 break-words">${q}</li>`).join('');
-                sections.push(`
-                    <div class="space-y-1">
-                        <div class="flex items-center justify-between">
-                            <span class="text-xs font-medium text-gray-500">开场推荐问题</span>
-                        </div>
-                        <ul class="space-y-1">${items}</ul>
-                    </div>
-                `);
-            }
-
-            if (showResponseQuestionsRow) {
-                const items = responseQuestions.map(q => `<li class="px-2 py-1 bg-white rounded border border-gray-200 text-xs text-gray-800 break-words">${q}</li>`).join('');
-                sections.push(`
-                    <div class="space-y-1">
-                        <div class="flex items-center justify-between">
-                            <span class="text-xs font-medium text-gray-500">回答后推荐问题</span>
-                        </div>
-                        <ul class="space-y-1">${items}</ul>
-                    </div>
-                `);
-            }
-
-            if (showFeedbackRow) {
-                const items = feedbackOptions.map(text => `<li class="px-2 py-1 bg-white rounded border border-gray-200 text-xs text-gray-800 break-words">${text}</li>`).join('');
-                sections.push(`
-                    <div class="space-y-1">
-                        <div class="flex items-center justify-between">
-                            <span class="text-xs font-medium text-gray-500">点踩反馈</span>
-                        </div>
-                        <ul class="space-y-1">${items}</ul>
-                    </div>
-                `);
-            }
-
-            if (sections.length === 0) {
-                sections.push(`
-                    <div class="text-xs text-gray-400">暂无可展示的原始配置</div>
-                `);
-            }
-
-            bodyHtml = sections.join('');
-        } else {
-            const sections = [];
-
-            if (showNameRow) {
-                sections.push(`
-                    <div class="space-y-1">
-                        <label class="block text-xs text-gray-500" for="agent-i18n-custom-${lang.code}-name">智能体名称</label>
-                        <input id="agent-i18n-custom-${lang.code}-name" data-lang="${lang.code}" data-field="name" type="text" class="w-full px-2 py-1.5 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white min-h-[32px]" placeholder="填写 ${lang.name} 的名称翻译">
-                    </div>
-                `);
-            }
-
-            if (showWelcomeRow) {
-                sections.push(`
-                    <div class="space-y-1">
-                        <label class="block text-xs text-gray-500" for="agent-i18n-custom-${lang.code}-welcome">欢迎语</label>
-                        <textarea id="agent-i18n-custom-${lang.code}-welcome" data-lang="${lang.code}" data-field="welcomeMsg" class="w-full px-2 py-1.5 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 resize-none bg-white min-h-[40px]" rows="3" placeholder="填写 ${lang.name} 的欢迎语翻译"></textarea>
-                    </div>
-                `);
-            }
-
-            if (showWelcomeQuestionsRow) {
-                const inputsHtml = Array.from({ length: 4 }).map((_, idx) => `
-                    <input
-                        id="agent-i18n-custom-${lang.code}-welcome-questions-${idx}"
-                        data-lang="${lang.code}"
-                        data-field="welcomeQuestions"
-                        data-index="${idx}"
-                        type="text"
-                        class="w-full px-2 py-1.5 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white"
-                        placeholder="开场推荐问题 ${idx + 1}"
-                    >
-                `).join('');
-
-                sections.push(`
-                    <div class="space-y-1">
-                        <div class="flex items-center justify-between">
-                            <span class="text-xs font-medium text-gray-500">开场推荐问题</span>
-                        </div>
-                        <div class="space-y-1">
-                            ${inputsHtml}
-                        </div>
-                    </div>
-                `);
-            }
-
-            if (showResponseQuestionsRow) {
-                sections.push(`
-                    <div class="space-y-1">
-                        <label class="block text-xs text-gray-500" for="agent-i18n-custom-${lang.code}-response-questions">回答后推荐问题</label>
-                        <textarea id="agent-i18n-custom-${lang.code}-response-questions" data-lang="${lang.code}" data-field="responseQuestions" class="w-full px-2 py-1.5 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 resize-none bg-white" rows="4" placeholder="为 ${lang.name} 配置回答后推荐问题翻译，建议一行一个问题"></textarea>
-                    </div>
-                `);
-            }
-
-            if (showFeedbackRow) {
-                const inputsHtml = Array.from({ length: 4 }).map((_, idx) => `
-                    <input
-                        id="agent-i18n-custom-${lang.code}-feedback-${idx}"
-                        data-lang="${lang.code}"
-                        data-field="feedback"
-                        data-index="${idx}"
-                        type="text"
-                        class="w-full px-2 py-1.5 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white"
-                        placeholder="点踩反馈选项 ${idx + 1}"
-                    >
-                `).join('');
-
-                sections.push(`
-                    <div class="space-y-1">
-                        <div class="flex items-center justify-between">
-                            <span class="text-xs font-medium text-gray-500">点踩反馈</span>
-                        </div>
-                        <div class="space-y-1">
-                            ${inputsHtml}
-                        </div>
-                    </div>
-                `);
-            }
-
-            if (sections.length === 0) {
-                sections.push(`
-                    <div class="text-xs text-gray-400">暂无可配置项</div>
-                `);
-            }
-
-            bodyHtml = sections.join('');
-        }
-
-        col.innerHTML = `
-            <div class="px-3 py-2 border-b ${active ? 'border-blue-200 bg-blue-50' : 'border-gray-100 bg-gray-100'} flex items-center justify-between">
-                <span class="text-xs font-medium ${active ? 'text-blue-700' : 'text-gray-700'}">${lang.name}</span>
-                ${active
-                    ? '<span class="text-[10px] px-1.5 py-0.5 rounded bg-blue-100 text-blue-700">默认</span>'
-                    : '<i class="fa-solid fa-language text-[14px] text-gray-500" title="翻译"></i>'
-                }
-            </div>
-            <div class="p-3 space-y-3">
-                ${bodyHtml}
-            </div>
-        `;
-        columns.appendChild(col);
-    });
-
-    columns.style.gridTemplateColumns = `repeat(${sorted.length}, minmax(240px, 1fr))`;
-
-    sorted.forEach((lang, index) => {
-        if (!agentI18nCustomConfig || index === 0) return;
-        const stored = agentI18nCustomConfig[lang.code];
-        if (stored === undefined) return;
-
-        if (stored && typeof stored === 'object') {
-            Object.keys(stored).forEach(field => {
-                const value = stored[field] || '';
-
-                if (field === 'welcomeQuestions' || field === 'feedback') {
-                    const parts = value ? String(value).split('\n') : [];
-                    parts.forEach((text, idx) => {
-                        const el = columns.querySelector(
-                            `[data-lang="${lang.code}"][data-field="${field}"][data-index="${idx}"]`
-                        );
-                        if (el) el.value = text;
-                    });
-                } else {
-                    const el = columns.querySelector(`[data-lang="${lang.code}"][data-field="${field}"]`);
-                    if (el) el.value = value;
-                }
-            });
-        } else if (typeof stored === 'string') {
-            const el = columns.querySelector(`[data-lang="${lang.code}"][data-field="welcomeMsg"]`);
-            if (el) el.value = stored;
-        }
-    });
-
-    modal.classList.remove('hidden');
-    scheduleAgentI18nCustomHeightSync();
-}
-
-function closeAgentI18nCustomModal() {
-    const modal = document.getElementById('agent-i18n-custom-modal');
-    if (modal) modal.classList.add('hidden');
-}
-
-function confirmAgentI18nCustom() {
-    const columns = document.getElementById('agent-i18n-custom-columns');
-    if (!columns) return;
-
-    const inputs = columns.querySelectorAll('[data-lang][data-field]');
-    const nextConfig = {};
-    const grouped = {};
-
-    inputs.forEach(el => {
-        const code = el.getAttribute('data-lang');
-        const field = el.getAttribute('data-field');
-        if (!code || !field) return;
-        const value = el.value.trim();
-        const indexAttr = el.getAttribute('data-index');
-
-        if (field === 'welcomeQuestions' || field === 'feedback') {
-            if (!grouped[code]) {
-                grouped[code] = { welcomeQuestions: [], feedback: [] };
-            }
-            const arr = grouped[code][field];
-            const idx = indexAttr ? parseInt(indexAttr, 10) : arr.length;
-            if (!Number.isNaN(idx)) {
-                arr[idx] = value;
-            }
-        } else {
-            if (!value) return;
-            if (!nextConfig[code]) nextConfig[code] = {};
-            nextConfig[code][field] = value;
-        }
-    });
-
-    Object.keys(grouped).forEach(code => {
-        const data = grouped[code];
-        ['welcomeQuestions', 'feedback'].forEach(field => {
-            const arr = (data[field] || []).filter(text => text && text.trim());
-            if (arr.length) {
-                if (!nextConfig[code]) nextConfig[code] = {};
-                nextConfig[code][field] = arr.join('\n');
-            }
-        });
-    });
-
-    agentI18nCustomConfig = nextConfig;
-    saveAgentConfig(true);
-    closeAgentI18nCustomModal(false);
-}
-
-function openAgentI18nModal() {
-    const list = document.getElementById('agent-i18n-lang-list');
-    const search = document.getElementById('agent-i18n-search');
-    const modal = document.getElementById('agent-i18n-modal');
-    if (!list || !modal) return;
-
-    list.innerHTML = '';
-    const selected = new Set(agentI18nConfig.languages || []);
-    selected.add('zh-CN');
-
-    AGENT_I18N_LANGUAGES.forEach(lang => {
-        const id = `agent-i18n-lang-${lang.code}`;
-        const isDefault = lang.code === 'zh-CN';
-        const disabledAttr = isDefault ? 'disabled' : '';
-        const checkedAttr = selected.has(lang.code) || isDefault ? 'checked' : '';
-        const labelBase =
-            'flex items-center gap-2 px-3 py-2 rounded-lg border cursor-pointer transition-colors';
-        const labelClass = isDefault
-            ? `${labelBase} border-blue-300 bg-blue-50 cursor-not-allowed`
-            : `${labelBase} border-gray-200 hover:border-blue-400 hover:bg-blue-50`;
-        const label = document.createElement('label');
-        label.className = labelClass;
-        label.setAttribute('data-code', lang.code);
-        label.setAttribute('data-name', lang.name.toLowerCase());
-        label.innerHTML = `
-            <input type="checkbox" class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 ${isDefault ? 'cursor-not-allowed' : ''}" id="${id}" value="${lang.code}" ${checkedAttr} ${disabledAttr}>
-            <span class="text-xs text-gray-700">${lang.name} (${lang.code})</span>
-        `;
-        list.appendChild(label);
-    });
-
-    if (search) search.value = '';
-    modal.classList.remove('hidden');
-}
-
-function closeAgentI18nModal(resetToggle = false) {
-    const modal = document.getElementById('agent-i18n-modal');
-    if (modal) modal.classList.add('hidden');
-    if (resetToggle) {
-        const toggle = document.getElementById('agent-i18n-toggle');
-        if (toggle) toggle.checked = agentI18nConfig.enabled;
-    }
-}
-
-function filterAgentI18nLanguages() {
-    const search = document.getElementById('agent-i18n-search');
-    const list = document.getElementById('agent-i18n-lang-list');
-    if (!search || !list) return;
-
-    const keyword = search.value.trim().toLowerCase();
-    const items = list.querySelectorAll('label[data-code]');
-    items.forEach(item => {
-        const name = item.getAttribute('data-name') || '';
-        const code = item.getAttribute('data-code') || '';
-        if (!keyword || name.includes(keyword) || code.toLowerCase().includes(keyword)) {
-            item.classList.remove('hidden');
-        } else {
-            item.classList.add('hidden');
-        }
-    });
-}
-
-function toggleAgentI18nSelectAll(selectAll) {
-    const list = document.getElementById('agent-i18n-lang-list');
-    if (!list) return;
-    const inputs = list.querySelectorAll('input[type="checkbox"]');
-    inputs.forEach(input => {
-        input.checked = !!selectAll;
-    });
-}
-
-function confirmAgentI18nSelection() {
-    const list = document.getElementById('agent-i18n-lang-list');
-    const toggle = document.getElementById('agent-i18n-toggle');
-    if (!list || !toggle) return;
-
-    const inputs = list.querySelectorAll('input[type="checkbox"]');
-    const selected = [];
-    inputs.forEach(input => {
-        if (input.checked) selected.push(input.value);
-    });
-
-    if (!selected.includes('zh-CN')) {
-        selected.unshift('zh-CN');
-    }
-
-    if (selected.length === 0) {
-        alert('请至少选择一种语言');
-        return;
-    }
-
-    agentI18nConfig.enabled = true;
-    agentI18nConfig.languages = selected;
-    toggle.checked = true;
-    saveAgentConfig(true);
-    closeAgentI18nModal(false);
-}
-
-window.toggleAgentI18n = toggleAgentI18n;
-window.filterAgentI18nLanguages = filterAgentI18nLanguages;
-window.toggleAgentI18nSelectAll = toggleAgentI18nSelectAll;
-window.confirmAgentI18nSelection = confirmAgentI18nSelection;
-window.closeAgentI18nModal = closeAgentI18nModal;
-window.openAgentI18nCustomModal = openAgentI18nCustomModal;
-window.closeAgentI18nCustomModal = closeAgentI18nCustomModal;
-window.confirmAgentI18nCustom = confirmAgentI18nCustom;
-
 function addQuestion(type) {
     const list = type === 'welcome' ? experienceConfig.welcomeQuestions.list : experienceConfig.responseQuestions.list;
     
@@ -2304,14 +1990,6 @@ function addQuestion(type) {
     list.push(`示例问题 ${list.length + 1}`);
     renderQuestionsList(type);
     saveAgentConfig(true);
-
-    const newIndex = list.length - 1;
-    const inputId = `question-${type}-${newIndex}`;
-    const input = document.getElementById(inputId);
-    if (input) {
-        input.focus();
-        input.select();
-    }
 }
 
 function removeQuestion(type, index) {
@@ -2679,6 +2357,12 @@ window.removeBackground = removeBackground;
 window.updateBackgroundOpacity = updateBackgroundOpacity;
 window.updateThemeColor = updateThemeColor;
 window.toggleThemeFeature = toggleThemeFeature;
+window.initAgentI18nConfig = initAgentI18nConfig;
+window.toggleAgentI18n = toggleAgentI18n;
+window.openAgentI18nModalFromDisplay = openAgentI18nModalFromDisplay;
+window.openAgentI18nCustomModal = openAgentI18nCustomModal;
+window.confirmAgentI18nSelection = confirmAgentI18nSelection;
+window.confirmAgentI18nCustom = confirmAgentI18nCustom;
 
 // --- Feedback Logic ---
 

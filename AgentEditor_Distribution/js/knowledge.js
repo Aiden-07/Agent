@@ -153,7 +153,7 @@ function renderKnowledgeList() {
                     <div class="w-8 h-8 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center">
                         <i class="fa-solid fa-book"></i>
                     </div>
-                    <div class="font-medium text-gray-900 cursor-pointer hover:text-blue-600" onclick="showKbDetail('${item.id}')">${item.name}</div>
+                    <div class="font-medium text-gray-900">${item.name}</div>
                 </div>
             </td>
             <td class="px-6 py-4">
@@ -1509,201 +1509,12 @@ function getFileType(filename) {
     return 'Text';
 }
 
-let docUploadStep = 1;
-let docUploadSliceMode = 'length';
-
-function openDocUploadWizard() {
-    docUploadStep = 1;
-    const modal = document.getElementById('doc-upload-wizard');
-    if (modal) modal.classList.remove('hidden');
-    updateDocUploadStep();
-}
-
-function closeDocUploadWizard() {
-    const modal = document.getElementById('doc-upload-wizard');
-    if (modal) modal.classList.add('hidden');
-}
-
-function updateDocUploadStep() {
-    const step1 = document.getElementById('doc-upload-step-1');
-    const step2 = document.getElementById('doc-upload-step-2');
-    const prevBtn = document.getElementById('doc-upload-prev');
-    const nextBtn = document.getElementById('doc-upload-next');
-    const step1Indicator = document.getElementById('step-1-indicator');
-    const step2Indicator = document.getElementById('step-2-indicator');
-    const sourceSelect = document.getElementById('doc-upload-source');
-    const localPanel = document.getElementById('doc-upload-local-panel');
-    const kbPanel = document.getElementById('doc-upload-kb-panel');
-
-    if (step1 && step2) {
-        if (docUploadStep === 1) {
-            step1.classList.remove('hidden');
-            step2.classList.add('hidden');
-        } else {
-            step1.classList.add('hidden');
-            step2.classList.remove('hidden');
-        }
-    }
-
-    if (prevBtn && nextBtn) {
-        if (docUploadStep === 1) {
-            prevBtn.disabled = true;
-            nextBtn.textContent = '下一步';
-        } else {
-            prevBtn.disabled = false;
-            nextBtn.textContent = '完成';
-        }
-    }
-
-    if (step1Indicator && step2Indicator) {
-        if (docUploadStep === 1) {
-            step1Indicator.classList.remove('opacity-40');
-            step2Indicator.classList.add('opacity-40');
-        } else {
-            step1Indicator.classList.add('opacity-40');
-            step2Indicator.classList.remove('opacity-40');
-        }
-    }
-
-    if (sourceSelect && localPanel && kbPanel) {
-        const value = sourceSelect.value;
-        if (value === 'kb') {
-            localPanel.classList.add('hidden');
-            kbPanel.classList.remove('hidden');
-        } else {
-            localPanel.classList.remove('hidden');
-            kbPanel.classList.add('hidden');
-        }
-    }
-}
-
-function nextDocUploadStep() {
-    if (docUploadStep === 1) {
-        docUploadStep = 2;
-        updateDocUploadStep();
-    } else {
-        closeDocUploadWizard();
-    }
-}
-
-function prevDocUploadStep() {
-    if (docUploadStep === 2) {
-        docUploadStep = 1;
-        updateDocUploadStep();
-    }
-}
-
-function initDocUploadWizard() {
-    const nextBtn = document.getElementById('doc-upload-next');
-    const prevBtn = document.getElementById('doc-upload-prev');
-    const sourceSelect = document.getElementById('doc-upload-source');
-
-    if (nextBtn) nextBtn.onclick = nextDocUploadStep;
-    if (prevBtn) prevBtn.onclick = prevDocUploadStep;
-    if (sourceSelect) sourceSelect.onchange = updateDocUploadStep;
-
-    setDocUploadSliceMode(docUploadSliceMode || 'length', false);
-}
-
-function updateDocUploadSliceParams(mode, animate) {
-    const container = document.getElementById('doc-upload-length-params');
-    if (!container) return;
-
-    const labels = container.querySelectorAll('label');
-    if (labels.length < 2) return;
-
-    const blocks = container.children;
-    if (!blocks || blocks.length < 2) return;
-
-    const chunkSizeInput = document.getElementById('doc-upload-chunk-size');
-    const symbolSelect = document.getElementById('doc-upload-symbol-select');
-
-    const firstLabel = labels[0];
-    const secondLabel = labels[1];
-    const firstBlock = blocks[0];
-    const secondBlock = blocks[1];
-
-    const applyTexts = () => {
-        if (mode === 'length') {
-            firstLabel.textContent = '分段大小';
-            secondLabel.textContent = '重叠大小';
-        } else if (mode === 'title') {
-            firstLabel.textContent = '分段大小';
-            secondLabel.textContent = '标题级数';
-        } else if (mode === 'symbol') {
-            firstLabel.textContent = '符号选择';
-            secondLabel.textContent = '分段大小';
-        } else {
-            firstLabel.textContent = '分片大小';
-            secondLabel.textContent = '重叠大小';
-        }
-
-        if (mode === 'page') {
-            secondBlock.classList.add('hidden');
-        } else {
-            secondBlock.classList.remove('hidden');
-        }
-
-        if (chunkSizeInput && symbolSelect) {
-            if (mode === 'symbol') {
-                chunkSizeInput.classList.add('hidden');
-                symbolSelect.classList.remove('hidden');
-            } else {
-                chunkSizeInput.classList.remove('hidden');
-                symbolSelect.classList.add('hidden');
-            }
-        }
-    };
-
-    if (!animate) {
-        applyTexts();
-        return;
-    }
-
-    container.classList.remove('opacity-100', 'translate-y-0');
-    container.classList.add('opacity-0', 'translate-y-1');
-
-    setTimeout(() => {
-        applyTexts();
-        container.classList.remove('opacity-0', 'translate-y-1');
-        container.classList.add('opacity-100', 'translate-y-0');
-    }, 150);
-}
-
-function setDocUploadSliceMode(mode, animate = true) {
-    docUploadSliceMode = mode;
-    const lengthTab = document.getElementById('slice-tab-length');
-    const pageTab = document.getElementById('slice-tab-page');
-    const titleTab = document.getElementById('slice-tab-title');
-    const symbolTab = document.getElementById('slice-tab-symbol');
-
-    const tabs = [
-        { el: lengthTab, key: 'length' },
-        { el: pageTab, key: 'page' },
-        { el: titleTab, key: 'title' },
-        { el: symbolTab, key: 'symbol' }
-    ];
-
-    tabs.forEach(tab => {
-        if (!tab.el) return;
-        tab.el.classList.remove('border-blue-500', 'bg-blue-50', 'text-blue-600', 'font-medium');
-        tab.el.classList.remove('border-gray-200', 'text-gray-600');
-        tab.el.classList.add('border-gray-200', 'text-gray-600');
-
-        if (tab.key === mode) {
-            tab.el.classList.remove('border-gray-200', 'text-gray-600');
-            tab.el.classList.add('border-blue-500', 'bg-blue-50', 'text-blue-600', 'font-medium');
-        }
-    });
-
-    updateDocUploadSliceParams(mode, animate);
-}
-
 // --- Doc More Menu Logic ---
 window.toggleDocMoreMenu = function(event) {
     event.stopPropagation();
     const menu = document.getElementById('doc-more-menu');
     if (menu) {
+        menu.classList.toggle('hidden');
     }
 }
 
@@ -1718,6 +1529,5 @@ document.addEventListener('click', function(event) {
 document.addEventListener('view-loaded', (e) => {
     if (e.detail.view === 'knowledge') {
         initKnowledgePage();
-        initDocUploadWizard();
     }
 });

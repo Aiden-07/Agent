@@ -327,7 +327,7 @@
                                     <div id="welcome-questions-list" class="space-y-2">
                                         <!-- Dynamic List -->
                                     </div>
-                                    <button type="button" onclick="addQuestion('welcome')" class="w-full py-2 bg-white text-blue-600 rounded-lg hover:bg-blue-50 text-xs font-medium border border-blue-200 border-dashed transition-all hover:border-blue-300 shadow-sm">
+                                    <button onclick="addQuestion('welcome')" class="w-full py-2 bg-white text-blue-600 rounded-lg hover:bg-blue-50 text-xs font-medium border border-blue-200 border-dashed transition-all hover:border-blue-300 shadow-sm">
                                         <i class="fa-solid fa-plus mr-1"></i> 添加推荐问题
                                     </button>
                                 </div>
@@ -356,7 +356,7 @@
                                      <div id="response-questions-list" class="space-y-2">
                                         <!-- Dynamic List -->
                                     </div>
-                                    <button type="button" onclick="addQuestion('response')" class="w-full py-2 bg-white text-blue-600 rounded-lg hover:bg-blue-50 text-xs font-medium border border-blue-200 border-dashed transition-all hover:border-blue-300 shadow-sm">
+                                    <button onclick="addQuestion('response')" class="w-full py-2 bg-white text-blue-600 rounded-lg hover:bg-blue-50 text-xs font-medium border border-blue-200 border-dashed transition-all hover:border-blue-300 shadow-sm">
                                         <i class="fa-solid fa-plus mr-1"></i> 添加推荐问题
                                     </button>
                                 </div>
@@ -557,7 +557,6 @@
                         </div>
 
                         <div id="advanced-content" class="p-4 space-y-4 hidden">
-                            <!-- Context Memory -->
                             <div class="flex items-center justify-between">
                                 <div class="flex flex-col">
                                     <span class="text-sm font-bold text-gray-700">上下文记忆</span>
@@ -571,34 +570,29 @@
                             
                             <hr class="border-gray-100">
 
-                            <!-- Internationalization -->
-                            <div class="space-y-2">
+                            <div class="space-y-3">
                                 <div class="flex items-center justify-between">
                                     <div class="flex flex-col">
                                         <span class="text-sm font-bold text-gray-700">国际化</span>
-                                        <span class="text-xs text-gray-400 mt-0.5">配置多语言回答与界面文案</span>
+                                        <span class="text-xs text-gray-400 mt-0.5">配置多语言展示和自定义信息</span>
                                     </div>
                                     <label class="relative inline-flex items-center cursor-pointer">
-                                        <input type="checkbox" id="agent-i18n-toggle" class="sr-only peer" onchange="toggleAgentI18n()">
-                                        <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                        <input type="checkbox" id="agent-i18n-switch" class="sr-only peer" onchange="toggleAgentI18n()">
+                                        <div class="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
                                     </label>
                                 </div>
-                                <div id="agent-i18n-summary" class="hidden rounded-lg border border-dashed border-gray-200 bg-gray-50 px-3 py-2">
-                                    <div class="flex items-center justify-between mb-1">
-                                        <span class="text-xs font-medium text-gray-600">已选语言</span>
-                                        <div class="flex items-center gap-2">
-                                            <button type="button" class="text-xs text-blue-600 hover:text-blue-700" onclick="openAgentI18nCustomModal()">
-                                                自定义信息配置
-                                            </button>
-                                            <button type="button" class="text-xs text-blue-600 hover:text-blue-700" onclick="openAgentI18nModal()">
-                                                编辑
-                                            </button>
-                                        </div>
+
+                                <div id="agent-i18n-display" class="mt-2 border border-dashed border-gray-200 rounded-lg px-3 py-2 bg-gray-50 flex items-center justify-between gap-3 cursor-pointer hover:border-blue-300 hover:bg-blue-50/50 transition-colors" onclick="openAgentI18nModalFromDisplay()">
+                                    <div id="agent-i18n-selected-languages" class="flex-1 flex flex-wrap gap-2 text-xs text-gray-700">
+                                        <span class="text-gray-400">暂无选中语言</span>
                                     </div>
-                                    <div id="agent-i18n-summary-list" class="flex flex-wrap gap-1.5 items-center min-h-[1.5rem]">
-                                        <span class="text-xs text-gray-400">暂无选中语言</span>
+                                    <div class="flex items-center gap-2 flex-shrink-0">
+                                        <button type="button" class="px-2.5 py-1.5 text-xs font-medium text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-100 hover:text-blue-600 transition-colors">编辑</button>
+                                        <button type="button" id="agent-i18n-custom-btn" onclick="openAgentI18nCustomModal(); event.stopPropagation();" class="px-2.5 py-1.5 text-xs font-medium text-blue-600 bg-blue-50 border border-blue-100 rounded-lg hover:bg-blue-100 hover:text-blue-700 transition-colors">自定义信息配置</button>
                                     </div>
                                 </div>
+
+                                <p class="text-[11px] text-gray-400 mt-1">请确定智能体自定义配置信息已配置完成</p>
                             </div>
                         </div>
                     </div>
@@ -910,6 +904,55 @@
         </div>
     </div>
 
+    <!-- Agent I18n Languages Modal -->
+    <div id="agent-i18n-modal" class="fixed inset-0 bg-gray-900/50 hidden z-50 flex items-center justify-center backdrop-blur-sm">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg max-h-[80vh] flex flex-col">
+            <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <h3 class="text-lg font-semibold text-gray-900">选择语言</h3>
+                </div>
+                <button onclick="closeModal('agent-i18n-modal')" class="text-gray-400 hover:text-gray-600 transition-colors">
+                    <i class="fa-solid fa-xmark text-xl"></i>
+                </button>
+            </div>
+            <div class="px-6 py-4 space-y-4 flex-1 overflow-y-auto">
+                <div class="relative">
+                    <i class="fa-solid fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                    <input id="agent-i18n-search" type="text" class="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="搜索语言...">
+                </div>
+                <div id="agent-i18n-language-list" class="space-y-2 text-sm"></div>
+            </div>
+            <div class="px-6 py-3 border-t border-gray-100 bg-gray-50 flex justify-end gap-3">
+                <button type="button" onclick="closeModal('agent-i18n-modal')" class="px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">取消</button>
+                <button type="button" onclick="confirmAgentI18nSelection()" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm transition-colors">确定</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Agent I18n Custom Info Modal -->
+    <div id="agent-i18n-custom-modal" class="fixed inset-0 bg-gray-900/50 hidden z-50 flex items-center justify-center backdrop-blur-sm">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-6xl max-h-[85vh] flex flex-col">
+            <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+                <div>
+                    <h3 class="text-lg font-semibold text-gray-900">自定义信息配置</h3>
+                    <p class="text-xs text-gray-500 mt-1">请确定智能体自定义配置信息已配置完成</p>
+                </div>
+                <button onclick="closeModal('agent-i18n-custom-modal')" class="text-gray-400 hover:text-gray-600 transition-colors">
+                    <i class="fa-solid fa-xmark text-xl"></i>
+                </button>
+            </div>
+            <div class="px-6 py-4 flex-1 overflow-x-auto">
+                <div class="w-full overflow-x-auto pb-2">
+                    <div id="agent-i18n-custom-columns" class="grid gap-4 w-full transition-all duration-200"></div>
+                </div>
+            </div>
+            <div class="px-6 py-3 border-t border-gray-100 bg-gray-50 flex justify-end gap-3">
+                <button type="button" onclick="closeModal('agent-i18n-custom-modal')" class="px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">取消</button>
+                <button type="button" onclick="confirmAgentI18nCustom()" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm transition-colors">保存</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Log Detail Modal -->
     <div id="log-detail-modal" class="fixed inset-0 z-50 hidden" aria-labelledby="modal-title" role="dialog" aria-modal="true">
         <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onclick="closeModal('log-detail-modal')"></div>
@@ -1038,61 +1081,6 @@
                 <button onclick="confirmPublish()" class="flex-1 px-4 py-2.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm transition-colors">
                     确定
                 </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- I18n Language Select Modal -->
-    <div id="agent-i18n-modal" class="fixed inset-0 bg-gray-900/50 hidden z-50 flex items-center justify-center backdrop-blur-sm">
-        <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg mx-4 flex flex-col">
-            <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-                <h3 class="text-lg font-semibold text-gray-900">选择国际化语言</h3>
-                <button onclick="closeAgentI18nModal(true)" class="text-gray-400 hover:text-gray-600 transition-colors">
-                    <i class="fa-solid fa-xmark text-xl"></i>
-                </button>
-            </div>
-            <div class="p-6 space-y-4 max-h-[60vh] overflow-y-auto">
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">搜索语言</label>
-                    <input id="agent-i18n-search" type="text" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="输入语言名称或缩写进行筛选..." oninput="filterAgentI18nLanguages()">
-                </div>
-                <div>
-                    <div class="flex items-center justify-between mb-2">
-                        <span class="text-sm font-medium text-gray-700">支持的语言</span>
-                        <button type="button" class="text-xs text-blue-600 hover:text-blue-700" onclick="toggleAgentI18nSelectAll(true)">全选</button>
-                    </div>
-                    <div id="agent-i18n-lang-list" class="grid grid-cols-2 gap-2 text-sm">
-                        <!-- Filled by JS -->
-                    </div>
-                </div>
-            </div>
-            <div class="px-6 py-4 border-t border-gray-100 flex justify-end gap-3">
-                <button type="button" onclick="closeAgentI18nModal(true)" class="px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">取消</button>
-                <button type="button" onclick="confirmAgentI18nSelection()" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm transition-colors">确定</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- I18n Custom Info Modal -->
-    <div id="agent-i18n-custom-modal" class="fixed inset-0 bg-gray-900/50 hidden z-50 flex items-center justify-center backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="agent-i18n-custom-title">
-        <div class="bg-white rounded-xl shadow-2xl w-full max-w-5xl mx-4 flex flex-col">
-            <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-                <div>
-                    <h3 id="agent-i18n-custom-title" class="text-lg font-semibold text-gray-900">自定义信息配置</h3>
-                    <p class="mt-1 text-xs text-gray-500">请确定智能体自定义配置信息已配置完成</p>
-                </div>
-                <button type="button" onclick="closeAgentI18nCustomModal()" class="text-gray-400 hover:text-gray-600 transition-colors" aria-label="关闭自定义信息配置弹窗">
-                    <i class="fa-solid fa-xmark text-xl"></i>
-                </button>
-            </div>
-            <div class="p-6 space-y-4 max-h-[70vh] overflow-hidden">
-                <div class="w-full overflow-x-auto pb-2">
-                    <div id="agent-i18n-custom-columns" class="grid gap-4 w-full transition-all duration-200"></div>
-                </div>
-            </div>
-            <div class="px-6 py-4 border-t border-gray-100 flex justify-end gap-3 bg-gray-50 rounded-b-xl">
-                <button type="button" onclick="closeAgentI18nCustomModal()" class="px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">取消</button>
-                <button type="button" onclick="confirmAgentI18nCustom()" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm transition-colors">确认</button>
             </div>
         </div>
     </div>
