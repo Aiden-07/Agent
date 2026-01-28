@@ -80,9 +80,55 @@ window.parserData = [
     }
 ];
 
+window.renderParserRetrievalConfig = function() {
+    const container = document.getElementById('parser-retrieval-config');
+    if (!container) return;
+    container.innerHTML = `
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">匹配度阈值</label>
+            <div class="flex items-center gap-4">
+                <input type="range" id="parser-retrieval-threshold" min="0" max="1" step="0.01" value="0.01"
+                       oninput="document.getElementById('parser-retrieval-threshold-val').textContent = this.value"
+                       class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600">
+                <span id="parser-retrieval-threshold-val" class="text-sm text-gray-600 font-mono w-12 text-right">0.01</span>
+            </div>
+        </div>
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">返回结果数量 (Top K)</label>
+            <div class="flex items-center gap-4">
+                <input type="range" id="parser-retrieval-topk" min="1" max="10" step="1" value="3"
+                       oninput="document.getElementById('parser-retrieval-topk-val').textContent = this.value"
+                       class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600">
+                <span id="parser-retrieval-topk-val" class="text-sm text-gray-600 font-mono w-12 text-right">3</span>
+            </div>
+        </div>
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">权重设置</label>
+            <div class="flex items-center gap-4">
+                <span class="text-xs text-gray-500 w-12 text-right">关键字</span>
+                <input type="range" id="parser-retrieval-weight" min="0" max="1" step="0.1" value="0.5"
+                       oninput="document.getElementById('parser-retrieval-weight-val').textContent = this.value"
+                       class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600">
+                <span class="text-xs text-gray-500 w-12">语义</span>
+                <span id="parser-retrieval-weight-val" class="text-sm text-gray-600 font-mono w-12 text-right">0.5</span>
+            </div>
+        </div>
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Rerank 模型</label>
+            <select id="parser-retrieval-rerank-model" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                <option value="Qwen3-Reranker-8B">Qwen3-Reranker-8B</option>
+                <option value="Qwen3-Reranker-4B">Qwen3-Reranker-4B</option>
+                <option value="Qwen3-Reranker-0.6B">Qwen3-Reranker-0.6B</option>
+            </select>
+        </div>
+    `;
+};
+
 window.initParserSettings = function(id) {
     const parser = window.parserData.find(p => p.id === id);
     if (!parser) return;
+    
+    if (window.renderParserRetrievalConfig) window.renderParserRetrievalConfig();
     
     // Fill Basic Info
     const nameEl = document.getElementById('setting-name');

@@ -35,6 +35,13 @@ const DOC_NAMES = [
 const RANKS = ['总监', '经理', '助理'];
 const RESPONSIBILITIES = ['工厂长', 'Team长', '本部长'];
 
+let createKbStep = 1;
+let createKbCompletedStep = 1;
+let createKbFiles = [];
+const createKbMaxStep = 3;
+let createKbSliceSource = '';
+const CREATE_KB_PREVIEW_FALLBACK = '这是一个用于切片预览的示例文档内容。你可以在这里看到不同的切片策略如何影响文本的分段方式。例如，按段落分割会以自然段落为边界，而按固定字符数分割则会严格根据长度进行切片。通过合理设置切片大小和重叠，可以在保证检索效果的同时，平衡索引规模与性能。';
+
 function initKnowledgePage() {
     if (knowledgeData.length === 0) {
         knowledgeData = generateMockKnowledge(10);
@@ -215,10 +222,692 @@ window.openKnowledgeActions = function(event, id) {
     ]);
 }
 
+function renderCreateKbRetrievalModeLegacy() {
+    const wrapper = document.getElementById('create-kb-retrieval-mode-wrapper');
+    if (!wrapper) return;
+    wrapper.innerHTML = `
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+                <label class="block text-xs text-gray-600 mb-1">检索模式</label>
+                <select id="create-kb-retrieval-mode" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-sm">
+                    <option value="">请选择检索模式</option>
+                    <option value="vector">向量检索</option>
+                    <option value="fulltext">全文检索</option>
+                    <option value="hybrid">混合检索</option>
+                </select>
+            </div>
+        </div>
+    `;
+}
+
+function renderCreateKbRetrievalConfigLegacy(mode) {
+    const container = document.getElementById('create-kb-retrieval-config');
+    if (!container) return;
+    container.innerHTML = '';
+    if (!mode) return;
+
+    if (mode === 'vector' || mode === 'fulltext') {
+        container.innerHTML = `
+            <div class="space-y-3">
+                <div>
+                    <label class="block text-xs text-gray-600 mb-1">Rerank 模型</label>
+                    <select id="create-kb-rerank-model" name="retrieval_rerank_model" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-sm">
+                        <option value="">请选择 Rerank 模型</option>
+                        <option value="none">不使用 Rerank</option>
+                        <option value="light">轻量级 Rerank 模型</option>
+                        <option value="accurate">高精度 Rerank 模型</option>
+                    </select>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs text-gray-600 mb-1">Top K</label>
+                        <input id="create-kb-top-k" name="retrieval_top_k" type="number" min="1" max="10" step="1" value="5" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm">
+                        <p class="text-[11px] text-gray-400 mt-1">设置返回的候选结果数量，范围 1-10。</p>
+                    </div>
+                    <div>
+                        <label class="block text-xs text-gray-600 mb-1">Score 阈值</label>
+                        <input id="create-kb-score-threshold" name="retrieval_score_threshold" type="number" min="0" max="1" step="0.01" value="0.5" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm">
+                        <p class="text-[11px] text-gray-400 mt-1">过滤低于该相关性分数的结果，范围 0-1。</p>
+                    </div>
+                </div>
+            </div>
+        `;
+    } else if (mode === 'hybrid') {
+        container.innerHTML = `
+            <div class="space-y-3">
+                <div>
+                    <label class="block text-xs text-gray-600 mb-1">Rerank 模型</label>
+                    <select id="create-kb-rerank-model" name="retrieval_rerank_model" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-sm">
+                        <option value="">请选择 Rerank 模型</option>
+                        <option value="none">不使用 Rerank</option>
+                        <option value="light">轻量级 Rerank 模型</option>
+                        <option value="accurate">高精度 Rerank 模型</option>
+                    </select>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs text-gray-600 mb-1">权重设置</label>
+                        <input id="create-kb-hybrid-weight" name="retrieval_hybrid_weight" type="number" min="0" max="1" step="0.01" value="0.5" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm">
+                        <p class="text-[11px] text-gray-400 mt-1">调整向量检索与全文检索在混合评分中的权重，范围 0-1。</p>
+                    </div>
+                    <div>
+                        <label class="block text-xs text-gray-600 mb-1">Top K</label>
+                        <input id="create-kb-top-k" name="retrieval_top_k" type="number" min="1" max="10" step="1" value="5" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm">
+                        <p class="text-[11px] text-gray-400 mt-1">设置返回的候选结果数量，范围 1-10。</p>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs text-gray-600 mb-1">Score 阈值</label>
+                    <input id="create-kb-score-threshold" name="retrieval_score_threshold" type="number" min="0" max="1" step="0.01" value="0.5" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm">
+                    <p class="text-[11px] text-gray-400 mt-1">过滤低于该相关性分数的结果，范围 0-1。</p>
+                </div>
+            </div>
+        `;
+    }
+}
+
+const CREATE_KB_RETRIEVAL_STORAGE_KEY = 'createKbRetrievalSettings';
+
+function loadCreateKbRetrievalSettings() {
+    try {
+        const raw = localStorage.getItem(CREATE_KB_RETRIEVAL_STORAGE_KEY);
+        if (!raw) return {};
+        const data = JSON.parse(raw);
+        if (data && typeof data === 'object') return data;
+        return {};
+    } catch (e) {
+        return {};
+    }
+}
+
+function saveCreateKbRetrievalSetting(key, value) {
+    try {
+        const data = loadCreateKbRetrievalSettings() || {};
+        data[key] = value;
+        localStorage.setItem(CREATE_KB_RETRIEVAL_STORAGE_KEY, JSON.stringify(data));
+    } catch (e) {}
+}
+
+function bindLinkedNumberAndSlider(numberId, sliderId, storageKey) {
+    const numberEl = document.getElementById(numberId);
+    const sliderEl = document.getElementById(sliderId);
+    if (!numberEl || !sliderEl) return;
+    const numberMin = numberEl.min !== '' ? parseFloat(numberEl.min) : null;
+    const numberMax = numberEl.max !== '' ? parseFloat(numberEl.max) : null;
+    const sliderMin = sliderEl.min !== '' ? parseFloat(sliderEl.min) : null;
+    const sliderMax = sliderEl.max !== '' ? parseFloat(sliderEl.max) : null;
+    const min = numberMin !== null ? numberMin : sliderMin !== null ? sliderMin : 0;
+    const max = numberMax !== null ? numberMax : sliderMax !== null ? sliderMax : 100;
+    const step = numberEl.step !== '' ? parseFloat(numberEl.step) : sliderEl.step !== '' ? parseFloat(sliderEl.step) : 1;
+    const stepDecimals = step.toString().includes('.') ? step.toString().split('.')[1].length : 0;
+    function normalize(val) {
+        let num = parseFloat(val);
+        if (isNaN(num)) num = min;
+        if (num < min) num = min;
+        if (num > max) num = max;
+        num = Math.round(num / step) * step;
+        return parseFloat(num.toFixed(stepDecimals));
+    }
+    function updateFromNumber() {
+        const normalized = normalize(numberEl.value);
+        numberEl.value = normalized;
+        sliderEl.value = normalized;
+        if (storageKey) {
+            saveCreateKbRetrievalSetting(storageKey, normalized);
+        }
+    }
+    function updateFromSlider() {
+        const val = normalize(sliderEl.value);
+        sliderEl.value = val;
+        numberEl.value = val;
+        if (storageKey) {
+            saveCreateKbRetrievalSetting(storageKey, val);
+        }
+    }
+    numberEl.addEventListener('input', updateFromNumber);
+    sliderEl.addEventListener('input', updateFromSlider);
+}
+
+function setupCreateKbRetrievalControls() {
+    const saved = loadCreateKbRetrievalSettings() || {};
+    const rerankEl = document.getElementById('create-kb-rerank-model');
+    if (rerankEl) {
+        const savedModel = saved.rerankModel;
+        if (savedModel && Array.prototype.some.call(rerankEl.options, function(opt) { return opt.value === savedModel; })) {
+            rerankEl.value = savedModel;
+        }
+        if (!rerankEl.value && rerankEl.options.length > 0) {
+            rerankEl.value = rerankEl.options[0].value;
+        }
+        rerankEl.onchange = function() {
+            saveCreateKbRetrievalSetting('rerankModel', this.value);
+        };
+    }
+    const weightInput = document.getElementById('create-kb-hybrid-weight');
+    const weightSlider = document.getElementById('create-kb-hybrid-weight-slider');
+    if (weightInput && weightSlider) {
+        let value = typeof saved.weight === 'number' ? saved.weight : 0.5;
+        if (value > 1) {
+            value = value / 100;
+        }
+        weightInput.value = value;
+        weightSlider.value = value;
+        bindLinkedNumberAndSlider('create-kb-hybrid-weight', 'create-kb-hybrid-weight-slider', 'weight');
+    }
+    const initialTokInput = document.getElementById('create-kb-initial-tok');
+    const initialTokSlider = document.getElementById('create-kb-initial-tok-slider');
+    if (initialTokInput && initialTokSlider) {
+        const value = typeof saved.initialTok === 'number' ? saved.initialTok : 25;
+        initialTokInput.value = value;
+        initialTokSlider.value = value;
+        bindLinkedNumberAndSlider('create-kb-initial-tok', 'create-kb-initial-tok-slider', 'initialTok');
+    }
+    const scoreInput = document.getElementById('create-kb-score-threshold');
+    const scoreSlider = document.getElementById('create-kb-score-threshold-slider');
+    if (scoreInput && scoreSlider) {
+        const value = typeof saved.scoreThreshold === 'number' ? saved.scoreThreshold : 0.7;
+        scoreInput.value = value;
+        scoreSlider.value = value;
+        bindLinkedNumberAndSlider('create-kb-score-threshold', 'create-kb-score-threshold-slider', 'scoreThreshold');
+    }
+    const finalTokInput = document.getElementById('create-kb-final-tok');
+    const finalTokSlider = document.getElementById('create-kb-final-tok-slider');
+    if (finalTokInput && finalTokSlider) {
+        const value = typeof saved.finalTok === 'number' ? saved.finalTok : 10;
+        finalTokInput.value = value;
+        finalTokSlider.value = value;
+        bindLinkedNumberAndSlider('create-kb-final-tok', 'create-kb-final-tok-slider', 'finalTok');
+    }
+}
+
+function renderCreateKbRetrievalConfig() {
+    const container = document.getElementById('create-kb-retrieval-config');
+    if (!container) return;
+    container.innerHTML = '';
+    container.innerHTML = `
+        <div class="space-y-4">
+            <div class="bg-gray-50 border border-gray-100 rounded-lg p-4 space-y-2">
+                <label class="block text-xs font-medium text-gray-700 mb-1">
+                    Rerank 模型
+                    <i class="fa-regular fa-circle-question text-gray-400 ml-1" title="用于对初步检索结果重新排序的模型，推荐选择大模型以获得更精准的排序效果。"></i>
+                </label>
+                <select id="create-kb-rerank-model" name="retrieval_rerank_model" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-sm">
+                    <option value="bge-reranker-large">BAAI/bge-reranker-large (推荐)</option>
+                    <option value="bge-reranker-base">BAAI/bge-reranker-base</option>
+                    <option value="mce-embedding">MCE Embedding Model</option>
+                    <option value="roberta-base">RoBERTa Base</option>
+                </select>
+            </div>
+            <div class="bg-gray-50 border border-gray-100 rounded-lg p-4 space-y-2">
+                <div class="flex items-center justify-between mb-1">
+                    <label class="text-xs font-medium text-gray-700">
+                        权重设置
+                        <i class="fa-regular fa-circle-question text-gray-400 ml-1" title="控制关键字检索与向量检索的综合占比，靠左更偏向关键字，靠右更偏向语义向量。"></i>
+                    </label>
+                    <span class="text-[11px] text-gray-500">当前值: <span id="create-kb-weight-display" class="font-mono">0.5</span></span>
+                </div>
+                <div class="flex items-center gap-3">
+                    <div class="w-24">
+                        <input id="create-kb-hybrid-weight" name="retrieval_hybrid_weight" type="number" min="0" max="1" step="0.1" value="0.5" class="w-full px-2 py-1.5 border border-gray-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 focus-border-transparent text-right">
+                    </div>
+                    <div class="flex-1">
+                        <input id="create-kb-hybrid-weight-slider" type="range" min="0" max="1" step="0.1" value="0.5" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600">
+                        <div class="flex items-center justify-between text-[11px] text-gray-400 mt-1">
+                            <span>关键字检索</span>
+                            <span>向量检索</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="bg-gray-50 border border-gray-100 rounded-lg p-4 space-y-2">
+                <div class="flex items-center justify-between mb-1">
+                    <label class="text-xs font-medium text-gray-700">
+                        初步检索 Tok
+                        <i class="fa-regular fa-circle-question text-gray-400 ml-1" title="用于从索引中召回的初始候选数量，值越大召回越全，但性能开销越高。建议在 10-30 之间调整。"></i>
+                    </label>
+                    <span class="text-[11px] text-gray-500">当前值: <span id="create-kb-initial-tok-display" class="font-mono">25</span></span>
+                </div>
+                <div class="flex items-center gap-3">
+                    <input id="create-kb-initial-tok" type="number" min="0" max="50" step="1" value="25" class="w-24 px-2 py-1.5 border border-gray-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 focus-border-transparent text-right">
+                    <input id="create-kb-initial-tok-slider" type="range" min="0" max="50" step="1" value="25" class="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600">
+                </div>
+            </div>
+            <div class="bg-gray-50 border border-gray-100 rounded-lg p-4 space-y-2">
+                <div class="flex items-center justify-between mb-1">
+                    <label class="text-xs font-medium text-gray-700">
+                        Score 阈值
+                        <i class="fa-regular fa-circle-question text-gray-400 ml-1" title="过滤低于该相关性分数的结果，范围 0.01-1.00，建议 0.60-0.80 之间。"></i>
+                    </label>
+                    <span class="text-[11px] text-gray-500">当前值: <span id="create-kb-score-display" class="font-mono">0.70</span></span>
+                </div>
+                <div class="flex items-center gap-3">
+                    <input id="create-kb-score-threshold" name="retrieval_score_threshold" type="number" min="0.01" max="1" step="0.01" value="0.7" class="w-24 px-2 py-1.5 border border-gray-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 focus-border-transparent text-right">
+                    <input id="create-kb-score-threshold-slider" type="range" min="0.01" max="1" step="0.01" value="0.7" class="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600">
+                </div>
+            </div>
+            <div class="bg-gray-50 border border-gray-100 rounded-lg p-4 space-y-2">
+                <div class="flex items-center justify-between mb-1">
+                    <label class="text-xs font-medium text-gray-700">
+                        最终召回 Tok
+                        <i class="fa-regular fa-circle-question text-gray-400 ml-1" title="最终返回给大模型用于回答的问题片段数量，通常应小于初步检索 Tok，以控制上下文长度。"></i>
+                    </label>
+                    <span class="text-[11px] text-gray-500">当前值: <span id="create-kb-final-tok-display" class="font-mono">10</span></span>
+                </div>
+                <div class="flex items-center gap-3">
+                    <input id="create-kb-final-tok" type="number" min="1" max="20" step="1" value="10" class="w-24 px-2 py-1.5 border border-gray-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 focus-border-transparent text-right">
+                    <input id="create-kb-final-tok-slider" type="range" min="1" max="20" step="1" value="10" class="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600">
+                </div>
+            </div>
+        </div>
+    `;
+    setupCreateKbRetrievalControls();
+    const weightInputDisplay = document.getElementById('create-kb-hybrid-weight');
+    const weightDisplay = document.getElementById('create-kb-weight-display');
+    if (weightInputDisplay && weightDisplay) {
+        weightDisplay.textContent = parseFloat(weightInputDisplay.value).toFixed(1);
+        weightInputDisplay.addEventListener('input', function() {
+            weightDisplay.textContent = parseFloat(this.value || '0').toFixed(1);
+        });
+    }
+    const initialTokInputDisplay = document.getElementById('create-kb-initial-tok');
+    const initialTokDisplay = document.getElementById('create-kb-initial-tok-display');
+    if (initialTokInputDisplay && initialTokDisplay) {
+        initialTokDisplay.textContent = initialTokInputDisplay.value;
+        initialTokInputDisplay.addEventListener('input', function() {
+            initialTokDisplay.textContent = this.value;
+        });
+    }
+    const scoreInputDisplay = document.getElementById('create-kb-score-threshold');
+    const scoreDisplay = document.getElementById('create-kb-score-display');
+    if (scoreInputDisplay && scoreDisplay) {
+        scoreDisplay.textContent = parseFloat(scoreInputDisplay.value).toFixed(2);
+        scoreInputDisplay.addEventListener('input', function() {
+            scoreDisplay.textContent = parseFloat(this.value).toFixed(2);
+        });
+    }
+    const finalTokInputDisplay = document.getElementById('create-kb-final-tok');
+    const finalTokDisplay = document.getElementById('create-kb-final-tok-display');
+    if (finalTokInputDisplay && finalTokDisplay) {
+        finalTokDisplay.textContent = finalTokInputDisplay.value;
+        finalTokInputDisplay.addEventListener('input', function() {
+            finalTokDisplay.textContent = this.value;
+        });
+    }
+}
+
+function initCreateKbForm() {
+    renderCreateKbRetrievalConfig();
+
+    const dropzone = document.getElementById('create-kb-upload-dropzone');
+    const fileInput = document.getElementById('create-kb-upload-input');
+    if (dropzone && fileInput) {
+        dropzone.onclick = () => fileInput.click();
+        dropzone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropzone.classList.add('border-blue-400', 'bg-blue-50');
+        });
+        dropzone.addEventListener('dragleave', (e) => {
+            e.preventDefault();
+            dropzone.classList.remove('border-blue-400', 'bg-blue-50');
+        });
+        dropzone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropzone.classList.remove('border-blue-400', 'bg-blue-50');
+            const files = Array.from(e.dataTransfer.files || []);
+            if (files.length) {
+                addCreateKbFiles(files);
+            }
+        });
+        fileInput.onchange = (e) => {
+            const files = Array.from(e.target.files || []);
+            if (files.length) {
+                addCreateKbFiles(files);
+                fileInput.value = '';
+            }
+        };
+    }
+
+    const sliceStrategyEl = document.getElementById('create-kb-slice-strategy');
+    const sliceSizeEl = document.getElementById('create-kb-slice-size');
+    const sliceOverlapEl = document.getElementById('create-kb-slice-overlap');
+    if (sliceStrategyEl) sliceStrategyEl.onchange = updateCreateKbSlicePreview;
+    if (sliceSizeEl) sliceSizeEl.oninput = updateCreateKbSlicePreview;
+    if (sliceOverlapEl) sliceOverlapEl.oninput = updateCreateKbSlicePreview;
+}
+
+function addCreateKbFiles(files) {
+    const list = [];
+    files.forEach(file => {
+        list.push({
+            name: file.name,
+            size: file.size,
+            status: 'ready'
+        });
+        if (!createKbSliceSource && (file.type.startsWith('text/') || file.name.endsWith('.txt'))) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const text = String(e.target.result || '');
+                createKbSliceSource = text.slice(0, 4000);
+                updateCreateKbSlicePreview();
+            };
+            reader.readAsText(file);
+        }
+    });
+    createKbFiles = createKbFiles.concat(list);
+    renderCreateKbFileList();
+}
+
+function renderCreateKbFileList() {
+    const container = document.getElementById('create-kb-file-list');
+    const countEl = document.getElementById('create-kb-upload-count');
+    if (!container) return;
+    if (countEl) countEl.textContent = `${createKbFiles.length} 个文件`;
+
+    if (!createKbFiles.length) {
+        container.innerHTML = '<div class="px-3 py-4 text-xs text-gray-400 text-center">暂无文件，请先上传</div>';
+        return;
+    }
+
+    container.innerHTML = '';
+    createKbFiles.forEach((file, index) => {
+        const row = document.createElement('div');
+        row.className = 'px-3 py-2 flex items-center gap-3 hover:bg-gray-100 transition-colors';
+        const sizeKB = file.size / 1024;
+        const sizeText = sizeKB > 1024 ? `${(sizeKB / 1024).toFixed(2)} MB` : `${sizeKB.toFixed(1)} KB`;
+        let statusClass = 'bg-gray-100 text-gray-600';
+        let statusText = '待上传';
+        if (file.status === 'success') {
+            statusClass = 'bg-green-100 text-green-700';
+            statusText = '成功';
+        } else if (file.status === 'error') {
+            statusClass = 'bg-red-100 text-red-700';
+            statusText = '失败';
+        }
+        row.innerHTML = `
+            <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2">
+                    <i class="fa-regular fa-file-lines text-gray-400 text-sm"></i>
+                    <span class="text-sm text-gray-800 truncate" title="${file.name}">${file.name}</span>
+                </div>
+                <div class="text-[11px] text-gray-400 mt-0.5">${sizeText}</div>
+            </div>
+            <span class="px-2 py-0.5 rounded-full text-[11px] font-medium ${statusClass}">${statusText}</span>
+            <button type="button" class="text-gray-400 hover:text-red-500 text-xs" data-index="${index}">
+                <i class="fa-solid fa-trash-can"></i>
+            </button>
+        `;
+        const deleteBtn = row.querySelector('button[data-index]');
+        deleteBtn.onclick = () => {
+            createKbFiles.splice(index, 1);
+            renderCreateKbFileList();
+            updateCreateKbSlicePreview();
+        };
+        container.appendChild(row);
+    });
+}
+
+function getCreateKbSliceSource() {
+    if (createKbSliceSource) return createKbSliceSource;
+    return CREATE_KB_PREVIEW_FALLBACK;
+}
+
+function updateCreateKbSlicePreview() {
+    const previewEl = document.getElementById('create-kb-slice-preview');
+    const countEl = document.getElementById('create-kb-slice-count');
+    const strategyEl = document.getElementById('create-kb-slice-strategy');
+    const sizeEl = document.getElementById('create-kb-slice-size');
+    const overlapEl = document.getElementById('create-kb-slice-overlap');
+    if (!previewEl || !strategyEl || !sizeEl || !overlapEl) return;
+
+    const strategy = strategyEl.value || 'paragraph';
+    const size = Math.max(50, Number(sizeEl.value) || 500);
+    const overlap = Math.max(0, Number(overlapEl.value) || 0);
+    const text = getCreateKbSliceSource();
+
+    let slices = [];
+    if (strategy === 'paragraph') {
+        const parts = text.split(/\n\s*\n|。/).map(t => t.trim()).filter(Boolean);
+        slices = parts;
+    } else if (strategy === 'length') {
+        let start = 0;
+        while (start < text.length && slices.length < 50) {
+            const end = Math.min(text.length, start + size);
+            slices.push(text.slice(start, end));
+            if (end >= text.length) break;
+            start = end - overlap;
+            if (start < 0) start = 0;
+        }
+    } else if (strategy === 'title') {
+        const lines = text.split('\n');
+        let current = [];
+        lines.forEach(line => {
+            if (/^#{1,3}\s+/.test(line) && current.length) {
+                slices.push(current.join('\n'));
+                current = [line];
+            } else {
+                current.push(line);
+            }
+        });
+        if (current.length) slices.push(current.join('\n'));
+    }
+
+    if (!slices.length) slices = [text];
+
+    if (countEl) countEl.textContent = `共 ${slices.length} 个切片`;
+    previewEl.innerHTML = '';
+    slices.slice(0, 30).forEach((slice, idx) => {
+        const block = document.createElement('div');
+        block.className = 'border border-gray-200 rounded-md bg-white px-3 py-2';
+        block.innerHTML = `
+            <div class="flex items-center justify-between mb-1">
+                <span class="text-[11px] text-gray-500">切片 #${idx + 1}</span>
+            </div>
+            <div class="text-[11px] text-gray-700 whitespace-pre-line break-words">${slice}</div>
+        `;
+        previewEl.appendChild(block);
+    });
+}
+
+function openCreateKbPage() {
+    const listView = document.getElementById('kb-list-view');
+    const detailView = document.getElementById('kb-detail-view');
+    const createPage = document.getElementById('kb-create-page');
+    if (listView) listView.classList.add('hidden');
+    if (detailView) detailView.classList.add('hidden');
+    if (createPage) createPage.classList.remove('hidden');
+    createKbStep = 1;
+    createKbCompletedStep = 1;
+    updateCreateKbStep();
+}
+
+function closeCreateKbPage() {
+    const listView = document.getElementById('kb-list-view');
+    const createPage = document.getElementById('kb-create-page');
+    if (createPage) createPage.classList.add('hidden');
+    if (listView) listView.classList.remove('hidden');
+}
+
+function cancelCreateKb() {
+    resetCreateKbForm();
+    closeCreateKbPage();
+}
+
+function setCreateKbStep(step) {
+    const target = Math.min(Math.max(1, step), createKbMaxStep);
+    if (target > createKbCompletedStep) return;
+    createKbStep = target;
+    updateCreateKbStep();
+}
+
+function prevCreateKbStep() {
+    if (createKbStep <= 1) return;
+    createKbStep -= 1;
+    updateCreateKbStep();
+}
+
+function nextCreateKbStep() {
+    if (createKbStep === 1) {
+        if (!validateCreateKbBasic()) return;
+    } else if (createKbStep === 2) {
+        if (!createKbFiles.length) {
+            if (window.showToast) {
+                window.showToast('请至少上传一个文件', 'warning');
+            } else {
+                alert('请至少上传一个文件');
+            }
+            return;
+        }
+        updateCreateKbSlicePreview();
+    } else if (createKbStep === 3) {
+        if (!confirmCreateKbSummary()) return;
+        submitCreateKb();
+        return;
+    }
+
+    if (createKbStep < createKbMaxStep) {
+        createKbStep += 1;
+        if (createKbStep > createKbCompletedStep) {
+            createKbCompletedStep = createKbStep;
+        }
+        updateCreateKbStep();
+    }
+}
+
+function updateCreateKbStep() {
+    const step1 = document.getElementById('kb-create-step-1');
+    const step2 = document.getElementById('kb-create-step-2');
+    const step3 = document.getElementById('kb-create-step-3');
+    if (step1) step1.classList.toggle('hidden', createKbStep !== 1);
+    if (step2) step2.classList.toggle('hidden', createKbStep !== 2);
+    if (step3) step3.classList.toggle('hidden', createKbStep !== 3);
+
+    const s1 = document.getElementById('kb-create-stepper-1');
+    const s2 = document.getElementById('kb-create-stepper-2');
+    const s3 = document.getElementById('kb-create-stepper-3');
+    const applyStepperState = (btn, index) => {
+        if (!btn) return;
+        const circle = btn.querySelector('div.w-7');
+        const title = btn.querySelector('span');
+        const desc = btn.querySelector('span.text-[11px]');
+        const active = createKbStep === index;
+        const completed = createKbCompletedStep >= index && index < createKbStep;
+        btn.classList.remove('text-gray-400', 'text-blue-600');
+        btn.classList.add(active || completed ? 'text-blue-600' : 'text-gray-400');
+        if (circle) {
+            circle.classList.remove('bg-gray-100', 'text-gray-500', 'bg-blue-600', 'text-white');
+            if (active || completed) {
+                circle.classList.add('bg-blue-600', 'text-white');
+            } else {
+                circle.classList.add('bg-gray-100', 'text-gray-500');
+            }
+        }
+        if (title) {
+            title.classList.remove('text-gray-700');
+            if (active || completed) {
+                title.classList.add('text-gray-700');
+            }
+        }
+        if (desc) {
+            desc.classList.remove('text-gray-400', 'text-blue-400');
+            desc.classList.add(active ? 'text-blue-400' : 'text-gray-400');
+        }
+    };
+    applyStepperState(s1, 1);
+    applyStepperState(s2, 2);
+    applyStepperState(s3, 3);
+
+    const prevBtn = document.getElementById('kb-create-prev');
+    const nextBtn = document.getElementById('kb-create-next');
+    if (prevBtn) {
+        prevBtn.disabled = createKbStep === 1;
+        prevBtn.classList.toggle('opacity-40', createKbStep === 1);
+        prevBtn.classList.toggle('cursor-not-allowed', createKbStep === 1);
+    }
+    if (nextBtn) {
+        if (createKbStep === createKbMaxStep) {
+            nextBtn.textContent = '提交';
+        } else {
+            nextBtn.textContent = '下一步';
+        }
+    }
+}
+
+function resetCreateKbForm() {
+    const nameEl = document.getElementById('create-kb-name');
+    const descEl = document.getElementById('create-kb-desc');
+    const parserEl = document.getElementById('create-kb-parser');
+    const nameErrorEl = document.getElementById('create-kb-name-error');
+    const descErrorEl = document.getElementById('create-kb-desc-error');
+    if (nameEl) nameEl.value = '';
+    if (descEl) descEl.value = '';
+    if (parserEl) parserEl.value = 'embedding-2';
+    if (nameErrorEl) nameErrorEl.classList.add('hidden');
+    if (descErrorEl) descErrorEl.classList.add('hidden');
+    renderCreateKbRetrievalConfig();
+    createKbFiles = [];
+    createKbSliceSource = '';
+    renderCreateKbFileList();
+    updateCreateKbSlicePreview();
+    createKbStep = 1;
+    createKbCompletedStep = 1;
+    updateCreateKbStep();
+}
+
+function validateCreateKbBasic() {
+    const nameEl = document.getElementById('create-kb-name');
+    const descEl = document.getElementById('create-kb-desc');
+    const nameErrorEl = document.getElementById('create-kb-name-error');
+    const descErrorEl = document.getElementById('create-kb-desc-error');
+    if (!nameEl || !descEl || !nameErrorEl || !descErrorEl) return false;
+    let isValid = true;
+    nameErrorEl.classList.add('hidden');
+    descErrorEl.classList.add('hidden');
+    nameEl.classList.remove('border-red-500');
+    descEl.classList.remove('border-red-500');
+    if (!nameEl.value.trim()) {
+        nameErrorEl.classList.remove('hidden');
+        nameEl.classList.add('border-red-500');
+        isValid = false;
+    }
+    if (!descEl.value.trim()) {
+        descErrorEl.classList.remove('hidden');
+        descEl.classList.add('border-red-500');
+        isValid = false;
+    }
+    return isValid;
+}
+
+function confirmCreateKbSummary() {
+    const name = document.getElementById('create-kb-name')?.value || '';
+    const strategy = document.getElementById('create-kb-slice-strategy')?.value || 'paragraph';
+    const rerankModel = document.getElementById('create-kb-rerank-model')?.value || '默认';
+    const scoreThreshold = document.getElementById('create-kb-score-threshold')?.value || '未设置';
+    const hybridWeight = document.getElementById('create-kb-hybrid-weight')?.value || '未设置';
+    const initialTok = document.getElementById('create-kb-initial-tok')?.value || '未设置';
+    const finalTok = document.getElementById('create-kb-final-tok')?.value || '未设置';
+    const filesCount = createKbFiles.length;
+    const summary = [
+        `知识库名称：${name}`,
+        `Rerank 模型：${rerankModel || '未设置'}`,
+        `Score 阈值：${scoreThreshold}`,
+        `权重设置：${hybridWeight}`,
+        `初步检索 Tok：${initialTok}`,
+        `最终召回 Tok：${finalTok}`,
+        `上传文件数：${filesCount}`,
+        `切片策略：${strategy}`
+    ].join('\n');
+    return confirm(`请确认以下配置：\n\n${summary}\n\n确认提交并构建索引吗？`);
+}
+
 function submitCreateKb() {
     const nameEl = document.getElementById('create-kb-name');
     const descEl = document.getElementById('create-kb-desc');
     const parserEl = document.getElementById('create-kb-parser');
+    const rerankModelEl = document.getElementById('create-kb-rerank-model');
+    const scoreThresholdEl = document.getElementById('create-kb-score-threshold');
+    const hybridWeightEl = document.getElementById('create-kb-hybrid-weight');
+    const initialTokEl = document.getElementById('create-kb-initial-tok');
+    const finalTokEl = document.getElementById('create-kb-final-tok');
     const nameErrorEl = document.getElementById('create-kb-name-error');
     const descErrorEl = document.getElementById('create-kb-desc-error');
     
@@ -247,7 +936,6 @@ function submitCreateKb() {
     
     if (!isValid) return;
     
-    // Create new KB
     const newKb = {
         id: window.generateId ? window.generateId('KB') : `KB-${Date.now()}`,
         name: name,
@@ -255,22 +943,22 @@ function submitCreateKb() {
         tag: '未分类',
         docCount: 0,
         updatedAt: new Date().toLocaleString(),
-        creator: 'Admin', // Current user
+        creator: 'Admin',
         permission: '私有',
         parser: parserEl.value,
-        chunkSize: 500
+        chunkSize: 500,
+        retrievalMode: null,
+        retrievalRerankModel: rerankModelEl ? rerankModelEl.value || null : null,
+        retrievalScoreThreshold: scoreThresholdEl && scoreThresholdEl.value ? Number(scoreThresholdEl.value) : null,
+        retrievalHybridWeight: hybridWeightEl && hybridWeightEl.value ? Number(hybridWeightEl.value) : null,
+        retrievalInitialTok: initialTokEl && initialTokEl.value ? Number(initialTokEl.value) : null,
+        retrievalFinalTok: finalTokEl && finalTokEl.value ? Number(finalTokEl.value) : null
     };
     
     knowledgeData.unshift(newKb);
     renderKnowledgeList();
-    closeModal('create-kb-modal');
-    
-    // Clear Form
-    nameEl.value = '';
-    descEl.value = '';
-    parserEl.value = 'general';
-    
-    // Redirect to detail view (document list)
+    resetCreateKbForm();
+    closeCreateKbPage();
     showKbDetail(newKb.id, 'list');
 }
 
@@ -1719,5 +2407,6 @@ document.addEventListener('view-loaded', (e) => {
     if (e.detail.view === 'knowledge') {
         initKnowledgePage();
         initDocUploadWizard();
+        initCreateKbForm();
     }
 });
