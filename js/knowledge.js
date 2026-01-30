@@ -40,6 +40,9 @@ let createKbCompletedStep = 1;
 let createKbFiles = [];
 const createKbMaxStep = 3;
 let createKbSliceSource = '';
+let createKbUploading = false;
+let createKbSliceMode = 'parent';
+let createKbConfigTab = 'form';
 const CREATE_KB_PREVIEW_FALLBACK = '这是一个用于切片预览的示例文档内容。你可以在这里看到不同的切片策略如何影响文本的分段方式。例如，按段落分割会以自然段落为边界，而按固定字符数分割则会严格根据长度进行切片。通过合理设置切片大小和重叠，可以在保证检索效果的同时，平衡索引规模与性能。';
 
 function initKnowledgePage() {
@@ -48,19 +51,34 @@ function initKnowledgePage() {
     }
     renderKnowledgeList();
 
-    // Check for saved state and restore if applicable
+    const savedCreateStateRaw = localStorage.getItem('kbCreateState');
     const savedView = localStorage.getItem('currentView');
     const savedKbId = localStorage.getItem('currentKbId');
-    
+    if (savedCreateStateRaw) {
+        try {
+            const savedCreateState = JSON.parse(savedCreateStateRaw);
+            if (savedCreateState && savedCreateState.active) {
+                const listView = document.getElementById('kb-list-view');
+                const detailView = document.getElementById('kb-detail-view');
+                const createPage = document.getElementById('kb-create-page');
+                if (listView) listView.classList.add('hidden');
+                if (detailView) detailView.classList.add('hidden');
+                if (createPage) createPage.classList.remove('hidden');
+                createKbStep = savedCreateState.step || 1;
+                createKbCompletedStep = savedCreateState.completedStep || createKbStep;
+                updateCreateKbStep();
+                return;
+            }
+        } catch (e) {}
+    }
+
     if (savedView === 'detail' && savedKbId) {
         showKbDetail(savedKbId);
-        
         const savedDocId = localStorage.getItem('kbSelectedDocId');
         if (savedDocId) {
             selectDoc(savedDocId);
         }
     } else {
-        // Ensure we are in list view if no state
         backToKbList();
     }
 }
@@ -240,71 +258,7 @@ function renderCreateKbRetrievalModeLegacy() {
     `;
 }
 
-function renderCreateKbRetrievalConfigLegacy(mode) {
-    const container = document.getElementById('create-kb-retrieval-config');
-    if (!container) return;
-    container.innerHTML = '';
-    if (!mode) return;
 
-    if (mode === 'vector' || mode === 'fulltext') {
-        container.innerHTML = `
-            <div class="space-y-3">
-                <div>
-                    <label class="block text-xs text-gray-600 mb-1">Rerank 模型</label>
-                    <select id="create-kb-rerank-model" name="retrieval_rerank_model" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-sm">
-                        <option value="">请选择 Rerank 模型</option>
-                        <option value="none">不使用 Rerank</option>
-                        <option value="light">轻量级 Rerank 模型</option>
-                        <option value="accurate">高精度 Rerank 模型</option>
-                    </select>
-                </div>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-xs text-gray-600 mb-1">Top K</label>
-                        <input id="create-kb-top-k" name="retrieval_top_k" type="number" min="1" max="10" step="1" value="5" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm">
-                        <p class="text-[11px] text-gray-400 mt-1">设置返回的候选结果数量，范围 1-10。</p>
-                    </div>
-                    <div>
-                        <label class="block text-xs text-gray-600 mb-1">Score 阈值</label>
-                        <input id="create-kb-score-threshold" name="retrieval_score_threshold" type="number" min="0" max="1" step="0.01" value="0.5" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm">
-                        <p class="text-[11px] text-gray-400 mt-1">过滤低于该相关性分数的结果，范围 0-1。</p>
-                    </div>
-                </div>
-            </div>
-        `;
-    } else if (mode === 'hybrid') {
-        container.innerHTML = `
-            <div class="space-y-3">
-                <div>
-                    <label class="block text-xs text-gray-600 mb-1">Rerank 模型</label>
-                    <select id="create-kb-rerank-model" name="retrieval_rerank_model" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-sm">
-                        <option value="">请选择 Rerank 模型</option>
-                        <option value="none">不使用 Rerank</option>
-                        <option value="light">轻量级 Rerank 模型</option>
-                        <option value="accurate">高精度 Rerank 模型</option>
-                    </select>
-                </div>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-xs text-gray-600 mb-1">权重设置</label>
-                        <input id="create-kb-hybrid-weight" name="retrieval_hybrid_weight" type="number" min="0" max="1" step="0.01" value="0.5" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm">
-                        <p class="text-[11px] text-gray-400 mt-1">调整向量检索与全文检索在混合评分中的权重，范围 0-1。</p>
-                    </div>
-                    <div>
-                        <label class="block text-xs text-gray-600 mb-1">Top K</label>
-                        <input id="create-kb-top-k" name="retrieval_top_k" type="number" min="1" max="10" step="1" value="5" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm">
-                        <p class="text-[11px] text-gray-400 mt-1">设置返回的候选结果数量，范围 1-10。</p>
-                    </div>
-                </div>
-                <div>
-                    <label class="block text-xs text-gray-600 mb-1">Score 阈值</label>
-                    <input id="create-kb-score-threshold" name="retrieval_score_threshold" type="number" min="0" max="1" step="0.01" value="0.5" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm">
-                    <p class="text-[11px] text-gray-400 mt-1">过滤低于该相关性分数的结果，范围 0-1。</p>
-                </div>
-            </div>
-        `;
-    }
-}
 
 const CREATE_KB_RETRIEVAL_STORAGE_KEY = 'createKbRetrievalSettings';
 
@@ -402,14 +356,7 @@ function setupCreateKbRetrievalControls() {
         initialTokSlider.value = value;
         bindLinkedNumberAndSlider('create-kb-initial-tok', 'create-kb-initial-tok-slider', 'initialTok');
     }
-    const scoreInput = document.getElementById('create-kb-score-threshold');
-    const scoreSlider = document.getElementById('create-kb-score-threshold-slider');
-    if (scoreInput && scoreSlider) {
-        const value = typeof saved.scoreThreshold === 'number' ? saved.scoreThreshold : 0.7;
-        scoreInput.value = value;
-        scoreSlider.value = value;
-        bindLinkedNumberAndSlider('create-kb-score-threshold', 'create-kb-score-threshold-slider', 'scoreThreshold');
-    }
+
     const finalTokInput = document.getElementById('create-kb-final-tok');
     const finalTokSlider = document.getElementById('create-kb-final-tok-slider');
     if (finalTokInput && finalTokSlider) {
@@ -475,19 +422,6 @@ function renderCreateKbRetrievalConfig() {
             <div class="bg-gray-50 border border-gray-100 rounded-lg p-4 space-y-2">
                 <div class="flex items-center justify-between mb-1">
                     <label class="text-xs font-medium text-gray-700">
-                        Score 阈值
-                        <i class="fa-regular fa-circle-question text-gray-400 ml-1" title="过滤低于该相关性分数的结果，范围 0.01-1.00，建议 0.60-0.80 之间。"></i>
-                    </label>
-                    <span class="text-[11px] text-gray-500">当前值: <span id="create-kb-score-display" class="font-mono">0.70</span></span>
-                </div>
-                <div class="flex items-center gap-3">
-                    <input id="create-kb-score-threshold" name="retrieval_score_threshold" type="number" min="0.01" max="1" step="0.01" value="0.7" class="w-24 px-2 py-1.5 border border-gray-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 focus-border-transparent text-right">
-                    <input id="create-kb-score-threshold-slider" type="range" min="0.01" max="1" step="0.01" value="0.7" class="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600">
-                </div>
-            </div>
-            <div class="bg-gray-50 border border-gray-100 rounded-lg p-4 space-y-2">
-                <div class="flex items-center justify-between mb-1">
-                    <label class="text-xs font-medium text-gray-700">
                         最终召回 Tok
                         <i class="fa-regular fa-circle-question text-gray-400 ml-1" title="最终返回给大模型用于回答的问题片段数量，通常应小于初步检索 Tok，以控制上下文长度。"></i>
                     </label>
@@ -515,14 +449,6 @@ function renderCreateKbRetrievalConfig() {
         initialTokDisplay.textContent = initialTokInputDisplay.value;
         initialTokInputDisplay.addEventListener('input', function() {
             initialTokDisplay.textContent = this.value;
-        });
-    }
-    const scoreInputDisplay = document.getElementById('create-kb-score-threshold');
-    const scoreDisplay = document.getElementById('create-kb-score-display');
-    if (scoreInputDisplay && scoreDisplay) {
-        scoreDisplay.textContent = parseFloat(scoreInputDisplay.value).toFixed(2);
-        scoreInputDisplay.addEventListener('input', function() {
-            scoreDisplay.textContent = parseFloat(this.value).toFixed(2);
         });
     }
     const finalTokInputDisplay = document.getElementById('create-kb-final-tok');
@@ -567,34 +493,68 @@ function initCreateKbForm() {
         };
     }
 
-    const sliceStrategyEl = document.getElementById('create-kb-slice-strategy');
     const sliceSizeEl = document.getElementById('create-kb-slice-size');
     const sliceOverlapEl = document.getElementById('create-kb-slice-overlap');
-    if (sliceStrategyEl) sliceStrategyEl.onchange = updateCreateKbSlicePreview;
-    if (sliceSizeEl) sliceSizeEl.oninput = updateCreateKbSlicePreview;
-    if (sliceOverlapEl) sliceOverlapEl.oninput = updateCreateKbSlicePreview;
+    if (sliceSizeEl) {
+        sliceSizeEl.oninput = function() {
+            updateCreateKbSlicePreview();
+        };
+    }
+    if (sliceOverlapEl) {
+        sliceOverlapEl.oninput = function() {
+            updateCreateKbSlicePreview();
+        };
+    }
+
+    const previewFileSelect = document.getElementById('create-kb-preview-file');
+    if (previewFileSelect) {
+        previewFileSelect.onchange = function() {
+            selectCreateKbPreviewFile(this.value);
+        };
+    }
+
+    const specialTypes = ['word', 'pdf', 'text', 'ppt', 'image', 'invoice'];
+    specialTypes.forEach(function(type) {
+        const el = document.getElementById('create-kb-special-type-' + type);
+        if (el) {
+            el.onmouseenter = function() {
+                setCreateKbSpecialType(type);
+            };
+        }
+    });
+
+    updateCreateKbSpecialPreview('word');
 }
 
 function addCreateKbFiles(files) {
     const list = [];
     files.forEach(file => {
-        list.push({
+        const item = {
             name: file.name,
             size: file.size,
-            status: 'ready'
-        });
+            status: 'ready',
+            file: file,
+            ts: Date.now()
+        };
+        list.push(item);
         if (!createKbSliceSource && (file.type.startsWith('text/') || file.name.endsWith('.txt'))) {
             const reader = new FileReader();
             reader.onload = (e) => {
                 const text = String(e.target.result || '');
-                createKbSliceSource = text.slice(0, 4000);
+                item.preview = text.slice(0, 4000);
+                createKbSliceSource = item.preview;
                 updateCreateKbSlicePreview();
+                updateCreateKbConfigPreview();
             };
             reader.readAsText(file);
         }
     });
     createKbFiles = createKbFiles.concat(list);
     renderCreateKbFileList();
+    updateCreateKbPreviewFileOptions();
+
+    // Automatically start upload for newly added files
+    startCreateKbUpload();
 }
 
 function renderCreateKbFileList() {
@@ -605,10 +565,22 @@ function renderCreateKbFileList() {
 
     if (!createKbFiles.length) {
         container.innerHTML = '<div class="px-3 py-4 text-xs text-gray-400 text-center">暂无文件，请先上传</div>';
+        updateCreateKbPreviewFileOptions();
+        
+        const previewBtn = document.getElementById('btn-parse-preview');
+        if (previewBtn) previewBtn.disabled = true;
         return;
     }
 
     container.innerHTML = '';
+    
+    // Check if any file is uploaded successfully to enable preview button
+    const hasUploadedFiles = createKbFiles.some(f => f.status === 'success');
+    const previewBtn = document.getElementById('btn-parse-preview');
+    if (previewBtn) {
+        previewBtn.disabled = !hasUploadedFiles;
+    }
+
     createKbFiles.forEach((file, index) => {
         const row = document.createElement('div');
         row.className = 'px-3 py-2 flex items-center gap-3 hover:bg-gray-100 transition-colors';
@@ -616,10 +588,13 @@ function renderCreateKbFileList() {
         const sizeText = sizeKB > 1024 ? `${(sizeKB / 1024).toFixed(2)} MB` : `${sizeKB.toFixed(1)} KB`;
         let statusClass = 'bg-gray-100 text-gray-600';
         let statusText = '待上传';
-        if (file.status === 'success') {
-            statusClass = 'bg-green-100 text-green-700';
-            statusText = '成功';
-        } else if (file.status === 'error') {
+        if (file.status === 'uploading') {
+        statusClass = 'bg-blue-100 text-blue-700';
+        statusText = '上传中';
+    } else if (file.status === 'success') {
+        statusClass = 'bg-green-100 text-green-700';
+        statusText = '上传完成';
+    } else if (file.status === 'error') {
             statusClass = 'bg-red-100 text-red-700';
             statusText = '失败';
         }
@@ -644,6 +619,51 @@ function renderCreateKbFileList() {
         };
         container.appendChild(row);
     });
+    updateCreateKbPreviewFileOptions();
+}
+
+function updateCreateKbPreviewFileOptions() {
+    const select = document.getElementById('create-kb-preview-file');
+    const parserSelect = document.getElementById('parser-preview-file-select');
+    
+    // Update original select if exists
+    if (select) {
+        while (select.firstChild) {
+            select.removeChild(select.firstChild);
+        }
+        const placeholder = document.createElement('option');
+        placeholder.value = '';
+        placeholder.textContent = createKbFiles.length ? '选择预览文件' : '暂无可预览文件';
+        select.appendChild(placeholder);
+        createKbFiles.forEach(function(file, index) {
+            const opt = document.createElement('option');
+            opt.value = String(index);
+            opt.textContent = file.name;
+            select.appendChild(opt);
+        });
+    }
+
+    // Update new parser select if exists
+    if (parserSelect) {
+        while (parserSelect.firstChild) {
+            parserSelect.removeChild(parserSelect.firstChild);
+        }
+        const placeholder = document.createElement('option');
+        placeholder.value = '';
+        placeholder.textContent = createKbFiles.length ? '选择预览文件' : '暂无可预览文件';
+        parserSelect.appendChild(placeholder);
+        
+        // Sort by timestamp descending for the parser select
+        const sortedFiles = createKbFiles.map((f, i) => ({ file: f, index: i }))
+            .sort((a, b) => (b.file.ts || 0) - (a.file.ts || 0));
+
+        sortedFiles.forEach(function(item) {
+            const opt = document.createElement('option');
+            opt.value = String(item.index);
+            opt.textContent = item.file.name;
+            parserSelect.appendChild(opt);
+        });
+    }
 }
 
 function getCreateKbSliceSource() {
@@ -654,12 +674,11 @@ function getCreateKbSliceSource() {
 function updateCreateKbSlicePreview() {
     const previewEl = document.getElementById('create-kb-slice-preview');
     const countEl = document.getElementById('create-kb-slice-count');
-    const strategyEl = document.getElementById('create-kb-slice-strategy');
     const sizeEl = document.getElementById('create-kb-slice-size');
     const overlapEl = document.getElementById('create-kb-slice-overlap');
-    if (!previewEl || !strategyEl || !sizeEl || !overlapEl) return;
+    if (!previewEl || !sizeEl || !overlapEl) return;
 
-    const strategy = strategyEl.value || 'paragraph';
+    const strategy = 'paragraph';
     const size = Math.max(50, Number(sizeEl.value) || 500);
     const overlap = Math.max(0, Number(overlapEl.value) || 0);
     const text = getCreateKbSliceSource();
@@ -708,7 +727,40 @@ function updateCreateKbSlicePreview() {
     });
 }
 
+function selectCreateKbPreviewFile(index) {
+    const idx = Number(index);
+    if (!Number.isFinite(idx) || idx < 0 || idx >= createKbFiles.length) {
+        createKbSliceSource = '';
+        updateCreateKbSlicePreview();
+        updateCreateKbConfigPreview();
+        return;
+    }
+    const item = createKbFiles[idx];
+    if (item.preview) {
+        createKbSliceSource = item.preview;
+        updateCreateKbSlicePreview();
+        updateCreateKbConfigPreview();
+        return;
+    }
+    if (item.file && (item.file.type && item.file.type.startsWith('text/') || item.name.endsWith('.txt'))) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const text = String(e.target.result || '');
+            item.preview = text.slice(0, 4000);
+            createKbSliceSource = item.preview;
+            updateCreateKbSlicePreview();
+            updateCreateKbConfigPreview();
+        };
+        reader.readAsText(item.file);
+    } else {
+        createKbSliceSource = '';
+        updateCreateKbSlicePreview();
+        updateCreateKbConfigPreview();
+    }
+}
+
 function openCreateKbPage() {
+    setupParserInteractions();
     const listView = document.getElementById('kb-list-view');
     const detailView = document.getElementById('kb-detail-view');
     const createPage = document.getElementById('kb-create-page');
@@ -734,8 +786,10 @@ function cancelCreateKb() {
 
 function setCreateKbStep(step) {
     const target = Math.min(Math.max(1, step), createKbMaxStep);
-    if (target > createKbCompletedStep) return;
     createKbStep = target;
+    if (createKbStep > createKbCompletedStep) {
+        createKbCompletedStep = createKbStep;
+    }
     updateCreateKbStep();
 }
 
@@ -757,7 +811,25 @@ function nextCreateKbStep() {
             }
             return;
         }
+        const hasPending = createKbFiles.some(function(f) {
+            return f.status === 'ready' || f.status === 'error' || f.status === 'uploading';
+        });
+        if (hasPending) {
+            startCreateKbUpload(function() {
+                updateCreateKbSlicePreview();
+                updateCreateKbConfigPreview();
+                if (createKbStep < createKbMaxStep) {
+                    createKbStep += 1;
+                    if (createKbStep > createKbCompletedStep) {
+                        createKbCompletedStep = createKbStep;
+                    }
+                    updateCreateKbStep();
+                }
+            });
+            return;
+        }
         updateCreateKbSlicePreview();
+        updateCreateKbConfigPreview();
     } else if (createKbStep === 3) {
         if (!confirmCreateKbSummary()) return;
         submitCreateKb();
@@ -786,30 +858,54 @@ function updateCreateKbStep() {
     const s3 = document.getElementById('kb-create-stepper-3');
     const applyStepperState = (btn, index) => {
         if (!btn) return;
+        
+        // Define base classes
+        const btnBase = "flex items-center gap-3 text-sm font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white transition-colors duration-200";
+        const circleBase = "w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold transition-colors duration-200";
+        const titleBase = "transition-colors duration-200";
+        const descBase = "text-[11px] transition-colors duration-200";
+
+        // Select elements safely
         const circle = btn.querySelector('div.w-7');
-        const title = btn.querySelector('span');
-        const desc = btn.querySelector('span.text-[11px]');
+        const textContainer = btn.lastElementChild;
+        const title = textContainer ? textContainer.firstElementChild : null;
+        const desc = textContainer ? textContainer.lastElementChild : null;
+        
         const active = createKbStep === index;
-        const completed = createKbCompletedStep >= index && index < createKbStep;
-        btn.classList.remove('text-gray-400', 'text-blue-600');
-        btn.classList.add(active || completed ? 'text-blue-600' : 'text-gray-400');
+        const completed = index < createKbStep;
+
+        // Apply classes
+        if (active) {
+            btn.className = `${btnBase} text-blue-600`;
+            if (circle) circle.className = `${circleBase} bg-blue-600 text-white`;
+            if (title) title.className = `${titleBase} text-gray-700`;
+            if (desc) desc.className = `${descBase} text-blue-400`;
+        } else if (completed) {
+            btn.className = `${btnBase} text-green-600`;
+            if (circle) circle.className = `${circleBase} bg-green-500 text-white`;
+            if (title) title.className = `${titleBase} text-green-600`;
+            if (desc) desc.className = `${descBase} text-green-500`;
+        } else {
+            btn.className = `${btnBase} text-gray-400`;
+            if (circle) circle.className = `${circleBase} bg-gray-100 text-gray-500`;
+            if (title) title.className = `${titleBase}`; // Inherit text color
+            if (desc) desc.className = `${descBase} text-gray-400`;
+        }
+
+        btn.setAttribute('aria-selected', active ? 'true' : 'false');
+        btn.tabIndex = active ? 0 : -1;
+        const status = active ? 'in_progress' : completed ? 'completed' : 'not_started';
+        btn.setAttribute('data-step-status', status);
+
         if (circle) {
-            circle.classList.remove('bg-gray-100', 'text-gray-500', 'bg-blue-600', 'text-white');
-            if (active || completed) {
-                circle.classList.add('bg-blue-600', 'text-white');
+            circle.innerHTML = '';
+            if (completed) {
+                const icon = document.createElement('i');
+                icon.className = 'fa-solid fa-check text-[10px]';
+                circle.appendChild(icon);
             } else {
-                circle.classList.add('bg-gray-100', 'text-gray-500');
+                circle.textContent = String(index);
             }
-        }
-        if (title) {
-            title.classList.remove('text-gray-700');
-            if (active || completed) {
-                title.classList.add('text-gray-700');
-            }
-        }
-        if (desc) {
-            desc.classList.remove('text-gray-400', 'text-blue-400');
-            desc.classList.add(active ? 'text-blue-400' : 'text-gray-400');
         }
     };
     applyStepperState(s1, 1);
@@ -826,10 +922,52 @@ function updateCreateKbStep() {
     if (nextBtn) {
         if (createKbStep === createKbMaxStep) {
             nextBtn.textContent = '提交';
+        } else if (createKbStep === 1) {
+            nextBtn.textContent = '下一步：上传文件';
         } else {
-            nextBtn.textContent = '下一步';
+            nextBtn.textContent = '下一步：索引设置';
         }
     }
+}
+
+function startCreateKbUpload(onDone) {
+    const readyFiles = createKbFiles.filter(f => f.status === 'ready' || f.status === 'error');
+    
+    if (readyFiles.length === 0) {
+        const isUploading = createKbFiles.some(f => f.status === 'uploading');
+        if (isUploading && typeof onDone === 'function') {
+            // Wait for current upload to finish
+            setTimeout(function() {
+                startCreateKbUpload(onDone);
+            }, 100);
+            return;
+        }
+        if (typeof onDone === 'function') onDone();
+        return;
+    }
+
+    createKbUploading = true;
+    readyFiles.forEach(function(file) {
+        file.status = 'uploading';
+    });
+    renderCreateKbFileList();
+
+    setTimeout(function() {
+        readyFiles.forEach(function(file) {
+            if (file.status === 'uploading') {
+                file.status = 'success';
+            }
+        });
+        
+        // Check if all files are finished
+        const stillUploading = createKbFiles.some(f => f.status === 'uploading' || f.status === 'ready');
+        if (!stillUploading) {
+            createKbUploading = false;
+        }
+        
+        renderCreateKbFileList();
+        if (typeof onDone === 'function') onDone();
+    }, 1000);
 }
 
 function resetCreateKbForm() {
@@ -851,6 +989,42 @@ function resetCreateKbForm() {
     createKbStep = 1;
     createKbCompletedStep = 1;
     updateCreateKbStep();
+}
+
+function setCreateKbSpecialType(type) {
+    const specialTypes = ['word', 'pdf', 'text', 'ppt', 'image', 'invoice'];
+    specialTypes.forEach(function(t) {
+        const el = document.getElementById('create-kb-special-type-' + t);
+        if (!el) return;
+        el.classList.remove('border-blue-500', 'bg-blue-50');
+        el.classList.add('border-gray-200', 'bg-white');
+        if (t === type) {
+            el.classList.add('border-blue-500', 'bg-blue-50');
+        }
+    });
+    updateCreateKbSpecialPreview(type);
+}
+
+function updateCreateKbSpecialPreview(type) {
+    const hintEl = document.getElementById('create-kb-special-hint');
+    if (!hintEl) return;
+    let hint = '';
+    if (type === 'word') {
+        hint = '针对 Word 文档，按标题和段落结构进行切片，保留样式与层级。';
+    } else if (type === 'pdf') {
+        hint = '针对 PDF 文档，处理多列布局与分页符，自动合并跨页段落。';
+    } else if (type === 'text') {
+        hint = '针对纯文本，按换行与空行进行分段，适合日志与记录类内容。';
+    } else if (type === 'ppt') {
+        hint = '针对 PPT，将每一页或每个要点作为独立切片，保留层级。';
+    } else if (type === 'image') {
+        hint = '针对图片，结合 OCR 结果按文本块切片，可用于海报与截图。';
+    } else if (type === 'invoice') {
+        hint = '针对发票类结构化票据，按字段区域与行项目进行切分。';
+    } else {
+        hint = '将根据不同文件类型应用对应的专用切片策略。';
+    }
+    hintEl.textContent = hint;
 }
 
 function validateCreateKbBasic() {
@@ -879,9 +1053,7 @@ function validateCreateKbBasic() {
 
 function confirmCreateKbSummary() {
     const name = document.getElementById('create-kb-name')?.value || '';
-    const strategy = document.getElementById('create-kb-slice-strategy')?.value || 'paragraph';
     const rerankModel = document.getElementById('create-kb-rerank-model')?.value || '默认';
-    const scoreThreshold = document.getElementById('create-kb-score-threshold')?.value || '未设置';
     const hybridWeight = document.getElementById('create-kb-hybrid-weight')?.value || '未设置';
     const initialTok = document.getElementById('create-kb-initial-tok')?.value || '未设置';
     const finalTok = document.getElementById('create-kb-final-tok')?.value || '未设置';
@@ -889,12 +1061,10 @@ function confirmCreateKbSummary() {
     const summary = [
         `知识库名称：${name}`,
         `Rerank 模型：${rerankModel || '未设置'}`,
-        `Score 阈值：${scoreThreshold}`,
         `权重设置：${hybridWeight}`,
         `初步检索 Tok：${initialTok}`,
         `最终召回 Tok：${finalTok}`,
-        `上传文件数：${filesCount}`,
-        `切片策略：${strategy}`
+        `上传文件数：${filesCount}`
     ].join('\n');
     return confirm(`请确认以下配置：\n\n${summary}\n\n确认提交并构建索引吗？`);
 }
@@ -904,7 +1074,6 @@ function submitCreateKb() {
     const descEl = document.getElementById('create-kb-desc');
     const parserEl = document.getElementById('create-kb-parser');
     const rerankModelEl = document.getElementById('create-kb-rerank-model');
-    const scoreThresholdEl = document.getElementById('create-kb-score-threshold');
     const hybridWeightEl = document.getElementById('create-kb-hybrid-weight');
     const initialTokEl = document.getElementById('create-kb-initial-tok');
     const finalTokEl = document.getElementById('create-kb-final-tok');
@@ -949,7 +1118,7 @@ function submitCreateKb() {
         chunkSize: 500,
         retrievalMode: null,
         retrievalRerankModel: rerankModelEl ? rerankModelEl.value || null : null,
-        retrievalScoreThreshold: scoreThresholdEl && scoreThresholdEl.value ? Number(scoreThresholdEl.value) : null,
+        retrievalScoreThreshold: 0.7,
         retrievalHybridWeight: hybridWeightEl && hybridWeightEl.value ? Number(hybridWeightEl.value) : null,
         retrievalInitialTok: initialTokEl && initialTokEl.value ? Number(initialTokEl.value) : null,
         retrievalFinalTok: finalTokEl && finalTokEl.value ? Number(finalTokEl.value) : null
@@ -2410,3 +2579,306 @@ document.addEventListener('view-loaded', (e) => {
         initCreateKbForm();
     }
 });
+
+// Parser UI Logic
+function setupParserInteractions() {
+    const fastOpt = document.getElementById('parser-option-fast');
+    const deepOpt = document.getElementById('parser-option-deep');
+    const deepSub = document.getElementById('deep-parse-sub-options');
+    const parseBtn = document.getElementById('btn-innovative-parse');
+    const fileSelect = document.getElementById('parser-preview-file-select');
+
+    if (fastOpt && deepOpt) {
+        fastOpt.onchange = function() {
+            if (this.checked) {
+                deepOpt.checked = false;
+                if (deepSub) deepSub.classList.add('hidden');
+            }
+        };
+        deepOpt.onchange = function() {
+            if (this.checked) {
+                fastOpt.checked = false;
+                if (deepSub) deepSub.classList.remove('hidden');
+            } else {
+                if (deepSub) deepSub.classList.add('hidden');
+            }
+        };
+    }
+
+    if (parseBtn) {
+        parseBtn.onclick = handleInnovativeParse;
+    }
+
+    const previewBtn = document.getElementById('btn-parse-preview');
+    if (previewBtn) {
+        previewBtn.onclick = function() {
+            // If no file is selected in the preview select, select the first successful one
+            const fileSelect = document.getElementById('parser-preview-file-select');
+            if (fileSelect && !fileSelect.value) {
+                const firstSuccessIndex = createKbFiles.findIndex(f => f.status === 'success');
+                if (firstSuccessIndex !== -1) {
+                    fileSelect.value = String(firstSuccessIndex);
+                }
+            }
+            handleInnovativeParse();
+        };
+    }
+    
+    if (fileSelect) {
+        fileSelect.onchange = function() {
+             const contentEl = document.getElementById('parser-preview-content');
+             if(contentEl) {
+                 contentEl.innerHTML = `
+                    <div class="h-full flex flex-col items-center justify-center text-gray-400">
+                        <i class="fa-regular fa-file-image text-4xl mb-3 opacity-30"></i>
+                        <p class="text-sm">点击“解析预览”查看结果</p>
+                    </div>`;
+             }
+        }
+    }
+}
+
+// Original View State
+let isViewingOriginal = false;
+let originalZoomLevel = 100;
+
+function initOriginalViewState() {
+    const saved = localStorage.getItem('kbViewingOriginal');
+    if (saved === 'true') {
+        toggleOriginalView(true);
+    }
+}
+
+function toggleOriginalView(forceState) {
+    const configPanel = document.getElementById('create-kb-config-panel');
+    const originalPanel = document.getElementById('create-kb-original-panel');
+    const btnText = document.getElementById('view-original-text');
+    const btnIcon = document.querySelector('#btn-view-original i');
+    const parserSelect = document.getElementById('parser-preview-file-select');
+    
+    const startTime = performance.now();
+    
+    if (forceState !== undefined) {
+        isViewingOriginal = forceState;
+    } else {
+        isViewingOriginal = !isViewingOriginal;
+    }
+
+    if (isViewingOriginal) {
+        // Switch to Original View
+        if (configPanel) {
+            configPanel.classList.add('opacity-0');
+            setTimeout(() => configPanel.classList.add('hidden'), 200);
+        }
+        if (originalPanel) {
+            originalPanel.classList.remove('hidden');
+            setTimeout(() => originalPanel.classList.add('opacity-100'), 10);
+        }
+        if (btnText) btnText.textContent = '关闭原文';
+        if (btnIcon) {
+            btnIcon.classList.remove('fa-eye');
+            btnIcon.classList.add('fa-eye-slash');
+        }
+        
+        // Load content if file selected
+        loadOriginalFileContent();
+    } else {
+        // Switch back to Config Panel
+        if (originalPanel) {
+            originalPanel.classList.remove('opacity-100');
+            setTimeout(() => originalPanel.classList.add('hidden'), 200);
+        }
+        if (configPanel) {
+            configPanel.classList.remove('hidden');
+            setTimeout(() => configPanel.classList.remove('opacity-0'), 10);
+        }
+        if (btnText) btnText.textContent = '查看原文';
+        if (btnIcon) {
+            btnIcon.classList.remove('fa-eye-slash');
+            btnIcon.classList.add('fa-eye');
+        }
+    }
+
+    localStorage.setItem('kbViewingOriginal', isViewingOriginal);
+    
+    // Log performance for verification
+    const duration = performance.now() - startTime;
+    console.log(`[PERF] toggleOriginalView took ${duration.toFixed(2)}ms`);
+}
+
+function loadOriginalFileContent() {
+    const parserSelect = document.getElementById('parser-preview-file-select');
+    const contentEl = document.getElementById('original-view-content');
+    if (!parserSelect || !contentEl) return;
+
+    const fileIndex = parserSelect.value;
+    if (fileIndex === "" || !createKbFiles[fileIndex]) {
+        contentEl.textContent = '请先在右侧选择一个已上传的文件进行预览。';
+        return;
+    }
+
+    const fileItem = createKbFiles[fileIndex];
+    if (fileItem.file) {
+        // Support text-based files for now
+        if (fileItem.file.type.startsWith('text/') || fileItem.name.endsWith('.txt') || fileItem.name.endsWith('.md')) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                contentEl.textContent = e.target.result;
+            };
+            reader.readAsText(fileItem.file);
+        } else {
+            contentEl.textContent = `暂不支持直接预览 ${fileItem.name} 的原始二进制内容。`;
+        }
+    }
+}
+
+function zoomOriginalView(direction) {
+    const content = document.getElementById('original-view-content');
+    const zoomText = document.getElementById('original-view-zoom-level');
+    if (!content || !zoomText) return;
+
+    if (direction === 'in' && originalZoomLevel < 200) {
+        originalZoomLevel += 10;
+    } else if (direction === 'out' && originalZoomLevel > 50) {
+        originalZoomLevel -= 10;
+    }
+
+    content.style.transform = `scale(${originalZoomLevel / 100})`;
+    zoomText.textContent = `${originalZoomLevel}%`;
+}
+
+function resetOriginalView() {
+    originalZoomLevel = 100;
+    const content = document.getElementById('original-view-content');
+    const zoomText = document.getElementById('original-view-zoom-level');
+    if (content) content.style.transform = 'scale(1)';
+    if (zoomText) zoomText.textContent = '100%';
+}
+
+// Update setupParserInteractions to handle file change in original view
+const originalSetupParserInteractions = setupParserInteractions;
+setupParserInteractions = function() {
+    originalSetupParserInteractions();
+    const fileSelect = document.getElementById('parser-preview-file-select');
+    if (fileSelect) {
+        const originalOnChange = fileSelect.onchange;
+        fileSelect.onchange = function() {
+            if (originalOnChange) originalOnChange.call(this);
+            if (isViewingOriginal) {
+                loadOriginalFileContent();
+            }
+        };
+    }
+    initOriginalViewState();
+};
+
+function handleInnovativeParse() {
+    const fileSelect = document.getElementById('parser-preview-file-select');
+    const contentEl = document.getElementById('parser-preview-content');
+    if (!fileSelect || !contentEl) return;
+    
+    if (!fileSelect.value && fileSelect.value !== "0") { // Check if empty or not selected (0 is valid index)
+         // Note: createKbFiles indexes are strings in options
+        if(!createKbFiles.length) {
+            alert('请先上传文件');
+            return;
+        }
+        // If has files but none selected, select first
+        if(createKbFiles.length > 0 && !fileSelect.value) {
+            fileSelect.value = "0";
+        }
+    }
+
+    // Loading state
+    contentEl.innerHTML = `
+        <div class="h-full flex flex-col items-center justify-center text-blue-500">
+            <i class="fa-solid fa-circle-notch fa-spin text-3xl mb-3"></i>
+            <p class="text-sm">正在进行创新解析...</p>
+        </div>
+    `;
+
+    // Simulate delay
+    setTimeout(() => {
+        const mockContent = [
+            "这是文档的第一段内容，经过智能解析提取。用户可以对这段内容进行校对和修正。",
+            "这里是第二段，可能包含一些专业术语或复杂格式。深度解析模型尝试保留了原始语义。",
+            "第三段内容展示了系统的容错能力。即使源文档有些模糊，我们依然能提取出核心信息。",
+            "最后一段，您可以点击右侧的纠正按钮来修改任何识别错误。"
+        ];
+        renderParserPreview(mockContent);
+    }, 1500);
+}
+
+function renderParserPreview(paragraphs) {
+    const contentEl = document.getElementById('parser-preview-content');
+    if (!contentEl) return;
+    
+    contentEl.innerHTML = '';
+    
+    paragraphs.forEach((text, index) => {
+        const id = `para-${index}`;
+        const div = document.createElement('div');
+        div.className = 'group relative p-4 bg-gray-50 rounded-lg border border-transparent hover:border-blue-200 hover:bg-blue-50/30 transition-all';
+        div.innerHTML = `
+            <div id="${id}-view" class="text-sm text-gray-700 leading-relaxed pr-8">${text}</div>
+            <textarea id="${id}-edit" class="hidden w-full p-2 text-sm border border-blue-300 rounded focus:ring-2 focus:ring-blue-500 focus:outline-none mb-2" rows="3">${text}</textarea>
+            
+            <div id="${id}-actions" class="hidden flex justify-end gap-2 mt-2">
+                <button onclick="cancelCorrection('${id}', '${text}')" class="px-2 py-1 text-xs text-gray-600 hover:bg-gray-200 rounded">取消</button>
+                <button onclick="saveCorrection('${id}')" class="px-2 py-1 text-xs bg-blue-600 text-white hover:bg-blue-700 rounded">保存</button>
+            </div>
+
+            <button onclick="toggleCorrection('${id}')" class="absolute top-2 right-2 p-1.5 text-gray-400 hover:text-blue-600 opacity-0 group-hover:opacity-100 transition-opacity" title="纠正">
+                <i class="fa-solid fa-pen-to-square"></i>
+            </button>
+        `;
+        contentEl.appendChild(div);
+    });
+}
+
+function toggleCorrection(id) {
+    const view = document.getElementById(`${id}-view`);
+    const edit = document.getElementById(`${id}-edit`);
+    const actions = document.getElementById(`${id}-actions`);
+    
+    if (view && edit && actions) {
+        view.classList.add('hidden');
+        edit.classList.remove('hidden');
+        actions.classList.remove('hidden');
+        edit.focus();
+    }
+}
+
+function saveCorrection(id) {
+    const view = document.getElementById(`${id}-view`);
+    const edit = document.getElementById(`${id}-edit`);
+    const actions = document.getElementById(`${id}-actions`);
+    
+    if (view && edit && actions) {
+        view.textContent = edit.value;
+        view.classList.remove('hidden');
+        edit.classList.add('hidden');
+        actions.classList.add('hidden');
+        
+        // Update cancel button
+        const cancelBtn = actions.querySelector('button[onclick^="cancelCorrection"]');
+        if(cancelBtn) {
+            // Simple escape for single quotes
+            const safeText = edit.value.replace(/'/g, "\\'"); 
+            cancelBtn.setAttribute('onclick', `cancelCorrection('${id}', '${safeText}')`);
+        }
+    }
+}
+
+function cancelCorrection(id, originalText) {
+    const view = document.getElementById(`${id}-view`);
+    const edit = document.getElementById(`${id}-edit`);
+    const actions = document.getElementById(`${id}-actions`);
+    
+    if (view && edit && actions) {
+        edit.value = originalText;
+        view.classList.remove('hidden');
+        edit.classList.add('hidden');
+        actions.classList.add('hidden');
+    }
+}
