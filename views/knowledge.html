@@ -45,24 +45,24 @@
     </div>
     <div class="bg-white rounded-xl shadow-sm border border-gray-100 flex-1 flex flex-col overflow-hidden">
         <div class="px-6 pt-6 pb-4 border-b border-gray-100">
-            <div class="flex items-center gap-6" role="tablist" aria-label="创建知识库步骤">
-                <button type="button" id="kb-create-stepper-1" data-step-index="1" data-step-status="in_progress" onclick="setCreateKbStep(1)" class="flex items-center gap-3 text-sm font-medium text-blue-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white" role="tab" aria-selected="true" aria-controls="kb-create-step-1" tabindex="0">
+            <div class="flex items-center gap-4" role="tablist" aria-label="创建知识库步骤">
+                <button type="button" id="kb-create-stepper-1" data-step-index="1" data-step-status="in_progress" onclick="setCreateKbStep(1)" class="flex items-center gap-2 text-sm font-medium text-blue-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white" role="tab" aria-selected="true" aria-controls="kb-create-step-1" tabindex="0">
                     <div class="w-7 h-7 rounded-full flex items-center justify-center bg-blue-600 text-white text-xs font-semibold">1</div>
                     <div class="flex flex-col items-start">
                         <span>基本信息</span>
                         <span class="text-[11px] text-gray-400">设置知识库名称与检索策略</span>
                     </div>
                 </button>
-                <div class="flex-1 h-px bg-gray-200"></div>
-                <button type="button" id="kb-create-stepper-2" data-step-index="2" data-step-status="not_started" onclick="setCreateKbStep(2)" class="flex items-center gap-3 text-sm font-medium text-gray-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white" role="tab" aria-selected="false" aria-controls="kb-create-step-2" tabindex="-1">
+                <div id="kb-create-separator-1" class="flex-1 h-px bg-gray-200"></div>
+                <button type="button" id="kb-create-stepper-2" data-step-index="2" data-step-status="not_started" onclick="setCreateKbStep(2)" class="flex items-center gap-2 text-sm font-medium text-gray-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white" role="tab" aria-selected="false" aria-controls="kb-create-step-2" tabindex="-1">
                     <div class="w-7 h-7 rounded-full flex items-center justify-center bg-gray-100 text-gray-500 text-xs font-semibold">2</div>
                     <div class="flex flex-col items-start">
                         <span>上传文件</span>
-                        <span class="text-[11px] text-gray-400">选择待构建索引的文档</span>
+                        <span class="text-[11px] text-gray-400">选择待构建索引的文档和解析策略</span>
                     </div>
                 </button>
-                <div class="flex-1 h-px bg-gray-200"></div>
-                <button type="button" id="kb-create-stepper-3" data-step-index="3" data-step-status="not_started" onclick="setCreateKbStep(3)" class="flex items-center gap-3 text-sm font-medium text-gray-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white" role="tab" aria-selected="false" aria-controls="kb-create-step-3" tabindex="-1">
+                <div id="kb-create-separator-2" class="flex-1 h-px bg-gray-200"></div>
+                <button type="button" id="kb-create-stepper-3" data-step-index="3" data-step-status="not_started" onclick="setCreateKbStep(3)" class="flex items-center gap-2 text-sm font-medium text-gray-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white" role="tab" aria-selected="false" aria-controls="kb-create-step-3" tabindex="-1">
                     <div class="w-7 h-7 rounded-full flex items-center justify-center bg-gray-100 text-gray-500 text-xs font-semibold">3</div>
                     <div class="flex flex-col items-start">
                         <span>索引设置</span>
@@ -71,7 +71,7 @@
                 </button>
             </div>
         </div>
-        <div class="flex-1 overflow-y-auto px-6 py-6">
+        <div id="kb-create-steps-container" class="flex-1 overflow-y-auto px-6 py-6">
             <div id="kb-create-step-1" class="space-y-5">
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">知识库名称 <span class="text-red-500">*</span></label>
@@ -261,64 +261,158 @@
                     </div>
                 </div>
             </div>
-            <div id="kb-create-step-3" class="hidden space-y-4">
-                <h3 class="text-sm font-medium text-gray-900">索引设置与切片预览</h3>
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <div class="space-y-4">
-                        <div class="bg-gray-50 border border-gray-100 rounded-lg p-4 space-y-3">
+            <div id="kb-create-step-3" class="hidden space-y-4 h-full flex flex-col overflow-hidden">
+                <h3 class="text-sm font-medium text-gray-900 flex-shrink-0">索引设置</h3>
+                <div class="flex-1 flex gap-6 overflow-hidden min-h-0">
+                    <!-- Left Column: Settings -->
+                    <div id="create-kb-settings-column" class="flex-1 overflow-auto space-y-4 custom-scrollbar pr-2 overscroll-contain">
+                        <div id="create-kb-slice-config-container" class="bg-gray-50 border border-gray-100 rounded-lg p-4 space-y-3">
                             <div class="flex items-center justify-between">
-                                <span class="text-sm font-bold text-gray-900" role="heading" aria-level="4">通用切片</span>
+                                <div class="flex items-center gap-2 cursor-pointer group select-none" onclick="selectSliceStrategy('general')" role="radio" aria-checked="true" tabindex="0" onkeydown="handleSliceStrategyKey(event, 'general')">
+                                    <i id="radio-icon-general" class="fa-solid fa-circle-check text-blue-600 transition-colors"></i>
+                                    <span class="text-sm font-bold text-gray-900 group-hover:text-blue-600 transition-colors" role="heading" aria-level="4">通用切片</span>
+                                </div>
                             </div>
                             <div class="grid grid-cols-3 gap-4">
                                 <div>
-                                    <label class="block text-xs text-gray-600 mb-1">分段标识符</label>
-                                    <input id="create-kb-slice-delimiter" type="text" placeholder="例如 空行 / 标题" class="w-full border border-gray-200 rounded-lg text-sm px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <label class="block text-xs text-gray-600 mb-1">分段标识符</label>
+                                <div class="relative">
+                                    <input id="create-kb-slice-delimiter" type="text" placeholder="例如 \n\n" value="\n\n" class="w-full border border-gray-200 rounded-lg text-sm pl-3 pr-10 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                    <select id="create-kb-slice-delimiter-select" onchange="document.getElementById('create-kb-slice-delimiter').value = this.value" class="absolute inset-y-0 right-0 w-10 opacity-0 cursor-pointer z-10">
+                                        <option value="\n\n">段落（\n\n）</option>
+                                        <option value="\n">换行（\n）</option>
+                                        <option value="。">中文句号（。）</option>
+                                        <option value="，">中文逗号（，）</option>
+                                        <option value="？">中文问号（？）</option>
+                                        <option value="！">中文感叹号（！）</option>
+                                        <option value="；">中文分号（；）</option>
+                                        <option value=".">英文句号（.）</option>
+                                        <option value=",">英文逗号（,）</option>
+                                        <option value="?">英文问号（?）</option>
+                                        <option value="!">英文感叹号（!）</option>
+                                        <option value=";">英文分号（;）</option>
+                                    </select>
+                                    <div class="absolute inset-y-0 right-0 flex items-center justify-center w-10 text-gray-500 pointer-events-none">
+                                        <i class="fa-solid fa-chevron-down text-xs"></i>
+                                    </div>
                                 </div>
-                                <div>
-                                    <label class="block text-xs text-gray-600 mb-1">分段最大长度</label>
-                                    <input id="create-kb-slice-size" type="number" min="100" max="2000" step="100" value="500" class="w-full border border-gray-200 rounded-lg text-sm px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-600 mb-1">分段最大长度</label>
+                                <input id="create-kb-slice-size" type="number" min="100" max="4000" step="100" value="1024" class="w-full border border-gray-200 rounded-lg text-sm px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-600 mb-1">切片重叠长度</label>
+                                <input id="create-kb-slice-overlap" type="number" min="0" max="500" step="50" value="50" class="w-full border border-gray-200 rounded-lg text-sm px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            </div>
+
+                        </div>
+                        
+                        <div>
+                                <label class="block text-xs text-gray-600 mb-1">文本预处理规则</label>
+                                <div class="space-y-2 pt-1">
+                                    <div class="flex items-center gap-2">
+                                        <input id="create-kb-preprocess-spaces" type="checkbox" class="rounded text-blue-500 focus:ring-blue-500 border-gray-300">
+                                        <label for="create-kb-preprocess-spaces" class="text-xs text-gray-600">替换掉连续的空格、换行符和制表符</label>
+                                    </div>
+                                    <div class="flex items-center gap-2">
+                                        <input id="create-kb-preprocess-sensitive" type="checkbox" class="rounded text-blue-500 focus:ring-blue-500 border-gray-300">
+                                        <label for="create-kb-preprocess-sensitive" class="text-xs text-gray-600">删除所有 URL 和电子邮件地址</label>
+                                    </div>
                                 </div>
-                                <div>
-                                    <label class="block text-xs text-gray-600 mb-1">切片重叠长度</label>
-                                    <input id="create-kb-slice-overlap" type="number" min="0" max="500" step="50" value="50" class="w-full border border-gray-200 rounded-lg text-sm px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <label class="block text-xs text-gray-600 mb-1 mt-3">关联信息</label>
+                                <div class="space-y-2 pt-1">
+                                    <div class="flex items-center gap-2">
+                                        <input id="create-kb-preprocess-filename" type="checkbox" class="rounded text-blue-500 focus:ring-blue-500 border-gray-300">
+                                        <label for="create-kb-preprocess-filename" class="text-xs text-gray-600">关联文件名</label>
+                                    </div>
+                                    <div class="flex items-center gap-2">
+                                        <input id="create-kb-preprocess-title" type="checkbox" class="rounded text-blue-500 focus:ring-blue-500 border-gray-300">
+                                        <label for="create-kb-preprocess-title" class="text-xs text-gray-600">关联标题及子标题</label>
+                                    </div>
+                                </div>
+                                <div class="flex items-center justify-end gap-2 mt-4 pt-2 border-t border-gray-100">
+                                    <button type="button" onclick="updateCreateKbSlicePreview()" class="px-3 py-1.5 bg-blue-50 text-blue-600 rounded-lg text-xs font-medium hover:bg-blue-100 transition-colors">
+                                        <i class="fa-regular fa-eye mr-1"></i>预览切片
+                                    </button>
+                                    <button type="button" onclick="resetCreateKbSliceConfig()" class="px-3 py-1.5 bg-gray-50 text-gray-600 rounded-lg text-xs font-medium hover:bg-gray-100 transition-colors border border-gray-200">
+                                        <i class="fa-solid fa-rotate-left mr-1"></i>重置
+                                    </button>
                                 </div>
                             </div>
 
+                        </div>
+
+                        <div id="create-kb-excel-hint-container" class="hidden bg-blue-50 border border-blue-100 rounded-lg p-6 flex flex-col items-center justify-center text-center space-y-3">
+                            <div class="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 mb-2">
+                                <i class="fa-solid fa-table text-xl"></i>
+                            </div>
+                            <h4 class="text-sm font-bold text-gray-900">Excel 表格处理模式</h4>
+                            <p class="text-xs text-gray-600 max-w-xs">Excel文件不做切片处理，将每一行作为一个切片，第一行为表头。</p>
                         </div>
                         <div class="bg-gray-50 border border-gray-100 rounded-lg p-4 space-y-3">
                             <div class="flex items-center justify-between">
-                                <span class="text-sm font-bold text-gray-900" role="heading" aria-level="4">特殊切片</span>
+                                <div class="flex items-center gap-2 cursor-pointer group select-none" onclick="selectSliceStrategy('special')" role="radio" aria-checked="false" tabindex="0" onkeydown="handleSliceStrategyKey(event, 'special')">
+                                    <i id="radio-icon-special" class="fa-regular fa-circle text-gray-400 transition-colors"></i>
+                                    <span class="text-sm font-bold text-gray-900 group-hover:text-blue-600 transition-colors" role="heading" aria-level="4">模版切片</span>
+                                </div>
                                 <span class="text-[11px] text-gray-400">按文件类型定制策略</span>
                             </div>
                             <div class="grid grid-cols-3 gap-2">
-                                <button type="button" id="create-kb-special-type-word" class="px-2 py-1 border border-gray-200 rounded-lg bg-white text-[11px] text-gray-700">Word</button>
-                                <button type="button" id="create-kb-special-type-pdf" class="px-2 py-1 border border-gray-200 rounded-lg bg-white text-[11px] text-gray-700">PDF</button>
-                                <button type="button" id="create-kb-special-type-text" class="px-2 py-1 border border-gray-200 rounded-lg bg-white text-[11px] text-gray-700">Text</button>
-                                <button type="button" id="create-kb-special-type-ppt" class="px-2 py-1 border border-gray-200 rounded-lg bg-white text-[11px] text-gray-700">PPT</button>
-                                <button type="button" id="create-kb-special-type-image" class="px-2 py-1 border border-gray-200 rounded-lg bg-white text-[11px] text-gray-700">图片</button>
-                                <button type="button" id="create-kb-special-type-invoice" class="px-2 py-1 border border-gray-200 rounded-lg bg-white text-[11px] text-gray-700">发票</button>
+                                <button type="button" id="create-kb-special-type-chapter" class="px-2 py-1 border border-gray-200 rounded-lg bg-white text-[11px] text-gray-700" onclick="selectCreateKbSpecialType('chapter')">章节结构</button>
+                                <button type="button" id="create-kb-special-type-excel" class="px-2 py-1 border border-gray-200 rounded-lg bg-white text-[11px] text-gray-700" onclick="selectCreateKbSpecialType('excel')">Excel</button>
+                                <button type="button" id="create-kb-special-type-ppt" class="px-2 py-1 border border-gray-200 rounded-lg bg-white text-[11px] text-gray-700" onclick="selectCreateKbSpecialType('ppt')">PPT</button>
+                                <button type="button" id="create-kb-special-type-image" class="px-2 py-1 border border-gray-200 rounded-lg bg-white text-[11px] text-gray-700" onclick="selectCreateKbSpecialType('image')">图片</button>
+                                <button type="button" id="create-kb-special-type-text" class="px-2 py-1 border border-gray-200 rounded-lg bg-white text-[11px] text-gray-700" onclick="selectCreateKbSpecialType('text')">Text</button>
+                                <button type="button" id="create-kb-special-type-invoice" class="px-2 py-1 border border-gray-200 rounded-lg bg-white text-[11px] text-gray-700" onclick="selectCreateKbSpecialType('invoice')">发票</button>
                             </div>
-                            <div id="create-kb-special-hint" class="text-[11px] text-gray-600 bg-white border border-dashed border-gray-200 rounded-lg px-3 py-2">
-                                将鼠标悬停在文件类型上查看详细说明和配置示例。
+                            <div id="create-kb-special-options" class="mt-3 overflow-hidden transition-all duration-300 ease-in-out opacity-0 max-h-0">
+                                <label class="block text-xs font-medium text-gray-700 mb-2">关联信息</label>
+                                <div class="flex items-center gap-4">
+                                    <div class="flex items-center">
+                                        <input id="create-kb-special-filename" type="checkbox" class="w-3.5 h-3.5 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                                        <label for="create-kb-special-filename" class="ml-2 text-xs text-gray-600">关联文件名</label>
+                                    </div>
+                                    <div class="flex items-center">
+                                        <input id="create-kb-special-title" type="checkbox" class="w-3.5 h-3.5 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                                        <label for="create-kb-special-title" class="ml-2 text-xs text-gray-600">关联标题及子标题</label>
+                                    </div>
+                                </div>
                             </div>
-                        </div>
 
-                    </div>
-                    <div class="space-y-3">
-                        <div class="flex items-center justify-between">
-                            <div class="flex items-center gap-3">
-                                <span class="text-sm font-bold text-gray-900" role="heading" aria-level="4">切片效果预览</span>
-                                <select id="create-kb-preview-file" class="border border-gray-200 rounded-lg text-[11px] px-2 py-1 bg-white text-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                                    <option value="">暂无可预览文件</option>
-                                </select>
+                            <!-- Unified Preview Container -->
+                            <div class="slice-preview-container" role="region" aria-label="切片预览区域">
+                                <div id="create-kb-special-hint" class="slice-preview-hint hidden" role="status" aria-live="polite">
+                                    将鼠标悬停在文件类型上查看详细说明和配置示例。
+                                </div>
+                                <div id="slice-viz-root" class="slice-preview-content"></div>
                             </div>
-                            <span id="create-kb-slice-count" class="text-[11px] text-gray-400">共 0 个切片</span>
                         </div>
-                        <div id="create-kb-slice-preview" class="border border-gray-100 rounded-lg bg-gray-50 h-64 overflow-y-auto text-xs text-gray-700 p-3 space-y-2">
+                    </div>
+
+                    <!-- Right Column: Preview -->
+                    <div class="flex-1 flex flex-col overflow-hidden min-w-0">
+                        <div class="flex-shrink-0 mb-3">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center gap-3">
+                                    <span class="text-sm font-bold text-gray-900" role="heading" aria-level="4">切片效果预览</span>
+                                    <select id="create-kb-preview-file" class="border border-gray-200 rounded-lg text-[11px] px-2 py-1 bg-white text-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                        <option value="">暂无可预览文件</option>
+                                    </select>
+                                    <span id="create-kb-slice-count" class="text-[11px] text-gray-400">共 0 个切片</span>
+                                </div>
+                                <button onclick="handleReSlice()" class="text-[11px] px-2 py-1 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors flex items-center gap-1 border border-blue-200">
+                                    <i class="fa-solid fa-arrows-rotate"></i>
+                                    重新切片
+                                </button>
+                            </div>
+                        </div>
+                        <div id="create-kb-slice-preview" class="flex-1 border border-gray-100 rounded-lg bg-gray-50 overflow-auto text-xs text-gray-700 p-3 space-y-2 custom-scrollbar overscroll-contain">
                             <div class="text-gray-400 text-center py-8">根据切片策略和已上传文档生成预览</div>
                         </div>
                     </div>
                 </div>
+            </div>
             </div>
         </div>
         <div class="px-6 py-4 border-t border-gray-100 bg-gray-50 flex items-center justify-between">

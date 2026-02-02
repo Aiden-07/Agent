@@ -41,6 +41,7 @@ let createKbFiles = [];
 const createKbMaxStep = 3;
 let createKbSliceSource = '';
 let createKbUploading = false;
+let isUploadOnlyMode = false;
 let createKbSliceMode = 'parent';
 let createKbConfigTab = 'form';
 const CREATE_KB_PREVIEW_FALLBACK = '这是一个用于切片预览的示例文档内容。你可以在这里看到不同的切片策略如何影响文本的分段方式。例如，按段落分割会以自然段落为边界，而按固定字符数分割则会严格根据长度进行切片。通过合理设置切片大小和重叠，可以在保证检索效果的同时，平衡索引规模与性能。';
@@ -357,6 +358,15 @@ function setupCreateKbRetrievalControls() {
         bindLinkedNumberAndSlider('create-kb-initial-tok', 'create-kb-initial-tok-slider', 'initialTok');
     }
 
+    const similarityThresholdInput = document.getElementById('create-kb-similarity-threshold');
+    const similarityThresholdSlider = document.getElementById('create-kb-similarity-threshold-slider');
+    if (similarityThresholdInput && similarityThresholdSlider) {
+        const value = typeof saved.similarityThreshold === 'number' ? saved.similarityThreshold : 0.7;
+        similarityThresholdInput.value = value;
+        similarityThresholdSlider.value = value;
+        bindLinkedNumberAndSlider('create-kb-similarity-threshold', 'create-kb-similarity-threshold-slider', 'similarityThreshold');
+    }
+
     const finalTokInput = document.getElementById('create-kb-final-tok');
     const finalTokSlider = document.getElementById('create-kb-final-tok-slider');
     if (finalTokInput && finalTokSlider) {
@@ -422,6 +432,19 @@ function renderCreateKbRetrievalConfig() {
             <div class="bg-gray-50 border border-gray-100 rounded-lg p-4 space-y-2">
                 <div class="flex items-center justify-between mb-1">
                     <label class="text-xs font-medium text-gray-700">
+                        相似度阈值
+                        <i class="fa-regular fa-circle-question text-gray-400 ml-1" title="用于过滤检索结果的相似度阈值，值越高结果越精准。"></i>
+                    </label>
+                    <span class="text-[11px] text-gray-500">当前值: <span id="create-kb-similarity-threshold-display" class="font-mono">0.7</span></span>
+                </div>
+                <div class="flex items-center gap-3">
+                    <input id="create-kb-similarity-threshold" type="number" min="0" max="1" step="0.01" value="0.7" class="w-24 px-2 py-1.5 border border-gray-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 focus-border-transparent text-right">
+                    <input id="create-kb-similarity-threshold-slider" type="range" min="0" max="1" step="0.01" value="0.7" class="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600">
+                </div>
+            </div>
+            <div class="bg-gray-50 border border-gray-100 rounded-lg p-4 space-y-2">
+                <div class="flex items-center justify-between mb-1">
+                    <label class="text-xs font-medium text-gray-700">
                         最终召回 Tok
                         <i class="fa-regular fa-circle-question text-gray-400 ml-1" title="最终返回给大模型用于回答的问题片段数量，通常应小于初步检索 Tok，以控制上下文长度。"></i>
                     </label>
@@ -449,6 +472,14 @@ function renderCreateKbRetrievalConfig() {
         initialTokDisplay.textContent = initialTokInputDisplay.value;
         initialTokInputDisplay.addEventListener('input', function() {
             initialTokDisplay.textContent = this.value;
+        });
+    }
+    const similarityThresholdInputDisplay = document.getElementById('create-kb-similarity-threshold');
+    const similarityThresholdDisplay = document.getElementById('create-kb-similarity-threshold-display');
+    if (similarityThresholdInputDisplay && similarityThresholdDisplay) {
+        similarityThresholdDisplay.textContent = parseFloat(similarityThresholdInputDisplay.value).toFixed(2);
+        similarityThresholdInputDisplay.addEventListener('input', function() {
+            similarityThresholdDisplay.textContent = parseFloat(this.value || '0').toFixed(2);
         });
     }
     const finalTokInputDisplay = document.getElementById('create-kb-final-tok');
@@ -495,16 +526,34 @@ function initCreateKbForm() {
 
     const sliceSizeEl = document.getElementById('create-kb-slice-size');
     const sliceOverlapEl = document.getElementById('create-kb-slice-overlap');
+    
     if (sliceSizeEl) {
-        sliceSizeEl.oninput = function() {
-            updateCreateKbSlicePreview();
-        };
+        // sliceSizeEl.oninput = function() {
+        //     updateCreateKbSlicePreview();
+        // };
     }
     if (sliceOverlapEl) {
-        sliceOverlapEl.oninput = function() {
-            updateCreateKbSlicePreview();
-        };
+        // sliceOverlapEl.oninput = function() {
+        //     updateCreateKbSlicePreview();
+        // };
     }
+    // Note: TopK and Score usually don't affect slice preview, but we can add listeners if needed.
+    // For now, we just ensure they exist and can be read.
+
+    const preprocessSpacesEl = document.getElementById('create-kb-preprocess-spaces');
+    const preprocessSensitiveEl = document.getElementById('create-kb-preprocess-sensitive');
+
+    if (preprocessSpacesEl) {
+        // preprocessSpacesEl.onchange = function() {
+        //     updateCreateKbSlicePreview();
+        // };
+    }
+    if (preprocessSensitiveEl) {
+        // preprocessSensitiveEl.onchange = function() {
+        //     updateCreateKbSlicePreview();
+        // };
+    }
+
 
     const previewFileSelect = document.getElementById('create-kb-preview-file');
     if (previewFileSelect) {
@@ -513,17 +562,22 @@ function initCreateKbForm() {
         };
     }
 
-    const specialTypes = ['word', 'pdf', 'text', 'ppt', 'image', 'invoice'];
+    const specialTypes = ['word', 'pdf', 'excel', 'ppt', 'image', 'text', 'invoice'];
     specialTypes.forEach(function(type) {
         const el = document.getElementById('create-kb-special-type-' + type);
         if (el) {
             el.onmouseenter = function() {
                 setCreateKbSpecialType(type);
             };
+            el.onclick = function() {
+                if (window.selectCreateKbSpecialType) {
+                    window.selectCreateKbSpecialType(type);
+                }
+            };
         }
     });
 
-    updateCreateKbSpecialPreview('word');
+    // updateCreateKbSpecialPreview('word');
 }
 
 function addCreateKbFiles(files) {
@@ -671,6 +725,8 @@ function getCreateKbSliceSource() {
     return CREATE_KB_PREVIEW_FALLBACK;
 }
 
+let createKbPreviewSlices = [];
+
 function updateCreateKbSlicePreview() {
     const previewEl = document.getElementById('create-kb-slice-preview');
     const countEl = document.getElementById('create-kb-slice-count');
@@ -681,9 +737,26 @@ function updateCreateKbSlicePreview() {
     const strategy = 'paragraph';
     const size = Math.max(50, Number(sizeEl.value) || 500);
     const overlap = Math.max(0, Number(overlapEl.value) || 0);
-    const text = getCreateKbSliceSource();
+    let text = getCreateKbSliceSource();
+
+    // Apply preprocessing rules
+    const preprocessSpacesEl = document.getElementById('create-kb-preprocess-spaces');
+    const preprocessSensitiveEl = document.getElementById('create-kb-preprocess-sensitive');
+
+    if (preprocessSpacesEl && preprocessSpacesEl.checked) {
+        // Replace consecutive spaces, newlines, and tabs with a single space
+        text = text.replace(/[\s\t\n]+/g, ' ');
+    }
+
+    if (preprocessSensitiveEl && preprocessSensitiveEl.checked) {
+        // Remove URLs
+        text = text.replace(/https?:\/\/[^\s]+/g, '');
+        // Remove Email addresses
+        text = text.replace(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g, '');
+    }
 
     let slices = [];
+
     if (strategy === 'paragraph') {
         const parts = text.split(/\n\s*\n|。/).map(t => t.trim()).filter(Boolean);
         slices = parts;
@@ -711,20 +784,189 @@ function updateCreateKbSlicePreview() {
     }
 
     if (!slices.length) slices = [text];
+    
+    // Store in global state
+    createKbPreviewSlices = slices;
+    
+    // Render from state
+    renderCreateKbPreviewSlices();
+}
 
-    if (countEl) countEl.textContent = `共 ${slices.length} 个切片`;
+function renderCreateKbPreviewSlices() {
+    const previewEl = document.getElementById('create-kb-slice-preview');
+    const countEl = document.getElementById('create-kb-slice-count');
+    
+    if (countEl) countEl.textContent = `共 ${createKbPreviewSlices.length} 个切片`;
+    
+    if (!previewEl) return;
     previewEl.innerHTML = '';
-    slices.slice(0, 30).forEach((slice, idx) => {
+    
+    createKbPreviewSlices.slice(0, 30).forEach((slice, idx) => {
         const block = document.createElement('div');
-        block.className = 'border border-gray-200 rounded-md bg-white px-3 py-2';
-        block.innerHTML = `
-            <div class="flex items-center justify-between mb-1">
-                <span class="text-[11px] text-gray-500">切片 #${idx + 1}</span>
+        block.className = 'border border-gray-200 rounded-md bg-white px-3 py-2 group';
+        block.id = `slice-item-${idx}`;
+        
+        // View Mode
+        const viewMode = `
+            <div id="slice-view-${idx}">
+                <div class="flex items-center justify-between mb-1">
+                    <div class="flex items-center gap-2">
+                        <span class="text-[11px] text-gray-500">切片 #${idx + 1}</span>
+                        <span class="text-[11px] text-gray-400">${slice.length} 字符</span>
+                    </div>
+                    <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button onclick="editCreateKbSlice(${idx})" class="relative group/btn p-1 text-gray-400 hover:text-blue-600 rounded hover:bg-blue-50">
+                            <i class="fa-solid fa-pen-to-square text-[10px]"></i>
+                            <span class="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-1.5 py-0.5 bg-gray-800 text-white text-[10px] rounded opacity-0 group-hover/btn:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10">编辑</span>
+                        </button>
+                        <button onclick="splitCreateKbSlice(${idx})" class="relative group/btn p-1 text-gray-400 hover:text-blue-600 rounded hover:bg-blue-50">
+                            <i class="fa-solid fa-scissors text-[10px]"></i>
+                            <span class="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-1.5 py-0.5 bg-gray-800 text-white text-[10px] rounded opacity-0 group-hover/btn:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10">拆分</span>
+                        </button>
+                        ${idx < createKbPreviewSlices.length - 1 ? `
+                        <button onclick="mergeCreateKbSlice(${idx})" class="relative group/btn p-1 text-gray-400 hover:text-blue-600 rounded hover:bg-blue-50">
+                            <i class="fa-solid fa-link text-[10px]"></i>
+                            <span class="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-1.5 py-0.5 bg-gray-800 text-white text-[10px] rounded opacity-0 group-hover/btn:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10">合并</span>
+                        </button>` : ''}
+                    </div>
+                </div>
+                <div class="text-[11px] text-gray-700 whitespace-pre-line break-words">${slice}</div>
             </div>
-            <div class="text-[11px] text-gray-700 whitespace-pre-line break-words">${slice}</div>
         `;
+        
+        // Edit Mode (Initially hidden)
+        const editMode = `
+            <div id="slice-edit-${idx}" class="hidden space-y-2">
+                 <div class="flex items-center justify-between mb-1">
+                    <span class="text-[11px] text-blue-600 font-medium">编辑切片 #${idx + 1}</span>
+                </div>
+                <textarea id="slice-input-${idx}" class="w-full text-[11px] text-gray-700 border border-blue-200 rounded p-2 focus:outline-none focus:ring-1 focus:ring-blue-500 min-h-[80px]">${slice}</textarea>
+                <div class="flex justify-end gap-2">
+                    <button onclick="cancelEditCreateKbSlice(${idx})" class="px-2 py-1 text-[10px] text-gray-600 hover:bg-gray-100 rounded">取消</button>
+                    <button onclick="saveCreateKbSlice(${idx})" class="px-2 py-1 text-[10px] text-white bg-blue-600 hover:bg-blue-700 rounded">保存</button>
+                </div>
+            </div>
+        `;
+        
+        // Split Mode (Initially hidden)
+        // We'll split the text in half by default and let user adjust
+        const mid = Math.floor(slice.length / 2);
+        const firstHalf = slice.slice(0, mid);
+        const secondHalf = slice.slice(mid);
+        
+        const splitMode = `
+            <div id="slice-split-${idx}" class="hidden space-y-2">
+                 <div class="flex items-center justify-between mb-1">
+                    <span class="text-[11px] text-blue-600 font-medium">拆分切片 #${idx + 1}</span>
+                </div>
+                <div class="grid grid-cols-1 gap-2">
+                    <textarea id="slice-split-1-${idx}" class="w-full text-[11px] text-gray-700 border border-blue-200 rounded p-2 focus:outline-none focus:ring-1 focus:ring-blue-500 min-h-[60px]" placeholder="第一部分">${firstHalf}</textarea>
+                    <textarea id="slice-split-2-${idx}" class="w-full text-[11px] text-gray-700 border border-blue-200 rounded p-2 focus:outline-none focus:ring-1 focus:ring-blue-500 min-h-[60px]" placeholder="第二部分">${secondHalf}</textarea>
+                </div>
+                <div class="flex justify-end gap-2">
+                    <button onclick="cancelSplitCreateKbSlice(${idx})" class="px-2 py-1 text-[10px] text-gray-600 hover:bg-gray-100 rounded">取消</button>
+                    <button onclick="confirmSplitCreateKbSlice(${idx})" class="px-2 py-1 text-[10px] text-white bg-blue-600 hover:bg-blue-700 rounded">确认拆分</button>
+                </div>
+            </div>
+        `;
+
+        block.innerHTML = viewMode + editMode + splitMode;
         previewEl.appendChild(block);
     });
+}
+
+function editCreateKbSlice(idx) {
+    document.getElementById(`slice-view-${idx}`).classList.add('hidden');
+    document.getElementById(`slice-edit-${idx}`).classList.remove('hidden');
+    document.getElementById(`slice-split-${idx}`).classList.add('hidden');
+}
+
+function cancelEditCreateKbSlice(idx) {
+    document.getElementById(`slice-view-${idx}`).classList.remove('hidden');
+    document.getElementById(`slice-edit-${idx}`).classList.add('hidden');
+}
+
+function saveCreateKbSlice(idx) {
+    const input = document.getElementById(`slice-input-${idx}`);
+    if (input) {
+        createKbPreviewSlices[idx] = input.value;
+        renderCreateKbPreviewSlices();
+    }
+}
+
+function splitCreateKbSlice(idx) {
+    document.getElementById(`slice-view-${idx}`).classList.add('hidden');
+    document.getElementById(`slice-edit-${idx}`).classList.add('hidden');
+    document.getElementById(`slice-split-${idx}`).classList.remove('hidden');
+}
+
+function cancelSplitCreateKbSlice(idx) {
+    document.getElementById(`slice-view-${idx}`).classList.remove('hidden');
+    document.getElementById(`slice-split-${idx}`).classList.add('hidden');
+}
+
+function confirmSplitCreateKbSlice(idx) {
+    const p1 = document.getElementById(`slice-split-1-${idx}`).value;
+    const p2 = document.getElementById(`slice-split-2-${idx}`).value;
+    
+    // Replace current slice with p1, and insert p2 after it
+    // If p1 is empty, just replace with p2 (effectively no split, just edit)
+    // If p2 is empty, just replace with p1
+    
+    if (!p1 && !p2) return; // Do nothing if both empty?
+    
+    if (p1 && p2) {
+        createKbPreviewSlices.splice(idx, 1, p1, p2);
+    } else if (p1) {
+        createKbPreviewSlices[idx] = p1;
+    } else if (p2) {
+        createKbPreviewSlices[idx] = p2;
+    }
+    
+    renderCreateKbPreviewSlices();
+}
+
+function mergeCreateKbSlice(idx) {
+    if (idx >= createKbPreviewSlices.length - 1) return;
+    
+    const current = createKbPreviewSlices[idx];
+    const next = createKbPreviewSlices[idx + 1];
+    
+    // Merge logic: simple concatenation with newline? or just concat?
+    // Let's use newline for safety
+    createKbPreviewSlices.splice(idx, 2, current + '\n' + next);
+    renderCreateKbPreviewSlices();
+}
+
+// Expose functions to window
+window.editCreateKbSlice = editCreateKbSlice;
+window.cancelEditCreateKbSlice = cancelEditCreateKbSlice;
+window.saveCreateKbSlice = saveCreateKbSlice;
+window.splitCreateKbSlice = splitCreateKbSlice;
+window.cancelSplitCreateKbSlice = cancelSplitCreateKbSlice;
+window.confirmSplitCreateKbSlice = confirmSplitCreateKbSlice;
+window.mergeCreateKbSlice = mergeCreateKbSlice;
+
+function updateCreateKbConfigPreview() {
+    const select = document.getElementById('create-kb-preview-file');
+    if (!select) return;
+    const index = select.value;
+    
+    // Check if index is valid (empty string is common for default/placeholder)
+    if (!index && index !== '0' && index !== 0) return;
+    
+    const file = createKbFiles[index];
+    if (!file) return;
+    
+    // Determine type for special preview hint
+    let type = 'text';
+    const name = file.name.toLowerCase();
+    if (name.endsWith('.pdf')) type = 'pdf';
+    else if (name.endsWith('.docx') || name.endsWith('.doc')) type = 'word';
+    else if (name.endsWith('.pptx') || name.endsWith('.ppt')) type = 'ppt';
+    else if ((file.file && file.file.type && file.file.type.startsWith('image/')) || /\.(jpg|jpeg|png|gif|webp)$/.test(name)) type = 'image';
+    
+    updateCreateKbSpecialPreview(type);
 }
 
 function selectCreateKbPreviewFile(index) {
@@ -760,6 +1002,7 @@ function selectCreateKbPreviewFile(index) {
 }
 
 function openCreateKbPage() {
+    isUploadOnlyMode = false;
     setupParserInteractions();
     const listView = document.getElementById('kb-list-view');
     const detailView = document.getElementById('kb-detail-view');
@@ -853,6 +1096,26 @@ function updateCreateKbStep() {
     if (step2) step2.classList.toggle('hidden', createKbStep !== 2);
     if (step3) step3.classList.toggle('hidden', createKbStep !== 3);
 
+    // Handle container layout for Step 3 split view
+    const stepsContainer = document.getElementById('kb-create-steps-container');
+    if (stepsContainer) {
+        if (createKbStep === 3) {
+            stepsContainer.classList.remove('overflow-y-auto');
+            stepsContainer.classList.add('overflow-hidden', 'flex', 'flex-col');
+        } else {
+            stepsContainer.classList.add('overflow-y-auto');
+            stepsContainer.classList.remove('overflow-hidden', 'flex', 'flex-col');
+        }
+    }
+
+    // Initialize height sync when entering step 3
+    if (createKbStep === 3) {
+        setTimeout(() => {
+            if (window.initCreateKbHeightSync) window.initCreateKbHeightSync();
+            initStep3LinkedScroll();
+        }, 50);
+    }
+
     const s1 = document.getElementById('kb-create-stepper-1');
     const s2 = document.getElementById('kb-create-stepper-2');
     const s3 = document.getElementById('kb-create-stepper-3');
@@ -860,7 +1123,7 @@ function updateCreateKbStep() {
         if (!btn) return;
         
         // Define base classes
-        const btnBase = "flex items-center gap-3 text-sm font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white transition-colors duration-200";
+        const btnBase = "flex items-center gap-2 text-sm font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white transition-colors duration-200";
         const circleBase = "w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold transition-colors duration-200";
         const titleBase = "transition-colors duration-200";
         const descBase = "text-[11px] transition-colors duration-200";
@@ -904,7 +1167,12 @@ function updateCreateKbStep() {
                 icon.className = 'fa-solid fa-check text-[10px]';
                 circle.appendChild(icon);
             } else {
-                circle.textContent = String(index);
+                let displayIndex = index;
+                if (isUploadOnlyMode) {
+                    if (index === 2) displayIndex = 1;
+                    if (index === 3) displayIndex = 2;
+                }
+                circle.textContent = String(displayIndex);
             }
         }
     };
@@ -912,12 +1180,22 @@ function updateCreateKbStep() {
     applyStepperState(s2, 2);
     applyStepperState(s3, 3);
 
+    const sep1 = document.getElementById('kb-create-separator-1');
+    if (s1) s1.classList.toggle('hidden', isUploadOnlyMode);
+    if (sep1) sep1.classList.toggle('hidden', isUploadOnlyMode);
+
+    const backTitle = document.querySelector('#kb-create-page .flex.items-center.gap-2 span.text-sm.font-medium');
+    if (backTitle) {
+        backTitle.textContent = isUploadOnlyMode ? '上传文档' : '新建知识库';
+    }
+
     const prevBtn = document.getElementById('kb-create-prev');
     const nextBtn = document.getElementById('kb-create-next');
     if (prevBtn) {
-        prevBtn.disabled = createKbStep === 1;
-        prevBtn.classList.toggle('opacity-40', createKbStep === 1);
-        prevBtn.classList.toggle('cursor-not-allowed', createKbStep === 1);
+        const isFirstStep = isUploadOnlyMode ? createKbStep === 2 : createKbStep === 1;
+        prevBtn.disabled = isFirstStep;
+        prevBtn.classList.toggle('opacity-40', isFirstStep);
+        prevBtn.classList.toggle('cursor-not-allowed', isFirstStep);
     }
     if (nextBtn) {
         if (createKbStep === createKbMaxStep) {
@@ -971,6 +1249,7 @@ function startCreateKbUpload(onDone) {
 }
 
 function resetCreateKbForm() {
+    isUploadOnlyMode = false;
     const nameEl = document.getElementById('create-kb-name');
     const descEl = document.getElementById('create-kb-desc');
     const parserEl = document.getElementById('create-kb-parser');
@@ -992,7 +1271,7 @@ function resetCreateKbForm() {
 }
 
 function setCreateKbSpecialType(type) {
-    const specialTypes = ['word', 'pdf', 'text', 'ppt', 'image', 'invoice'];
+    const specialTypes = ['chapter', 'excel', 'ppt', 'image', 'text', 'invoice'];
     specialTypes.forEach(function(t) {
         const el = document.getElementById('create-kb-special-type-' + t);
         if (!el) return;
@@ -1008,11 +1287,18 @@ function setCreateKbSpecialType(type) {
 function updateCreateKbSpecialPreview(type) {
     const hintEl = document.getElementById('create-kb-special-hint');
     if (!hintEl) return;
+    
+    if (!type) {
+        hintEl.classList.add('hidden');
+        return;
+    }
+    
+    hintEl.classList.remove('hidden');
     let hint = '';
-    if (type === 'word') {
-        hint = '针对 Word 文档，按标题和段落结构进行切片，保留样式与层级。';
-    } else if (type === 'pdf') {
-        hint = '针对 PDF 文档，处理多列布局与分页符，自动合并跨页段落。';
+    if (type === 'chapter') {
+        hint = '适用于按照章节结构对文档进行切分处理的场景，例如合同文档、员工手册等类型的文件。';
+    } else if (type === 'excel') {
+        hint = 'Excel文件不做切片处理，将每一行作为一个切片，默认第一行为标题';
     } else if (type === 'text') {
         hint = '针对纯文本，按换行与空行进行分段，适合日志与记录类内容。';
     } else if (type === 'ppt') {
@@ -1025,6 +1311,31 @@ function updateCreateKbSpecialPreview(type) {
         hint = '将根据不同文件类型应用对应的专用切片策略。';
     }
     hintEl.textContent = hint;
+}
+
+function handleReSlice() {
+    const previewContainer = document.getElementById('create-kb-slice-preview');
+    if (!previewContainer) return;
+    
+    previewContainer.innerHTML = `
+        <div class="h-full flex flex-col items-center justify-center text-blue-500">
+            <i class="fa-solid fa-circle-notch fa-spin text-3xl mb-3"></i>
+            <p class="text-sm">正在重新切片...</p>
+        </div>
+    `;
+    
+    // Simulate delay and refresh preview
+    setTimeout(() => {
+        updateCreateKbSlicePreview();
+        // Trigger file selection change to refresh content if a file is selected
+        const fileSelect = document.getElementById('create-kb-preview-file');
+        if (fileSelect && fileSelect.onchange) {
+             fileSelect.onchange();
+        } else {
+            // If no onchange or not selected, just render default
+             renderSliceVisualization(getMockSliceData('chapter'), 'chapter'); 
+        }
+    }, 1000);
 }
 
 function validateCreateKbBasic() {
@@ -2370,10 +2681,25 @@ let docUploadStep = 1;
 let docUploadSliceMode = 'length';
 
 function openDocUploadWizard() {
-    docUploadStep = 1;
-    const modal = document.getElementById('doc-upload-wizard');
-    if (modal) modal.classList.remove('hidden');
-    updateDocUploadStep();
+    isUploadOnlyMode = true;
+    setupParserInteractions();
+    
+    // Set default values for step 1 to pass validation
+    const nameEl = document.getElementById('create-kb-name');
+    const descEl = document.getElementById('create-kb-desc');
+    if (nameEl) nameEl.value = '快速上传-' + new Date().getTime();
+    if (descEl) descEl.value = '通过快速上传按钮创建的知识库';
+
+    const listView = document.getElementById('kb-list-view');
+    const detailView = document.getElementById('kb-detail-view');
+    const createPage = document.getElementById('kb-create-page');
+    if (listView) listView.classList.add('hidden');
+    if (detailView) detailView.classList.add('hidden');
+    if (createPage) createPage.classList.remove('hidden');
+    
+    createKbStep = 2;
+    createKbCompletedStep = 2;
+    updateCreateKbStep();
 }
 
 function closeDocUploadWizard() {
@@ -2706,10 +3032,25 @@ function toggleOriginalView(forceState) {
     console.log(`[PERF] toggleOriginalView took ${duration.toFixed(2)}ms`);
 }
 
+let lastParsedParagraphs = null;
+
 function loadOriginalFileContent() {
     const parserSelect = document.getElementById('parser-preview-file-select');
     const contentEl = document.getElementById('original-view-content');
     if (!parserSelect || !contentEl) return;
+
+    if (lastParsedParagraphs) {
+        contentEl.innerHTML = '';
+        lastParsedParagraphs.forEach((text, index) => {
+             const span = document.createElement('div');
+             span.id = `original-para-${index}`;
+             span.className = 'mb-4 p-2 rounded transition-all duration-300 border border-transparent hover:bg-gray-100 cursor-pointer'; 
+             span.textContent = text;
+             span.onclick = () => highlightParser(index);
+             contentEl.appendChild(span);
+        });
+        return;
+    }
 
     const fileIndex = parserSelect.value;
     if (fileIndex === "" || !createKbFiles[fileIndex]) {
@@ -2763,6 +3104,7 @@ setupParserInteractions = function() {
     if (fileSelect) {
         const originalOnChange = fileSelect.onchange;
         fileSelect.onchange = function() {
+            lastParsedParagraphs = null;
             if (originalOnChange) originalOnChange.call(this);
             if (isViewingOriginal) {
                 loadOriginalFileContent();
@@ -2810,17 +3152,38 @@ function handleInnovativeParse() {
 }
 
 function renderParserPreview(paragraphs) {
+    lastParsedParagraphs = paragraphs;
     const contentEl = document.getElementById('parser-preview-content');
+    const originalContentEl = document.getElementById('original-view-content');
+
     if (!contentEl) return;
     
     contentEl.innerHTML = '';
     
+    // Reset Original View Content for Sync
+    if (originalContentEl) {
+        originalContentEl.innerHTML = ''; 
+    }
+    
     paragraphs.forEach((text, index) => {
         const id = `para-${index}`;
         const div = document.createElement('div');
-        div.className = 'group relative p-4 bg-gray-50 rounded-lg border border-transparent hover:border-blue-200 hover:bg-blue-50/30 transition-all';
+        div.id = `parser-wrapper-${index}`;
+        // Add cursor-pointer and onclick event
+        div.className = 'group relative p-4 bg-gray-50 rounded-lg border border-transparent hover:border-blue-200 hover:bg-blue-50/30 transition-all cursor-pointer';
+        div.onclick = (e) => {
+             // Prevent triggering when clicking buttons/textarea inside
+             if (e.target.closest('button') || e.target.tagName === 'TEXTAREA') return;
+             highlightOriginal(index);
+        };
+        
+        let extraClass = '';
+        if (text.includes('第三段内容展示了系统的容错能力')) {
+            extraClass = 'bg-yellow-100 text-yellow-900';
+        }
+
         div.innerHTML = `
-            <div id="${id}-view" class="text-sm text-gray-700 leading-relaxed pr-8">${text}</div>
+            <div id="${id}-view" class="text-sm text-gray-700 leading-relaxed pr-8 ${extraClass}">${text}</div>
             <textarea id="${id}-edit" class="hidden w-full p-2 text-sm border border-blue-300 rounded focus:ring-2 focus:ring-blue-500 focus:outline-none mb-2" rows="3">${text}</textarea>
             
             <div id="${id}-actions" class="hidden flex justify-end gap-2 mt-2">
@@ -2833,7 +3196,71 @@ function renderParserPreview(paragraphs) {
             </button>
         `;
         contentEl.appendChild(div);
+
+        // Sync to Original View
+        if (originalContentEl) {
+            const span = document.createElement('div');
+            span.id = `original-para-${index}`;
+            span.className = 'mb-4 p-2 rounded transition-all duration-300 border border-transparent hover:bg-gray-100 cursor-pointer'; 
+            span.textContent = text;
+            span.onclick = () => highlightParser(index);
+            originalContentEl.appendChild(span);
+        }
     });
+}
+
+function highlightOriginal(index) {
+    const originalWrapper = document.getElementById('original-view-content-wrapper');
+    const target = document.getElementById(`original-para-${index}`);
+    
+    if (!originalWrapper || !target) return;
+
+    // Remove previous highlights
+    const allParas = document.getElementById('original-view-content').querySelectorAll('[id^="original-para-"]');
+    allParas.forEach(p => {
+        p.classList.remove('bg-yellow-100', 'border-yellow-300', 'text-gray-900');
+        p.classList.add('border-transparent');
+    });
+
+    // Add highlight
+    target.classList.remove('border-transparent');
+    target.classList.add('bg-yellow-100', 'border-yellow-300', 'text-gray-900');
+
+    // Scroll into view
+    target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+    // Auto fade out after 4 seconds
+    setTimeout(() => {
+        target.classList.remove('bg-yellow-100', 'border-yellow-300', 'text-gray-900');
+        target.classList.add('border-transparent');
+    }, 4000);
+}
+
+function highlightParser(index) {
+    const parserWrapper = document.getElementById('parser-preview-content');
+    const target = document.getElementById(`parser-wrapper-${index}`);
+
+    if (!parserWrapper || !target) return;
+
+    // Remove previous highlights
+    const allWrappers = parserWrapper.querySelectorAll('[id^="parser-wrapper-"]');
+    allWrappers.forEach(p => {
+        p.classList.remove('bg-blue-100', 'border-blue-300');
+        p.classList.add('border-transparent');
+    });
+
+    // Add highlight
+    target.classList.remove('border-transparent');
+    target.classList.add('bg-blue-100', 'border-blue-300');
+
+    // Scroll into view
+    target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+    // Auto fade out after 4 seconds
+    setTimeout(() => {
+        target.classList.remove('bg-blue-100', 'border-blue-300');
+        target.classList.add('border-transparent');
+    }, 4000);
 }
 
 function toggleCorrection(id) {
@@ -2881,4 +3308,646 @@ function cancelCorrection(id, originalText) {
         edit.classList.add('hidden');
         actions.classList.add('hidden');
     }
+}
+
+// Dynamic Height Sync for Knowledge Base Creation Step 3
+let kbHeightObserver = null;
+
+function initCreateKbHeightSync() {
+    const settingsCol = document.getElementById('create-kb-settings-column');
+    const previewEl = document.getElementById('create-kb-slice-preview');
+    
+    if (!settingsCol || !previewEl) return;
+    
+    // Add transition for smooth effect
+    previewEl.style.transition = 'height 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
+    
+    const updateHeight = () => {
+        if (settingsCol.offsetParent === null) return; // Hidden
+        
+        const settingsRect = settingsCol.getBoundingClientRect();
+        const previewRect = previewEl.getBoundingClientRect();
+        
+        // Calculate target height based on visual alignment
+        // We want the bottom of previewEl to match the bottom of settingsCol
+        let targetHeight = settingsRect.bottom - previewRect.top;
+        
+        // Ensure minimum height (h-64 = 256px)
+        const minHeight = 256; 
+        targetHeight = Math.max(minHeight, targetHeight);
+        
+        previewEl.style.height = targetHeight + 'px';
+    };
+
+    // Clean up existing observer
+    if (kbHeightObserver) {
+        kbHeightObserver.disconnect();
+    }
+    
+    // Create new observer
+    kbHeightObserver = new ResizeObserver((entries) => {
+        window.requestAnimationFrame(() => {
+            updateHeight();
+        });
+    });
+    
+    kbHeightObserver.observe(settingsCol);
+    
+    // Initial call
+    updateHeight();
+}
+
+// Initialize on load
+document.addEventListener('DOMContentLoaded', initCreateKbHeightSync);
+
+// Export for unit testing
+window.initCreateKbHeightSync = initCreateKbHeightSync;
+
+// Unit Test Verification Function
+window.testKbHeightSync = function() {
+    console.group('Height Sync Test');
+    const settingsCol = document.getElementById('create-kb-settings-column');
+    const previewEl = document.getElementById('create-kb-slice-preview');
+    
+    if (!settingsCol || !previewEl) {
+        console.error('Elements not found');
+        console.groupEnd();
+        return false;
+    }
+    
+    // Test 1: Initial Sync
+    initCreateKbHeightSync();
+    console.log('Initial Sync triggered');
+    
+    // Wait for transition/update
+    setTimeout(() => {
+        const h1 = previewEl.offsetHeight;
+        console.log('Height after sync:', h1);
+        
+        // Test 2: Modify content height
+        const testDiv = document.createElement('div');
+        testDiv.style.height = '100px';
+        testDiv.textContent = 'Test Height Expansion';
+        settingsCol.appendChild(testDiv);
+        console.log('Added 100px content to settings');
+        
+        setTimeout(() => {
+            const h2 = previewEl.offsetHeight;
+            console.log('Height after expansion:', h2);
+            
+            const diff = h2 - h1;
+            const success = Math.abs(diff - 100) < 20; // Allow some margin for padding/layout
+            console.log('Test Result:', success ? 'PASS' : 'FAIL', 'Diff:', diff);
+            
+            // Cleanup
+            settingsCol.removeChild(testDiv);
+            console.groupEnd();
+        }, 500); // Wait for transition
+    }, 100);
+};
+
+// Slice Strategy Selection Logic
+let currentSliceStrategy = 'general';
+
+function selectSliceStrategy(strategy) {
+    if (currentSliceStrategy === strategy) return;
+    
+    currentSliceStrategy = strategy;
+    updateSliceStrategyUI();
+
+    // Restore general config visibility if switching to general
+    if (strategy === 'general') {
+        currentSpecialType = null;
+        updateCreateKbSpecialPreview(null);
+        const generalConfigEl = document.getElementById('create-kb-slice-config-container');
+        const excelHintEl = document.getElementById('create-kb-excel-hint-container');
+        if (generalConfigEl) generalConfigEl.classList.remove('hidden');
+        if (excelHintEl) excelHintEl.classList.add('hidden');
+        
+        // Reset special types styles
+        const specialTypes = ['word', 'pdf', 'excel', 'ppt', 'image', 'text', 'invoice'];
+        specialTypes.forEach(function(type) {
+            const el = document.getElementById('create-kb-special-type-' + type);
+            if (el) {
+                el.classList.remove('border-blue-500', 'bg-blue-50');
+            }
+        });
+
+        // Hide special options
+        const specialOptionsEl = document.getElementById('create-kb-special-options');
+        if (specialOptionsEl) {
+            specialOptionsEl.classList.add('opacity-0', 'max-h-0');
+            specialOptionsEl.classList.remove('opacity-100', 'max-h-[100px]');
+        }
+
+        // Clear visualization
+        const root = document.getElementById('slice-viz-root');
+        if (root) root.innerHTML = '';
+    }
+}
+
+function selectCreateKbSpecialType(type) {
+    currentSpecialType = type;
+    // Check if Special Strategy is active, if not, do nothing or prompt
+    // According to user requirement: "Only selected div (Special Slice)... buttons can be selected"
+    // But usually clicking a button should auto-select the parent radio.
+    // However, user said: "When closing div... selected are cancelled".
+    // Let's assume if I click the button, I WANT special strategy. 
+    // BUT user says "Only selected div... can be selected". 
+    // This implies disabled state.
+    
+    // If we are in general mode, we should switch to special mode first?
+    // "1: Only selected div... can be selected" -> implies buttons are disabled if div not selected.
+    
+    if (currentSliceStrategy !== 'special') {
+        selectSliceStrategy('special');
+    }
+    
+    // 2. Update UI for specific type
+    const generalConfigEl = document.getElementById('create-kb-slice-config-container');
+    const excelHintEl = document.getElementById('create-kb-excel-hint-container');
+    
+    if (generalConfigEl) generalConfigEl.classList.remove('hidden');
+    if (excelHintEl) excelHintEl.classList.add('hidden');
+    
+    // 3. Persist the selection (update styles)
+    setCreateKbSpecialType(type);
+
+    // Show special options with animation
+    const specialOptionsEl = document.getElementById('create-kb-special-options');
+    if (specialOptionsEl) {
+        // Use requestAnimationFrame to ensure transition works if it was just inserted or unhidden
+        requestAnimationFrame(() => {
+            specialOptionsEl.classList.remove('opacity-0', 'max-h-0');
+            specialOptionsEl.classList.add('opacity-100', 'max-h-[100px]');
+        });
+    }
+
+    // 4. Render interactive visualization
+    renderSliceVisualization(type);
+}
+window.selectCreateKbSpecialType = selectCreateKbSpecialType;
+
+/**
+ * Interactive Document Slicing Visualization
+ * @param {string} type - File type (word, pdf, etc.)
+ */
+function renderSliceVisualization(type) {
+    const root = document.getElementById('slice-viz-root');
+    if (!root) return;
+
+    const startTime = performance.now();
+
+    const getTemplates = (type) => {
+        const templates = {
+            'chapter': {
+                left: `
+                    <div class="paper-doc">
+                        <div class="paper-module border-2 border-blue-100 p-4 mb-4 text-center">
+                            <div class="font-bold text-lg mb-2">2026 年度技术趋势报告</div>
+                            <div class="text-xs text-gray-400">PDF COVER PAGE</div>
+                        </div>
+                        <div class="paper-module border-b border-gray-200 pb-2">
+                            <div class="font-semibold text-sm">目录 (Contents)</div>
+                            <div class="flex justify-between text-xs mt-1"><span>1. 行业概览</span><span>P1</span></div>
+                            <div class="flex justify-between text-xs mt-1"><span>2. 核心技术解析</span><span>P5</span></div>
+                        </div>
+                        <div class="paper-module mt-4">
+                            <div class="flex gap-2">
+                                <div class="flex-1">
+                                    <div class="paper-content-line"></div>
+                                    <div class="paper-content-line"></div>
+                                </div>
+                                <div class="w-16 h-12 bg-blue-50 border border-blue-100 flex items-center justify-center text-[8px] text-blue-400">图表 1.1</div>
+                            </div>
+                        </div>
+                    </div>
+                `,
+                right: [
+                    { title: '切片 1', content: '【封面+标题】2026 年度技术趋势报告。本报告深入分析了未来五年的关键技术演进路径，涵盖了从量子计算到生物感知的多维领域...' },
+                    { title: '切片 2', content: '【目录】1. 行业概览 (P1)；2. 核心技术解析 (P5)。目录结构清晰展示了报告的逻辑框架，为后续的深度检索提供了层级索引...' },
+                    { title: '切片 3', content: '【正文+图表】核心技术解析部分详细阐述了分布式计算的新架构。如图表 1.1 所示，吞吐量提升了 40%，同时延迟降低了 25%...' }
+                ]
+            },
+            'excel': {
+                left: `
+                    <div class="paper-doc overflow-x-auto">
+                        <table class="viz-table">
+                            <thead>
+                                <tr><th>姓名</th><th>部门</th><th>入职日期</th><th>岗位</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr><td>张三</td><td>技术部</td><td>2024-01-15</td><td>高级架构师</td></tr>
+                                <tr><td>李四</td><td>产品部</td><td>2024-03-20</td><td>产品经理</td></tr>
+                                <tr><td>王五</td><td>市场部</td><td>2024-05-10</td><td>运营总监</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                `,
+                right: [
+                    { title: '切片 1', content: '【表头+第1行】\n姓名：张三\n部门：技术部\n入职日期：2024-01-05\n岗位：高级架构师' },
+                    { title: '切片 2', content: '【表头+第2行】\n姓名：李四\n部门：产品部\n入职日期：2024-03-20\n岗位：产品经理' }
+                ]
+            },
+            'ppt': {
+                left: `
+                    <div class="paper-doc">
+                        <div class="ppt-grid">
+                            <div class="ppt-slide border-blue-400 shadow-sm"><div class="ppt-slide-title"></div><div class="ppt-slide-content"><div class="ppt-slide-line"></div></div><div class="text-[8px] text-center mt-auto">P1: 封面</div></div>
+                            <div class="ppt-slide"><div class="ppt-slide-title" style="width:30%"></div><div class="ppt-slide-content"><div class="ppt-slide-line" style="width:50%"></div><div class="ppt-slide-line" style="width:50%"></div></div><div class="text-[8px] text-center mt-auto">P2: 目录</div></div>
+                            <div class="ppt-slide"><div class="ppt-slide-title"></div><div class="ppt-slide-content"><div class="ppt-slide-line"></div><div class="ppt-slide-line"></div><div class="ppt-slide-line"></div></div><div class="text-[8px] text-center mt-auto">P3: 内容</div></div>
+                            <div class="ppt-slide"><div class="ppt-slide-title" style="width:40%; background:#7f8c8d"></div><div class="ppt-slide-content"><div class="ppt-slide-line" style="width:60%"></div></div><div class="text-[8px] text-center mt-auto">P4: 结论</div></div>
+                        </div>
+                    </div>
+                `,
+                right: [
+                    { title: '切片 1', content: '【封面页】演示文稿标题：2026 企业数字化转型战略。演讲人：首席技术官。该切片捕获了演示文稿的核心主题与演讲背景...' },
+                    { title: '切片 2', content: '【目录页】1. 现状分析；2. 目标愿景；3. 执行方案；4. 预期收益。该切片提供了演示文稿的全局逻辑路线图...' },
+                    { title: '切片 3', content: '【内容页】现状分析部分指出，目前 70% 的业务流程已实现自动化，但数据孤岛问题依然显著。下一步重点在于构建统一数据湖...' }
+                ]
+            },
+            'image': {
+                left: `
+                    <div class="paper-doc h-full">
+                        <div class="viz-image-mock">
+                            <div class="viz-image-block" style="height: 40px;">
+                                <div class="viz-image-label">OCR: TITLE</div>
+                                <div class="paper-title" style="font-size: 14px;">未来城市概念海报</div>
+                            </div>
+                            <div class="flex gap-2 flex-1">
+                                <div class="viz-image-block flex-1 flex items-center justify-center">
+                                    <div class="viz-image-label">IMAGE CONTENT</div>
+                                    <i class="fa-regular fa-image text-2xl text-blue-200"></i>
+                                </div>
+                                <div class="viz-image-block w-24">
+                                    <div class="viz-image-label">OCR: TEXT</div>
+                                    <div class="paper-content-line"></div>
+                                    <div class="paper-content-line"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `,
+                right: [
+                    { title: '切片 1', content: '【标题+副标题】未来城市概念海报。OCR 识别：智慧互联，绿色共生。该切片整合了海报的核心视觉文案信息...' },
+                    { title: '切片 2', content: '【配图+说明】海报中心展示了悬浮建筑与绿植结合的未来景观。右侧文本说明：城市森林覆盖率将达到 60%，所有能源实现碳中和...' }
+                ]
+            },
+            'text': {
+                left: `
+                    <div class="paper-doc">
+                        <div class="text-xs text-gray-700 font-mono">
+                            <p class="mb-4">这是纯文本的第一段内容。通常用于记录日志或者简单的笔记信息。段落之间通过两个换行符进行分隔，这是最基础的切分规则。</p>
+                            <p>这是纯文本的第二段内容。解析器会识别出段落边界，并将其转换为独立的语义切片，以便于后续的高效检索和分析。</p>
+                        </div>
+                    </div>
+                `,
+                right: [
+                    { title: '切片 1', content: '【第一段】这是纯文本的第一段内容。通常用于记录日志或者简单的笔记信息。段落之间通过两个换行符进行分隔，这是最基础的切分规则...' },
+                    { title: '切片 2', content: '【第二段】这是纯文本的第二段内容。解析器会识别出段落边界，并将其转换为独立的语义切片，以便于后续的高效检索和分析...' }
+                ]
+            },
+            'invoice': {
+                left: `
+                    <div class="paper-doc">
+                        <div class="viz-image-mock" style="padding: 10px; border: 1px solid #ccc;">
+                            <div class="text-center font-bold text-sm border-b pb-1 mb-2">电子增值税普通发票</div>
+                            <div class="grid grid-cols-2 gap-x-4 gap-y-2">
+                                <div class="viz-image-block"><div class="viz-image-label">OCR: HEADER</div><div class="text-[8px]">抬头: 北京某科技有限公司</div></div>
+                                <div class="viz-image-block"><div class="viz-image-label">OCR: DATE</div><div class="text-[8px]">日期: 2026-01-30</div></div>
+                                <div class="viz-image-block col-span-2"><div class="viz-image-label">OCR: ITEMS</div><div class="text-[8px]">云服务器租赁费 - 1200.00元</div></div>
+                                <div class="viz-image-block"><div class="viz-image-label">OCR: AMOUNT</div><div class="text-[8px]">合计: 1200.00</div></div>
+                                <div class="viz-image-block"><div class="viz-image-label">OCR: VENDOR</div><div class="text-[8px]">销售方: 某云计算公司</div></div>
+                            </div>
+                        </div>
+                    </div>
+                `,
+                right: [
+                    { title: '切片 1', content: '【发票抬头+日期】发票名称：电子增值税普通发票；抬头：北京某科技有限公司；开票日期：2026-01-30。提取了票据的核心主体信息...' },
+                    { title: '切片 2', content: '【商品明细】项目名称：云服务器租赁费；金额：1200.00 元。该切片捕获了具体的消费明细和单项金额，支持精准的费用审计检索...' },
+                    { title: '切片 3', content: '【金额+开票方】合计金额：1200.00；销售方：某云计算公司。整合了最终支付数据与责任方信息，完成了票据的结构化解析...' }
+                ]
+            }
+        };
+        return templates[type] || templates['chapter'];
+    };
+
+    const renderContent = () => {
+        const config = getTemplates(type);
+        
+        // Add Excel toggle buttons if type is excel
+        let extraHtml = '';
+        if (type === 'excel') {
+            extraHtml = `
+                <div class="absolute top-3 right-3 flex gap-1 bg-white p-0.5 rounded-lg border border-gray-100 shadow-sm z-10">
+                    <button onclick="switchExcelViz(1)" class="px-2 py-1 text-[10px] rounded-md text-blue-600 bg-blue-50 font-medium transition-colors" id="excel-viz-btn-1">示例1</button>
+                    <button onclick="switchExcelViz(2)" class="px-2 py-1 text-[10px] rounded-md text-gray-500 hover:bg-gray-50 transition-colors" id="excel-viz-btn-2">示例2</button>
+                </div>
+            `;
+        }
+
+        const rightHtml = config.right.map(card => `
+            <div class="slice-card">
+                <div class="slice-card-header">${card.title}</div>
+                <div class="slice-card-body">${card.content}</div>
+            </div>
+        `).join('');
+
+        root.innerHTML = `
+            <div class="slice-viz-container relative">
+                ${extraHtml}
+                ${config.left}
+                
+                <svg class="slice-viz-arrow" width="100" height="40" viewBox="0 0 100 40">
+                    <defs>
+                        <linearGradient id="arrowGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                            <stop offset="0%" style="stop-color:#3498db;stop-opacity:0.2" />
+                            <stop offset="100%" style="stop-color:#3498db;stop-opacity:0.8" />
+                        </linearGradient>
+                    </defs>
+                    <path d="M0 20 L80 20 M70 10 L85 20 L70 30" fill="none" stroke="url(#arrowGrad)" stroke-width="3" stroke-linecap="round" />
+                </svg>
+
+                <div class="slice-cards">
+                    ${rightHtml}
+                </div>
+            </div>
+        `;
+
+        requestAnimationFrame(() => {
+            const container = root.querySelector('.slice-viz-container');
+            if (container) {
+                container.classList.add('animate-viz-in');
+            }
+            const endTime = performance.now();
+            console.log(`Visualization [${type}] rendered in ${(endTime - startTime).toFixed(2)}ms`);
+        });
+    };
+
+    renderContent();
+}
+window.renderSliceVisualization = renderSliceVisualization;
+
+window.switchExcelViz = function(id) {
+    const root = document.getElementById('slice-viz-root');
+    const tableContainer = root.querySelector('.paper-doc');
+    const sliceCardsContainer = root.querySelector('.slice-cards');
+    const btn1 = document.getElementById('excel-viz-btn-1');
+    const btn2 = document.getElementById('excel-viz-btn-2');
+
+    if (!btn1 || !btn2 || !tableContainer || !sliceCardsContainer) return;
+
+    if (id === 1) {
+        // Update buttons
+        btn1.className = 'px-2 py-1 text-[10px] rounded-md text-blue-600 bg-blue-50 font-medium transition-colors';
+        btn2.className = 'px-2 py-1 text-[10px] rounded-md text-gray-500 hover:bg-gray-50 transition-colors';
+        // Update content
+        tableContainer.innerHTML = `
+            <table class="viz-table">
+                <thead>
+                    <tr><th>姓名</th><th>部门</th><th>入职日期</th><th>岗位</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td>张三</td><td>技术部</td><td>2024-01-15</td><td>高级架构师</td></tr>
+                    <tr><td>李四</td><td>产品部</td><td>2024-03-20</td><td>产品经理</td></tr>
+                    <tr><td>王五</td><td>市场部</td><td>2024-05-10</td><td>运营总监</td></tr>
+                </tbody>
+            </table>
+        `;
+        // Update slice cards
+        sliceCardsContainer.innerHTML = `
+            <div class="slice-card">
+                <div class="slice-card-header">切片 1</div>
+                <div class="slice-card-body">【表头+第1行】
+姓名：张三
+部门：技术部
+入职日期：2024-01-05
+岗位：高级架构师</div>
+            </div>
+            <div class="slice-card">
+                <div class="slice-card-header">切片 2</div>
+                <div class="slice-card-body">【表头+第2行】
+姓名：李四
+部门：产品部
+入职日期：2024-03-20
+岗位：产品经理</div>
+            </div>
+        `;
+    } else {
+        // Update buttons
+        btn1.className = 'px-2 py-1 text-[10px] rounded-md text-gray-500 hover:bg-gray-50 transition-colors';
+        btn2.className = 'px-2 py-1 text-[10px] rounded-md text-blue-600 bg-blue-50 font-medium transition-colors';
+        // Update content
+        tableContainer.innerHTML = `
+             <table class="viz-table">
+                <thead>
+                    <tr><th>部门</th><th>姓名</th><th>入职日期</th><th>岗位</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td rowspan="2" class="align-middle bg-blue-50/50 font-medium text-blue-600">技术部</td><td>张三</td><td>2024-01-15</td><td>高级架构师</td></tr>
+                    <tr><td>李四</td><td>2024-03-20</td><td>产品经理</td></tr>
+                    <tr><td>市场部</td><td>王五</td><td>2024-05-10</td><td>运营总监</td></tr>
+                </tbody>
+            </table>
+        `;
+        // Update slice cards
+        sliceCardsContainer.innerHTML = `
+            <div class="slice-card">
+                <div class="slice-card-header">切片 1</div>
+                <div class="slice-card-body">【表头+第1行】
+姓名：张三
+部门：技术部
+入职日期：2024-01-05
+岗位：高级架构师</div>
+            </div>
+            <div class="slice-card">
+                <div class="slice-card-header">切片 2</div>
+                <div class="slice-card-body">【表头+第2行】
+姓名：李四
+部门：技术部
+入职日期：2024-03-20
+岗位：产品经理</div>
+            </div>
+        `;
+    }
+}
+
+function updateSliceStrategyUI() {
+    const generalIcon = document.getElementById('radio-icon-general');
+    const specialIcon = document.getElementById('radio-icon-special');
+    
+    // Get parent containers for aria attributes
+    const generalContainer = generalIcon ? generalIcon.parentElement : null;
+    const specialContainer = specialIcon ? specialIcon.parentElement : null;
+    
+    const specialTypes = ['word', 'pdf', 'excel', 'ppt', 'image', 'text', 'invoice'];
+
+    if (currentSliceStrategy === 'general') {
+        if (generalIcon) {
+            generalIcon.className = 'fa-solid fa-circle-check text-blue-600 transition-colors';
+        }
+        if (specialIcon) {
+            specialIcon.className = 'fa-regular fa-circle text-gray-400 transition-colors';
+        }
+        if (generalContainer) generalContainer.setAttribute('aria-checked', 'true');
+        if (specialContainer) specialContainer.setAttribute('aria-checked', 'false');
+        
+        // Disable special type buttons
+        specialTypes.forEach(function(type) {
+            const el = document.getElementById('create-kb-special-type-' + type);
+            if (el) {
+                el.classList.add('opacity-50', 'cursor-not-allowed', 'pointer-events-none');
+            }
+        });
+        
+    } else {
+        if (generalIcon) {
+            generalIcon.className = 'fa-regular fa-circle text-gray-400 transition-colors';
+        }
+        if (specialIcon) {
+            specialIcon.className = 'fa-solid fa-circle-check text-blue-600 transition-colors';
+        }
+        if (generalContainer) generalContainer.setAttribute('aria-checked', 'false');
+        if (specialContainer) specialContainer.setAttribute('aria-checked', 'true');
+        
+        // Enable special type buttons
+        specialTypes.forEach(function(type) {
+            const el = document.getElementById('create-kb-special-type-' + type);
+            if (el) {
+                el.classList.remove('opacity-50', 'cursor-not-allowed', 'pointer-events-none');
+            }
+        });
+    }
+}
+
+function handleSliceStrategyKey(event, strategy) {
+    if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        selectSliceStrategy(strategy);
+    }
+}
+
+// Expose for testing
+window.selectSliceStrategy = selectSliceStrategy;
+window.handleSliceStrategyKey = handleSliceStrategyKey;
+
+// Unit Test for Slice Strategy Selection
+window.testSliceStrategySelection = function() {
+    console.group('Slice Strategy Selection Test');
+    
+    const generalIcon = document.getElementById('radio-icon-general');
+    const specialIcon = document.getElementById('radio-icon-special');
+    
+    if (!generalIcon || !specialIcon) {
+        console.error('Icons not found');
+        console.groupEnd();
+        return false;
+    }
+    
+    // Test 1: Initial State (Should be General)
+    // Note: JS state might be reset if page reloads, so we assume initial is 'general'
+    // Force reset for test
+    selectSliceStrategy('general');
+    console.log('Reset to General');
+    
+    if (currentSliceStrategy !== 'general') console.error('FAIL: Initial state not general');
+    else console.log('PASS: Initial state is general');
+    
+    if (!generalIcon.classList.contains('fa-circle-check')) console.error('FAIL: General icon incorrect');
+    else console.log('PASS: General icon is checked');
+    
+    // Test 2: Switch to Special
+    selectSliceStrategy('special');
+    console.log('Switched to Special');
+    
+    if (currentSliceStrategy !== 'special') console.error('FAIL: State not updated to special');
+    else console.log('PASS: State updated to special');
+    
+    if (!specialIcon.classList.contains('fa-circle-check')) console.error('FAIL: Special icon incorrect');
+    else console.log('PASS: Special icon is checked');
+    
+    if (generalIcon.classList.contains('fa-circle-check')) console.error('FAIL: General icon still checked');
+    else console.log('PASS: General icon unchecked');
+    
+    // Test 3: Keyboard Interaction
+    console.log('Testing Keyboard (Enter on General)');
+    handleSliceStrategyKey({ key: 'Enter', preventDefault: () => {} }, 'general');
+    
+    if (currentSliceStrategy !== 'general') console.error('FAIL: Keyboard interaction failed');
+    else console.log('PASS: Keyboard interaction success');
+    
+    console.groupEnd();
+};
+
+function resetCreateKbSliceConfig() {
+    const delimiterEl = document.getElementById('create-kb-slice-delimiter');
+    const delimiterSelectEl = document.getElementById('create-kb-slice-delimiter-select');
+    const sizeEl = document.getElementById('create-kb-slice-size');
+    const overlapEl = document.getElementById('create-kb-slice-overlap');
+    const preprocessSpacesEl = document.getElementById('create-kb-preprocess-spaces');
+    const preprocessSensitiveEl = document.getElementById('create-kb-preprocess-sensitive');
+    const preprocessFilenameEl = document.getElementById('create-kb-preprocess-filename');
+    const preprocessTitleEl = document.getElementById('create-kb-preprocess-title');
+    const specialFilenameEl = document.getElementById('create-kb-special-filename');
+    const specialTitleEl = document.getElementById('create-kb-special-title');
+
+    if (delimiterEl) delimiterEl.value = '\n\n';
+    if (delimiterSelectEl) delimiterSelectEl.value = '\n\n';
+    if (sizeEl) sizeEl.value = 1024;
+    if (overlapEl) overlapEl.value = 50;
+    if (preprocessSpacesEl) preprocessSpacesEl.checked = false;
+    if (preprocessSensitiveEl) preprocessSensitiveEl.checked = false;
+    if (preprocessFilenameEl) preprocessFilenameEl.checked = false;
+    if (preprocessTitleEl) preprocessTitleEl.checked = false;
+    if (specialFilenameEl) specialFilenameEl.checked = false;
+    if (specialTitleEl) specialTitleEl.checked = false;
+    
+    // updateCreateKbSlicePreview(); // Do NOT auto-preview on reset as per implicit requirement to disable auto-preview interaction
+}
+window.resetCreateKbSliceConfig = resetCreateKbSliceConfig;
+
+/**
+ * Initialize linked scrolling between settings and preview in Step 3
+ */
+function initStep3LinkedScroll() {
+    const leftCol = document.getElementById('create-kb-settings-column');
+    const rightCol = document.getElementById('create-kb-slice-preview');
+    
+    if (!leftCol || !rightCol) return;
+
+    let isScrollingLeft = false;
+    let isScrollingRight = false;
+
+    const syncScroll = (source, target, flagSetter, otherFlag) => {
+        if (otherFlag.value) return;
+        flagSetter(true);
+        
+        const scrollPercentage = source.scrollTop / (source.scrollHeight - source.clientHeight);
+        target.scrollTop = scrollPercentage * (target.scrollHeight - target.clientHeight);
+        
+        // Also sync horizontal if needed, though usually not desired for split view
+        // const scrollPercentageX = source.scrollLeft / (source.scrollWidth - source.clientWidth);
+        // target.scrollLeft = scrollPercentageX * (target.scrollWidth - target.clientWidth);
+
+        setTimeout(() => flagSetter(false), 50);
+    };
+
+    const leftFlag = { value: false };
+    const rightFlag = { value: false };
+
+    leftCol.onscroll = () => {
+        if (rightFlag.value) return;
+        leftFlag.value = true;
+        const pct = leftCol.scrollTop / (leftCol.scrollHeight - leftCol.clientHeight);
+        rightCol.scrollTop = pct * (rightCol.scrollHeight - rightCol.clientHeight);
+        setTimeout(() => leftFlag.value = false, 50);
+    };
+
+    rightCol.onscroll = () => {
+        if (leftFlag.value) return;
+        rightFlag.value = true;
+        const pct = rightCol.scrollTop / (rightCol.scrollHeight - rightCol.clientHeight);
+        leftCol.scrollTop = pct * (leftCol.scrollHeight - leftCol.clientHeight);
+        setTimeout(() => rightFlag.value = false, 50);
+    };
 }

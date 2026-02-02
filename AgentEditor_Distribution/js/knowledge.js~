@@ -41,7 +41,6 @@ let createKbFiles = [];
 const createKbMaxStep = 3;
 let createKbSliceSource = '';
 let createKbUploading = false;
-let isUploadOnlyMode = false;
 let createKbSliceMode = 'parent';
 let createKbConfigTab = 'form';
 const CREATE_KB_PREVIEW_FALLBACK = '这是一个用于切片预览的示例文档内容。你可以在这里看到不同的切片策略如何影响文本的分段方式。例如，按段落分割会以自然段落为边界，而按固定字符数分割则会严格根据长度进行切片。通过合理设置切片大小和重叠，可以在保证检索效果的同时，平衡索引规模与性能。';
@@ -358,15 +357,6 @@ function setupCreateKbRetrievalControls() {
         bindLinkedNumberAndSlider('create-kb-initial-tok', 'create-kb-initial-tok-slider', 'initialTok');
     }
 
-    const similarityThresholdInput = document.getElementById('create-kb-similarity-threshold');
-    const similarityThresholdSlider = document.getElementById('create-kb-similarity-threshold-slider');
-    if (similarityThresholdInput && similarityThresholdSlider) {
-        const value = typeof saved.similarityThreshold === 'number' ? saved.similarityThreshold : 0.7;
-        similarityThresholdInput.value = value;
-        similarityThresholdSlider.value = value;
-        bindLinkedNumberAndSlider('create-kb-similarity-threshold', 'create-kb-similarity-threshold-slider', 'similarityThreshold');
-    }
-
     const finalTokInput = document.getElementById('create-kb-final-tok');
     const finalTokSlider = document.getElementById('create-kb-final-tok-slider');
     if (finalTokInput && finalTokSlider) {
@@ -432,19 +422,6 @@ function renderCreateKbRetrievalConfig() {
             <div class="bg-gray-50 border border-gray-100 rounded-lg p-4 space-y-2">
                 <div class="flex items-center justify-between mb-1">
                     <label class="text-xs font-medium text-gray-700">
-                        相似度阈值
-                        <i class="fa-regular fa-circle-question text-gray-400 ml-1" title="用于过滤检索结果的相似度阈值，值越高结果越精准。"></i>
-                    </label>
-                    <span class="text-[11px] text-gray-500">当前值: <span id="create-kb-similarity-threshold-display" class="font-mono">0.7</span></span>
-                </div>
-                <div class="flex items-center gap-3">
-                    <input id="create-kb-similarity-threshold" type="number" min="0" max="1" step="0.01" value="0.7" class="w-24 px-2 py-1.5 border border-gray-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 focus-border-transparent text-right">
-                    <input id="create-kb-similarity-threshold-slider" type="range" min="0" max="1" step="0.01" value="0.7" class="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600">
-                </div>
-            </div>
-            <div class="bg-gray-50 border border-gray-100 rounded-lg p-4 space-y-2">
-                <div class="flex items-center justify-between mb-1">
-                    <label class="text-xs font-medium text-gray-700">
                         最终召回 Tok
                         <i class="fa-regular fa-circle-question text-gray-400 ml-1" title="最终返回给大模型用于回答的问题片段数量，通常应小于初步检索 Tok，以控制上下文长度。"></i>
                     </label>
@@ -472,14 +449,6 @@ function renderCreateKbRetrievalConfig() {
         initialTokDisplay.textContent = initialTokInputDisplay.value;
         initialTokInputDisplay.addEventListener('input', function() {
             initialTokDisplay.textContent = this.value;
-        });
-    }
-    const similarityThresholdInputDisplay = document.getElementById('create-kb-similarity-threshold');
-    const similarityThresholdDisplay = document.getElementById('create-kb-similarity-threshold-display');
-    if (similarityThresholdInputDisplay && similarityThresholdDisplay) {
-        similarityThresholdDisplay.textContent = parseFloat(similarityThresholdInputDisplay.value).toFixed(2);
-        similarityThresholdInputDisplay.addEventListener('input', function() {
-            similarityThresholdDisplay.textContent = parseFloat(this.value || '0').toFixed(2);
         });
     }
     const finalTokInputDisplay = document.getElementById('create-kb-final-tok');
@@ -1002,7 +971,6 @@ function selectCreateKbPreviewFile(index) {
 }
 
 function openCreateKbPage() {
-    isUploadOnlyMode = false;
     setupParserInteractions();
     const listView = document.getElementById('kb-list-view');
     const detailView = document.getElementById('kb-detail-view');
@@ -1123,7 +1091,7 @@ function updateCreateKbStep() {
         if (!btn) return;
         
         // Define base classes
-        const btnBase = "flex items-center gap-2 text-sm font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white transition-colors duration-200";
+        const btnBase = "flex items-center gap-3 text-sm font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white transition-colors duration-200";
         const circleBase = "w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold transition-colors duration-200";
         const titleBase = "transition-colors duration-200";
         const descBase = "text-[11px] transition-colors duration-200";
@@ -1167,12 +1135,7 @@ function updateCreateKbStep() {
                 icon.className = 'fa-solid fa-check text-[10px]';
                 circle.appendChild(icon);
             } else {
-                let displayIndex = index;
-                if (isUploadOnlyMode) {
-                    if (index === 2) displayIndex = 1;
-                    if (index === 3) displayIndex = 2;
-                }
-                circle.textContent = String(displayIndex);
+                circle.textContent = String(index);
             }
         }
     };
@@ -1180,22 +1143,12 @@ function updateCreateKbStep() {
     applyStepperState(s2, 2);
     applyStepperState(s3, 3);
 
-    const sep1 = document.getElementById('kb-create-separator-1');
-    if (s1) s1.classList.toggle('hidden', isUploadOnlyMode);
-    if (sep1) sep1.classList.toggle('hidden', isUploadOnlyMode);
-
-    const backTitle = document.querySelector('#kb-create-page .flex.items-center.gap-2 span.text-sm.font-medium');
-    if (backTitle) {
-        backTitle.textContent = isUploadOnlyMode ? '上传文档' : '新建知识库';
-    }
-
     const prevBtn = document.getElementById('kb-create-prev');
     const nextBtn = document.getElementById('kb-create-next');
     if (prevBtn) {
-        const isFirstStep = isUploadOnlyMode ? createKbStep === 2 : createKbStep === 1;
-        prevBtn.disabled = isFirstStep;
-        prevBtn.classList.toggle('opacity-40', isFirstStep);
-        prevBtn.classList.toggle('cursor-not-allowed', isFirstStep);
+        prevBtn.disabled = createKbStep === 1;
+        prevBtn.classList.toggle('opacity-40', createKbStep === 1);
+        prevBtn.classList.toggle('cursor-not-allowed', createKbStep === 1);
     }
     if (nextBtn) {
         if (createKbStep === createKbMaxStep) {
@@ -1249,7 +1202,6 @@ function startCreateKbUpload(onDone) {
 }
 
 function resetCreateKbForm() {
-    isUploadOnlyMode = false;
     const nameEl = document.getElementById('create-kb-name');
     const descEl = document.getElementById('create-kb-desc');
     const parserEl = document.getElementById('create-kb-parser');
@@ -1311,31 +1263,6 @@ function updateCreateKbSpecialPreview(type) {
         hint = '将根据不同文件类型应用对应的专用切片策略。';
     }
     hintEl.textContent = hint;
-}
-
-function handleReSlice() {
-    const previewContainer = document.getElementById('create-kb-slice-preview');
-    if (!previewContainer) return;
-    
-    previewContainer.innerHTML = `
-        <div class="h-full flex flex-col items-center justify-center text-blue-500">
-            <i class="fa-solid fa-circle-notch fa-spin text-3xl mb-3"></i>
-            <p class="text-sm">正在重新切片...</p>
-        </div>
-    `;
-    
-    // Simulate delay and refresh preview
-    setTimeout(() => {
-        updateCreateKbSlicePreview();
-        // Trigger file selection change to refresh content if a file is selected
-        const fileSelect = document.getElementById('create-kb-preview-file');
-        if (fileSelect && fileSelect.onchange) {
-             fileSelect.onchange();
-        } else {
-            // If no onchange or not selected, just render default
-             renderSliceVisualization(getMockSliceData('chapter'), 'chapter'); 
-        }
-    }, 1000);
 }
 
 function validateCreateKbBasic() {
@@ -2681,25 +2608,10 @@ let docUploadStep = 1;
 let docUploadSliceMode = 'length';
 
 function openDocUploadWizard() {
-    isUploadOnlyMode = true;
-    setupParserInteractions();
-    
-    // Set default values for step 1 to pass validation
-    const nameEl = document.getElementById('create-kb-name');
-    const descEl = document.getElementById('create-kb-desc');
-    if (nameEl) nameEl.value = '快速上传-' + new Date().getTime();
-    if (descEl) descEl.value = '通过快速上传按钮创建的知识库';
-
-    const listView = document.getElementById('kb-list-view');
-    const detailView = document.getElementById('kb-detail-view');
-    const createPage = document.getElementById('kb-create-page');
-    if (listView) listView.classList.add('hidden');
-    if (detailView) detailView.classList.add('hidden');
-    if (createPage) createPage.classList.remove('hidden');
-    
-    createKbStep = 2;
-    createKbCompletedStep = 2;
-    updateCreateKbStep();
+    docUploadStep = 1;
+    const modal = document.getElementById('doc-upload-wizard');
+    if (modal) modal.classList.remove('hidden');
+    updateDocUploadStep();
 }
 
 function closeDocUploadWizard() {
@@ -3032,25 +2944,10 @@ function toggleOriginalView(forceState) {
     console.log(`[PERF] toggleOriginalView took ${duration.toFixed(2)}ms`);
 }
 
-let lastParsedParagraphs = null;
-
 function loadOriginalFileContent() {
     const parserSelect = document.getElementById('parser-preview-file-select');
     const contentEl = document.getElementById('original-view-content');
     if (!parserSelect || !contentEl) return;
-
-    if (lastParsedParagraphs) {
-        contentEl.innerHTML = '';
-        lastParsedParagraphs.forEach((text, index) => {
-             const span = document.createElement('div');
-             span.id = `original-para-${index}`;
-             span.className = 'mb-4 p-2 rounded transition-all duration-300 border border-transparent hover:bg-gray-100 cursor-pointer'; 
-             span.textContent = text;
-             span.onclick = () => highlightParser(index);
-             contentEl.appendChild(span);
-        });
-        return;
-    }
 
     const fileIndex = parserSelect.value;
     if (fileIndex === "" || !createKbFiles[fileIndex]) {
@@ -3104,7 +3001,6 @@ setupParserInteractions = function() {
     if (fileSelect) {
         const originalOnChange = fileSelect.onchange;
         fileSelect.onchange = function() {
-            lastParsedParagraphs = null;
             if (originalOnChange) originalOnChange.call(this);
             if (isViewingOriginal) {
                 loadOriginalFileContent();
@@ -3152,38 +3048,17 @@ function handleInnovativeParse() {
 }
 
 function renderParserPreview(paragraphs) {
-    lastParsedParagraphs = paragraphs;
     const contentEl = document.getElementById('parser-preview-content');
-    const originalContentEl = document.getElementById('original-view-content');
-
     if (!contentEl) return;
     
     contentEl.innerHTML = '';
     
-    // Reset Original View Content for Sync
-    if (originalContentEl) {
-        originalContentEl.innerHTML = ''; 
-    }
-    
     paragraphs.forEach((text, index) => {
         const id = `para-${index}`;
         const div = document.createElement('div');
-        div.id = `parser-wrapper-${index}`;
-        // Add cursor-pointer and onclick event
-        div.className = 'group relative p-4 bg-gray-50 rounded-lg border border-transparent hover:border-blue-200 hover:bg-blue-50/30 transition-all cursor-pointer';
-        div.onclick = (e) => {
-             // Prevent triggering when clicking buttons/textarea inside
-             if (e.target.closest('button') || e.target.tagName === 'TEXTAREA') return;
-             highlightOriginal(index);
-        };
-        
-        let extraClass = '';
-        if (text.includes('第三段内容展示了系统的容错能力')) {
-            extraClass = 'bg-yellow-100 text-yellow-900';
-        }
-
+        div.className = 'group relative p-4 bg-gray-50 rounded-lg border border-transparent hover:border-blue-200 hover:bg-blue-50/30 transition-all';
         div.innerHTML = `
-            <div id="${id}-view" class="text-sm text-gray-700 leading-relaxed pr-8 ${extraClass}">${text}</div>
+            <div id="${id}-view" class="text-sm text-gray-700 leading-relaxed pr-8">${text}</div>
             <textarea id="${id}-edit" class="hidden w-full p-2 text-sm border border-blue-300 rounded focus:ring-2 focus:ring-blue-500 focus:outline-none mb-2" rows="3">${text}</textarea>
             
             <div id="${id}-actions" class="hidden flex justify-end gap-2 mt-2">
@@ -3196,71 +3071,7 @@ function renderParserPreview(paragraphs) {
             </button>
         `;
         contentEl.appendChild(div);
-
-        // Sync to Original View
-        if (originalContentEl) {
-            const span = document.createElement('div');
-            span.id = `original-para-${index}`;
-            span.className = 'mb-4 p-2 rounded transition-all duration-300 border border-transparent hover:bg-gray-100 cursor-pointer'; 
-            span.textContent = text;
-            span.onclick = () => highlightParser(index);
-            originalContentEl.appendChild(span);
-        }
     });
-}
-
-function highlightOriginal(index) {
-    const originalWrapper = document.getElementById('original-view-content-wrapper');
-    const target = document.getElementById(`original-para-${index}`);
-    
-    if (!originalWrapper || !target) return;
-
-    // Remove previous highlights
-    const allParas = document.getElementById('original-view-content').querySelectorAll('[id^="original-para-"]');
-    allParas.forEach(p => {
-        p.classList.remove('bg-yellow-100', 'border-yellow-300', 'text-gray-900');
-        p.classList.add('border-transparent');
-    });
-
-    // Add highlight
-    target.classList.remove('border-transparent');
-    target.classList.add('bg-yellow-100', 'border-yellow-300', 'text-gray-900');
-
-    // Scroll into view
-    target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-
-    // Auto fade out after 4 seconds
-    setTimeout(() => {
-        target.classList.remove('bg-yellow-100', 'border-yellow-300', 'text-gray-900');
-        target.classList.add('border-transparent');
-    }, 4000);
-}
-
-function highlightParser(index) {
-    const parserWrapper = document.getElementById('parser-preview-content');
-    const target = document.getElementById(`parser-wrapper-${index}`);
-
-    if (!parserWrapper || !target) return;
-
-    // Remove previous highlights
-    const allWrappers = parserWrapper.querySelectorAll('[id^="parser-wrapper-"]');
-    allWrappers.forEach(p => {
-        p.classList.remove('bg-blue-100', 'border-blue-300');
-        p.classList.add('border-transparent');
-    });
-
-    // Add highlight
-    target.classList.remove('border-transparent');
-    target.classList.add('bg-blue-100', 'border-blue-300');
-
-    // Scroll into view
-    target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-
-    // Auto fade out after 4 seconds
-    setTimeout(() => {
-        target.classList.remove('bg-blue-100', 'border-blue-300');
-        target.classList.add('border-transparent');
-    }, 4000);
 }
 
 function toggleCorrection(id) {
@@ -3780,7 +3591,6 @@ function updateSliceStrategyUI() {
     const generalContainer = generalIcon ? generalIcon.parentElement : null;
     const specialContainer = specialIcon ? specialIcon.parentElement : null;
     
-    const specialTypesGrid = document.getElementById('create-kb-special-types-grid');
     const specialTypes = ['word', 'pdf', 'excel', 'ppt', 'image', 'text', 'invoice'];
 
     if (currentSliceStrategy === 'general') {
@@ -3792,11 +3602,6 @@ function updateSliceStrategyUI() {
         }
         if (generalContainer) generalContainer.setAttribute('aria-checked', 'true');
         if (specialContainer) specialContainer.setAttribute('aria-checked', 'false');
-        
-        // Hide special type grid
-        if (specialTypesGrid) {
-            specialTypesGrid.classList.add('hidden');
-        }
         
         // Disable special type buttons
         specialTypes.forEach(function(type) {
@@ -3815,11 +3620,6 @@ function updateSliceStrategyUI() {
         }
         if (generalContainer) generalContainer.setAttribute('aria-checked', 'false');
         if (specialContainer) specialContainer.setAttribute('aria-checked', 'true');
-        
-        // Show special type grid
-        if (specialTypesGrid) {
-            specialTypesGrid.classList.remove('hidden');
-        }
         
         // Enable special type buttons
         specialTypes.forEach(function(type) {

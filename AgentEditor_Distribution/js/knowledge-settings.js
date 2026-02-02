@@ -29,6 +29,12 @@ let kbDocFields = [
 
 window.initKbSettingsPage = function(params) {
     console.log('Initializing KB Settings...', params);
+    
+    // Initialize Retrieval Config UI
+    if (window.renderCreateKbRetrievalConfig) {
+        window.renderCreateKbRetrievalConfig();
+    }
+    
     if (params && params.id) {
         currentSettingsKbId = params.id;
         loadKbSettings(params.id);
@@ -62,14 +68,56 @@ function loadKbSettings(id) {
     document.getElementById('setting-kb-name-display').textContent = kb.name;
     document.getElementById('kb-setting-name').value = kb.name;
     document.getElementById('kb-setting-desc').value = kb.description || '';
-    document.getElementById('kb-auto-parse').checked = kb.autoParse !== false;
     
-    // Parser Select
-    const parserSelect = document.getElementById('kb-parser-select');
+    // Parser Select (Embedding Model)
+    const parserSelect = document.getElementById('kb-setting-parser');
     if (parserSelect) {
-        parserSelect.value = kb.parser || 'default';
+        parserSelect.value = kb.parser || 'embedding-2';
     }
 
+    // Retrieval Settings
+    const rerankModel = document.getElementById('create-kb-rerank-model');
+    if (rerankModel) rerankModel.value = kb.retrievalRerankModel || 'bge-reranker-large';
+    
+    const hybridWeight = document.getElementById('create-kb-hybrid-weight');
+    const hybridWeightSlider = document.getElementById('create-kb-hybrid-weight-slider');
+    if (hybridWeight && hybridWeightSlider) {
+        const val = kb.retrievalHybridWeight !== undefined ? kb.retrievalHybridWeight : 0.5;
+        hybridWeight.value = val;
+        hybridWeightSlider.value = val;
+        const weightDisplay = document.getElementById('create-kb-weight-display');
+        if (weightDisplay) weightDisplay.textContent = parseFloat(val).toFixed(1);
+    }
+    
+    const initialTok = document.getElementById('create-kb-initial-tok');
+    const initialTokSlider = document.getElementById('create-kb-initial-tok-slider');
+    if (initialTok && initialTokSlider) {
+        const val = kb.retrievalInitialTok || 25;
+        initialTok.value = val;
+        initialTokSlider.value = val;
+        const initialTokDisplay = document.getElementById('create-kb-initial-tok-display');
+        if (initialTokDisplay) initialTokDisplay.textContent = val;
+    }
+
+    const similarityThreshold = document.getElementById('create-kb-similarity-threshold');
+    const similarityThresholdSlider = document.getElementById('create-kb-similarity-threshold-slider');
+    if (similarityThreshold && similarityThresholdSlider) {
+        const val = kb.retrievalScoreThreshold !== undefined ? kb.retrievalScoreThreshold : 0.7;
+        similarityThreshold.value = val;
+        similarityThresholdSlider.value = val;
+        const thresholdDisplay = document.getElementById('create-kb-similarity-threshold-display');
+        if (thresholdDisplay) thresholdDisplay.textContent = parseFloat(val).toFixed(2);
+    }
+
+    const finalTok = document.getElementById('create-kb-final-tok');
+    const finalTokSlider = document.getElementById('create-kb-final-tok-slider');
+    if (finalTok && finalTokSlider) {
+        const val = kb.retrievalFinalTok || 10;
+        finalTok.value = val;
+        finalTokSlider.value = val;
+        const finalTokDisplay = document.getElementById('create-kb-final-tok-display');
+        if (finalTokDisplay) finalTokDisplay.textContent = val;
+    }
 
     // Prompt Settings
     const promptEnable = document.getElementById('kb-custom-prompt-enable');
@@ -295,8 +343,14 @@ window.saveKbSettings = function() {
         if (kb) {
             kb.name = name;
             kb.description = document.getElementById('kb-setting-desc').value;
-            kb.autoParse = document.getElementById('kb-auto-parse').checked;
-            kb.parser = document.getElementById('kb-parser-select').value;
+            kb.parser = document.getElementById('kb-setting-parser').value;
+            
+            // Retrieval Settings
+            kb.retrievalRerankModel = document.getElementById('create-kb-rerank-model')?.value;
+            kb.retrievalHybridWeight = Number(document.getElementById('create-kb-hybrid-weight')?.value);
+            kb.retrievalInitialTok = Number(document.getElementById('create-kb-initial-tok')?.value);
+            kb.retrievalScoreThreshold = Number(document.getElementById('create-kb-similarity-threshold')?.value);
+            kb.retrievalFinalTok = Number(document.getElementById('create-kb-final-tok')?.value);
 
             // Prompt
             kb.promptEnabled = document.getElementById('kb-custom-prompt-enable').checked;

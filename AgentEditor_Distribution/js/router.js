@@ -10,7 +10,6 @@ const routes = {
     'agent': { title: '智能体管理', file: 'views/agent.html' },
     'orchestrator': { title: '编排器', file: 'views/orchestrator.html' },
     'orchestrator-editor': { title: '编排器编辑', file: 'views/orchestrator-editor.html', fullscreen: true },
-    'parser': { title: '解析器', file: 'views/parser.html' },
     'knowledge': { title: '知识库', file: 'views/knowledge.html' },
     'knowledge-graph': { title: '知识图谱', file: 'views/knowledge-graph.html' },
     'knowledge-graph-detail': { title: '图谱详情', file: 'views/knowledge-graph-detail.html' },

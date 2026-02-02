@@ -207,3 +207,72 @@ function formatDate(date) {
 
 window.formatSize = formatSize;
 window.formatDate = formatDate;
+
+// Debounce Helper
+function debounce(func, wait) {
+    let timeout;
+    return function(...args) {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => func.apply(this, args), wait);
+    };
+}
+window.debounce = debounce;
+
+/**
+ * DualColumnManager
+ * Highly configurable independent dual-column layout manager
+ */
+class DualColumnManager {
+    constructor(containerId, options = {}) {
+        this.container = document.getElementById(containerId);
+        if (!this.container) return;
+
+        this.options = {
+            widthRatio: options.widthRatio || [50, 50],
+            dividerWidth: options.dividerWidth || 1,
+            dividerColor: options.dividerColor || '#e5e7eb',
+            leftBg: options.leftBg || '#f9fafb',
+            rightBg: options.rightBg || '#ffffff',
+            height: options.height || '600px',
+            ...options
+        };
+
+        this.init();
+    }
+
+    init() {
+        this.applyConfig();
+        this.setupEventListeners();
+    }
+
+    applyConfig() {
+        const [left, right] = this.options.widthRatio;
+        this.container.style.setProperty('--left-ratio', left);
+        this.container.style.setProperty('--right-ratio', right);
+        this.container.style.setProperty('--divider-width', `${this.options.dividerWidth}px`);
+        this.container.style.setProperty('--divider-color', this.options.dividerColor);
+        this.container.style.setProperty('--left-bg', this.options.leftBg);
+        this.container.style.setProperty('--right-bg', this.options.rightBg);
+        
+        if (this.options.height) {
+            this.container.style.height = this.options.height;
+        }
+    }
+
+    setRatio(left, right) {
+        this.options.widthRatio = [left, right];
+        this.applyConfig();
+    }
+
+    setupEventListeners() {
+        // Optimized resize listener with debounce
+        const handleResize = debounce(() => {
+            // Optional: Trigger layout adjustments if needed for virtual scrolling
+            // console.log('DualColumnContainer resized');
+        }, 200);
+
+        window.addEventListener('resize', handleResize);
+    }
+}
+
+window.DualColumnManager = DualColumnManager;
