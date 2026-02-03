@@ -88,7 +88,7 @@ function renderOrchestratorList() {
                 <td colspan="8" class="px-6 py-8 text-center text-gray-500">
                     <div class="flex flex-col items-center gap-2">
                         <i class="fa-solid fa-diagram-project text-3xl text-gray-300"></i>
-                        <p>暂无编排器数据</p>
+                        <p>暂无工作流数据</p>
                     </div>
                 </td>
             </tr>
@@ -321,7 +321,7 @@ window.submitCreateOrchestrator = function() {
     const desc = document.getElementById('orch-desc-input').value.trim();
     
     if (!name) {
-        alert('请输入编排器名称');
+        alert('请输入工作流名称');
         return;
     }
     

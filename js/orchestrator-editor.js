@@ -11,7 +11,7 @@ window.initOrchestratorEditor = function(params) {
         loadOrchestratorData(params.id);
     } else {
         console.error('No orchestrator ID provided');
-        alert('错误：未指定编排器ID');
+        alert('错误：未指定工作流ID');
         window.goBackFromOrchestrator();
         return;
     }
@@ -26,7 +26,7 @@ function loadOrchestratorData(id) {
         // For now, we just generate a dummy one if missing to prevent crash
         window.orchestratorData = [{
             id: id,
-            name: '未命名编排器',
+            name: '未命名工作流',
             status: 'draft'
         }];
     }
@@ -146,7 +146,7 @@ window.publishOrchestrator = function() {
             btn.classList.remove('bg-green-600', 'hover:bg-green-700');
         }, 2000);
         
-        alert('编排器已成功发布！');
+        alert('工作流已成功发布！');
     }, 1500);
 }
 

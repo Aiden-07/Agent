@@ -14,6 +14,7 @@
     <script src="../js/parser.js"></script>
     <script src="../js/components.js"></script>
     <script src="../js/agent.js"></script>
+    <script src="../js/role-mgmt.js"></script>
     <!-- We might need other scripts if we test more-->
 
     <!-- Test Suite -->
@@ -34,6 +35,7 @@
         }
 
         async function runTests() {
+            await testRoleMgmtTree();
             await testActionMenu();
             await testMobilePositioning();
             await testParserPage();
@@ -43,6 +45,144 @@
             await testAgentI18nCustomHeightSync();
             await testAgentI18nCustomFeedbackDisabled();
             await testAddQuestionFocus();
+        }
+
+        async function testRoleMgmtTree() {
+            console.log('Testing Role Management Tree...');
+
+            // Helper to generate deep nodes
+            function generateDeepNodes(depth, currentDepth = 1) {
+                if (currentDepth > depth) return [];
+                return [{
+                    id: `d${currentDepth}_1`,
+                    label: `Depth ${currentDepth}`,
+                    children: generateDeepNodes(depth, currentDepth + 1)
+                }];
+            }
+
+            // Mock Container
+            const container = document.createElement('div');
+            container.id = 'test-tree-container';
+            container.style.position = 'absolute';
+            container.style.left = '-9999px'; // Off-screen but rendered
+            document.body.appendChild(container);
+
+            try {
+                // Verify Helper Availability
+                assert(window.roleMgmtTestHelpers && window.roleMgmtTestHelpers.createTreeList, 'roleMgmtTestHelpers.createTreeList should be exposed');
+                
+                if (!window.roleMgmtTestHelpers) return;
+
+                // Prepare Test Data
+                const testNodes = [
+                    {
+                        id: 'root', label: 'Root Node', children: [
+                            { id: 'child1', label: 'Child 1', children: [] }, // Leaf
+                            {
+                                id: 'child2', label: 'Child 2', children: [ // Sub-tree
+                                    { id: 'grandchild1', label: 'Grandchild 1' }
+                                ]
+                            }
+                        ]
+                    }
+                ];
+
+                // 1. Test Rendering & Structure
+                const treeUl = window.roleMgmtTestHelpers.createTreeList(testNodes, ['child1']);
+                container.appendChild(treeUl);
+
+                const rootItems = treeUl.querySelectorAll(':scope > li');
+                assert(rootItems.length === 1, 'Should render 1 root node');
+                assert(treeUl.getAttribute('role') === 'tree', 'Root UL should have role="tree"');
+
+                const child2 = treeUl.querySelector('input[value="child2"]').closest('li');
+                assert(child2 !== null, 'Child 2 should be rendered');
+                
+                // 2. Test Expand/Collapse
+                // Child 2 has children, so it should have expander and start expanded
+                assert(child2.getAttribute('aria-expanded') === 'true', 'Node with children should start expanded');
+                
+                const expander = child2.querySelector('.tree-expander');
+                const wrapper = child2.querySelector('.tree-children-wrapper');
+                
+                // Click to collapse
+                // Note: We need to ensure the click event hits the listener. 
+                // The listener is on expander: expander.onclick = ...
+                if (expander.querySelector('i')) {
+                    expander.click(); 
+                    await new Promise(r => setTimeout(r, 350)); // Wait for animation (300ms)
+                    
+                    assert(child2.getAttribute('aria-expanded') === 'false', 'Should collapse after click');
+                    assert(wrapper.style.maxHeight === '0px', 'Wrapper max-height should be 0px after collapse');
+
+                    // Click to expand
+                    expander.click();
+                    await new Promise(r => setTimeout(r, 350));
+                    assert(child2.getAttribute('aria-expanded') === 'true', 'Should expand after second click');
+                    assert(wrapper.style.maxHeight !== '0px', 'Wrapper max-height should not be 0px after expand');
+                } else {
+                    assert(false, 'Expander icon not found');
+                }
+
+                // 3. Test Checkbox Toggle & Cascade
+                const rootCheckbox = treeUl.querySelector('input[value="root"]');
+                const child1Checkbox = treeUl.querySelector('input[value="child1"]');
+                const child2Checkbox = treeUl.querySelector('input[value="child2"]');
+                const grandchildCheckbox = treeUl.querySelector('input[value="grandchild1"]');
+
+                // Initial state
+                assert(child1Checkbox.checked, 'Child 1 should be checked initially');
+                assert(!child2Checkbox.checked, 'Child 2 should be unchecked initially');
+                
+                // Click Row to toggle Child 2
+                const child2Row = child2.querySelector('.tree-content');
+                child2Row.click(); 
+                
+                assert(child2Checkbox.checked, 'Clicking row should toggle checkbox');
+                assert(grandchildCheckbox.checked, 'Selecting parent should select children (Cascade Down)');
+                
+                // Check cascade up (Root should now be checked because child1 and child2 are checked)
+                // Note: updateAncestors runs recursively.
+                assert(rootCheckbox.checked, 'Selecting all children should select parent (Cascade Up)');
+                
+                // 4. Test Keyboard Navigation
+                child2Row.focus();
+                
+                // Press ArrowLeft to collapse
+                const leftEvent = new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true });
+                child2Row.dispatchEvent(leftEvent);
+                await new Promise(r => setTimeout(r, 350));
+                assert(child2.getAttribute('aria-expanded') === 'false', 'ArrowLeft should collapse node');
+                
+                // Press ArrowRight to expand
+                const rightEvent = new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true });
+                child2Row.dispatchEvent(rightEvent);
+                await new Promise(r => setTimeout(r, 350));
+                assert(child2.getAttribute('aria-expanded') === 'true', 'ArrowRight should expand node');
+                
+                // Press Enter to toggle checkbox (Uncheck)
+                const enterEvent = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true });
+                child2Row.dispatchEvent(enterEvent); 
+                assert(!child2Checkbox.checked, 'Enter key should toggle checkbox');
+
+                // 5. Performance Test (Depth 5)
+                const deepNodes = generateDeepNodes(5);
+                const start = performance.now();
+                const deepTree = window.roleMgmtTestHelpers.createTreeList(deepNodes, []);
+                container.appendChild(deepTree);
+                const end = performance.now();
+                
+                assert((end - start) <= 1000, `Rendering depth 5 tree should take <= 1s (took ${(end - start).toFixed(2)}ms)`);
+                
+                const deepNode = deepTree.querySelector('input[value="d5_1"]');
+                assert(deepNode !== null, 'Depth 5 node should be rendered');
+
+            } catch (e) {
+                assert(false, 'Exception during testRoleMgmtTree: ' + e.message);
+                console.error(e);
+            } finally {
+                container.remove();
+            }
         }
 
         async function testParserPage() {

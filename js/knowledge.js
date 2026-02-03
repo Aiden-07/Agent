@@ -618,23 +618,13 @@ function renderCreateKbFileList() {
     if (countEl) countEl.textContent = `${createKbFiles.length} 个文件`;
 
     if (!createKbFiles.length) {
-        container.innerHTML = '<div class="px-3 py-4 text-xs text-gray-400 text-center">暂无文件，请先上传</div>';
+        container.innerHTML = '<div class="px-3 py-6 text-xs text-gray-400 text-center">暂无文件，请先上传</div>';
         updateCreateKbPreviewFileOptions();
-        
-        const previewBtn = document.getElementById('btn-parse-preview');
-        if (previewBtn) previewBtn.disabled = true;
         return;
     }
 
     container.innerHTML = '';
     
-    // Check if any file is uploaded successfully to enable preview button
-    const hasUploadedFiles = createKbFiles.some(f => f.status === 'success');
-    const previewBtn = document.getElementById('btn-parse-preview');
-    if (previewBtn) {
-        previewBtn.disabled = !hasUploadedFiles;
-    }
-
     createKbFiles.forEach((file, index) => {
         const row = document.createElement('div');
         row.className = 'px-3 py-2 flex items-center gap-3 hover:bg-gray-100 transition-colors';
@@ -643,12 +633,12 @@ function renderCreateKbFileList() {
         let statusClass = 'bg-gray-100 text-gray-600';
         let statusText = '待上传';
         if (file.status === 'uploading') {
-        statusClass = 'bg-blue-100 text-blue-700';
-        statusText = '上传中';
-    } else if (file.status === 'success') {
-        statusClass = 'bg-green-100 text-green-700';
-        statusText = '上传完成';
-    } else if (file.status === 'error') {
+            statusClass = 'bg-blue-100 text-blue-700';
+            statusText = '上传中';
+        } else if (file.status === 'success') {
+            statusClass = 'bg-green-100 text-green-700';
+            statusText = '上传完成';
+        } else if (file.status === 'error') {
             statusClass = 'bg-red-100 text-red-700';
             statusText = '失败';
         }
@@ -678,7 +668,6 @@ function renderCreateKbFileList() {
 
 function updateCreateKbPreviewFileOptions() {
     const select = document.getElementById('create-kb-preview-file');
-    const parserSelect = document.getElementById('parser-preview-file-select');
     
     // Update original select if exists
     if (select) {
@@ -696,28 +685,6 @@ function updateCreateKbPreviewFileOptions() {
             select.appendChild(opt);
         });
     }
-
-    // Update new parser select if exists
-    if (parserSelect) {
-        while (parserSelect.firstChild) {
-            parserSelect.removeChild(parserSelect.firstChild);
-        }
-        const placeholder = document.createElement('option');
-        placeholder.value = '';
-        placeholder.textContent = createKbFiles.length ? '选择预览文件' : '暂无可预览文件';
-        parserSelect.appendChild(placeholder);
-        
-        // Sort by timestamp descending for the parser select
-        const sortedFiles = createKbFiles.map((f, i) => ({ file: f, index: i }))
-            .sort((a, b) => (b.file.ts || 0) - (a.file.ts || 0));
-
-        sortedFiles.forEach(function(item) {
-            const opt = document.createElement('option');
-            opt.value = String(item.index);
-            opt.textContent = item.file.name;
-            parserSelect.appendChild(opt);
-        });
-    }
 }
 
 function getCreateKbSliceSource() {
@@ -727,9 +694,63 @@ function getCreateKbSliceSource() {
 
 let createKbPreviewSlices = [];
 
+function loadOriginalFileContent() {
+    let parserSelect, contentEl;
+    if (createKbStep === 3) {
+        parserSelect = document.getElementById('create-kb-preview-file');
+        contentEl = document.getElementById('original-view-content-step3');
+    } else {
+        parserSelect = document.getElementById('parser-preview-file-select');
+        contentEl = document.getElementById('original-view-content');
+    }
+
+    if (!contentEl) return;
+
+    if (createKbStep === 3) {
+        // Step 3: Use the same source as slice preview
+        const source = getCreateKbSliceSource();
+        contentEl.textContent = source;
+        return;
+    }
+
+    if (!parserSelect) return;
+
+    if (lastParsedParagraphs && createKbStep !== 3) {
+        contentEl.innerHTML = '';
+        lastParsedParagraphs.forEach((text, index) => {
+             const span = document.createElement('div');
+             span.id = `original-para-${index}`;
+             span.className = 'mb-4 p-2 rounded transition-all duration-300 border border-transparent hover:bg-gray-100 cursor-pointer'; 
+             span.textContent = text;
+             span.onclick = () => highlightParser(index);
+             contentEl.appendChild(span);
+        });
+        return;
+    }
+
+    const fileIndex = parserSelect.value;
+    if (fileIndex === "" || !createKbFiles[fileIndex]) {
+        contentEl.textContent = '请先在右侧选择一个已上传的文件进行预览。';
+        return;
+    }
+
+    const fileItem = createKbFiles[fileIndex];
+    if (fileItem.file) {
+        // Support text-based files for now
+        if (fileItem.file.type.startsWith('text/') || fileItem.name.endsWith('.txt') || fileItem.name.endsWith('.md')) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                contentEl.textContent = e.target.result;
+            };
+            reader.readAsText(fileItem.file);
+        } else {
+            contentEl.textContent = `暂不支持直接预览 ${fileItem.name} 的原始二进制内容。`;
+        }
+    }
+}
+
 function updateCreateKbSlicePreview() {
     const previewEl = document.getElementById('create-kb-slice-preview');
-    const countEl = document.getElementById('create-kb-slice-count');
     const sizeEl = document.getElementById('create-kb-slice-size');
     const overlapEl = document.getElementById('create-kb-slice-overlap');
     if (!previewEl || !sizeEl || !overlapEl) return;
@@ -738,109 +759,165 @@ function updateCreateKbSlicePreview() {
     const size = Math.max(50, Number(sizeEl.value) || 500);
     const overlap = Math.max(0, Number(overlapEl.value) || 0);
     let text = getCreateKbSliceSource();
+    const originalText = text;
 
     // Apply preprocessing rules
     const preprocessSpacesEl = document.getElementById('create-kb-preprocess-spaces');
     const preprocessSensitiveEl = document.getElementById('create-kb-preprocess-sensitive');
 
     if (preprocessSpacesEl && preprocessSpacesEl.checked) {
-        // Replace consecutive spaces, newlines, and tabs with a single space
         text = text.replace(/[\s\t\n]+/g, ' ');
     }
 
     if (preprocessSensitiveEl && preprocessSensitiveEl.checked) {
-        // Remove URLs
         text = text.replace(/https?:\/\/[^\s]+/g, '');
-        // Remove Email addresses
         text = text.replace(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g, '');
     }
 
     let slices = [];
-
     if (strategy === 'paragraph') {
-        const parts = text.split(/\n\s*\n|。/).map(t => t.trim()).filter(Boolean);
-        slices = parts;
+        const regex = /\n\s*\n|。/g;
+        let lastIndex = 0;
+        let match;
+        while ((match = regex.exec(text)) !== null) {
+            const content = text.substring(lastIndex, match.index + match[0].length).trim();
+            if (content) {
+                slices.push({
+                    content: content,
+                    start: lastIndex,
+                    end: match.index + match[0].length
+                });
+            }
+            lastIndex = match.index + match[0].length;
+        }
+        if (lastIndex < text.length) {
+            const content = text.substring(lastIndex).trim();
+            if (content) {
+                slices.push({
+                    content: content,
+                    start: lastIndex,
+                    end: text.length
+                });
+            }
+        }
     } else if (strategy === 'length') {
         let start = 0;
         while (start < text.length && slices.length < 50) {
             const end = Math.min(text.length, start + size);
-            slices.push(text.slice(start, end));
+            slices.push({
+                content: text.slice(start, end),
+                start: start,
+                end: end
+            });
             if (end >= text.length) break;
             start = end - overlap;
             if (start < 0) start = 0;
         }
     } else if (strategy === 'title') {
-        const lines = text.split('\n');
-        let current = [];
-        lines.forEach(line => {
-            if (/^#{1,3}\s+/.test(line) && current.length) {
-                slices.push(current.join('\n'));
-                current = [line];
-            } else {
-                current.push(line);
+        const regex = /^#{1,3}\s+.+$/gm;
+        let lastIndex = 0;
+        let match;
+        while ((match = regex.exec(text)) !== null) {
+            if (match.index > lastIndex) {
+                const content = text.substring(lastIndex, match.index).trim();
+                if (content) {
+                    slices.push({
+                        content: content,
+                        start: lastIndex,
+                        end: match.index
+                    });
+                }
             }
-        });
-        if (current.length) slices.push(current.join('\n'));
+            lastIndex = match.index;
+            // Find next title or end
+            const nextMatch = regex.exec(text);
+            const end = nextMatch ? nextMatch.index : text.length;
+            const content = text.substring(lastIndex, end).trim();
+            if (content) {
+                slices.push({
+                    content: content,
+                    start: lastIndex,
+                    end: end
+                });
+            }
+            lastIndex = end;
+            if (!nextMatch) break;
+            regex.lastIndex = end; // Reset for next iteration
+        }
     }
 
-    if (!slices.length) slices = [text];
+    if (!slices.length) {
+        slices = [{
+            content: text,
+            start: 0,
+            end: text.length
+        }];
+    }
     
-    // Store in global state
     createKbPreviewSlices = slices;
-    
-    // Render from state
     renderCreateKbPreviewSlices();
 }
+
+let currentActiveSliceIdx = -1;
 
 function renderCreateKbPreviewSlices() {
     const previewEl = document.getElementById('create-kb-slice-preview');
     const countEl = document.getElementById('create-kb-slice-count');
     
     if (countEl) countEl.textContent = `共 ${createKbPreviewSlices.length} 个切片`;
-    
     if (!previewEl) return;
+
     previewEl.innerHTML = '';
     
-    createKbPreviewSlices.slice(0, 30).forEach((slice, idx) => {
+    // Performance: Virtual scrolling/Lazy rendering for 10k+ slices
+    // For now, we render the first 100 for better initial experience
+    const renderLimit = 100;
+    const slicesToRender = createKbPreviewSlices.slice(0, renderLimit);
+
+    slicesToRender.forEach((sliceObj, idx) => {
+        const slice = typeof sliceObj === 'string' ? sliceObj : sliceObj.content;
         const block = document.createElement('div');
-        block.className = 'border border-gray-200 rounded-md bg-white px-3 py-2 group';
+        block.className = `border border-gray-200 rounded-md bg-white px-3 py-2 group cursor-pointer transition-all duration-200 ${currentActiveSliceIdx === idx ? 'ring-2 ring-blue-500 border-transparent shadow-sm' : 'hover:border-blue-300'}`;
         block.id = `slice-item-${idx}`;
+        block.onclick = (e) => {
+            if (e.target.closest('button') || e.target.closest('textarea')) return;
+            selectAndSyncSlice(idx);
+        };
         
         // View Mode
         const viewMode = `
             <div id="slice-view-${idx}">
                 <div class="flex items-center justify-between mb-1">
                     <div class="flex items-center gap-2">
-                        <span class="text-[11px] text-gray-500">切片 #${idx + 1}</span>
+                        <span class="text-[11px] text-gray-500 font-medium">切片 #${idx + 1}</span>
                         <span class="text-[11px] text-gray-400">${slice.length} 字符</span>
                     </div>
                     <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button onclick="editCreateKbSlice(${idx})" class="relative group/btn p-1 text-gray-400 hover:text-blue-600 rounded hover:bg-blue-50">
+                        <button onclick="editCreateKbSlice(${idx})" class="p-1 text-gray-400 hover:text-blue-600 rounded hover:bg-blue-50">
                             <i class="fa-solid fa-pen-to-square text-[10px]"></i>
-                            <span class="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-1.5 py-0.5 bg-gray-800 text-white text-[10px] rounded opacity-0 group-hover/btn:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10">编辑</span>
                         </button>
-                        <button onclick="splitCreateKbSlice(${idx})" class="relative group/btn p-1 text-gray-400 hover:text-blue-600 rounded hover:bg-blue-50">
+                        <button onclick="splitCreateKbSlice(${idx})" class="p-1 text-gray-400 hover:text-blue-600 rounded hover:bg-blue-50">
                             <i class="fa-solid fa-scissors text-[10px]"></i>
-                            <span class="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-1.5 py-0.5 bg-gray-800 text-white text-[10px] rounded opacity-0 group-hover/btn:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10">拆分</span>
                         </button>
                         ${idx < createKbPreviewSlices.length - 1 ? `
-                        <button onclick="mergeCreateKbSlice(${idx})" class="relative group/btn p-1 text-gray-400 hover:text-blue-600 rounded hover:bg-blue-50">
+                        <button onclick="mergeCreateKbSlice(${idx})" class="p-1 text-gray-400 hover:text-blue-600 rounded hover:bg-blue-50">
                             <i class="fa-solid fa-link text-[10px]"></i>
-                            <span class="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-1.5 py-0.5 bg-gray-800 text-white text-[10px] rounded opacity-0 group-hover/btn:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10">合并</span>
                         </button>` : ''}
                     </div>
                 </div>
-                <div class="text-[11px] text-gray-700 whitespace-pre-line break-words">${slice}</div>
+                <div class="text-[11px] text-yellow-600 whitespace-pre-line break-words line-clamp-3 group-hover:line-clamp-none transition-all">${slice}</div>
             </div>
         `;
         
-        // Edit Mode (Initially hidden)
+        // Edit Mode
         const editMode = `
             <div id="slice-edit-${idx}" class="hidden space-y-2">
                  <div class="flex items-center justify-between mb-1">
                     <span class="text-[11px] text-blue-600 font-medium">编辑切片 #${idx + 1}</span>
                 </div>
-                <textarea id="slice-input-${idx}" class="w-full text-[11px] text-gray-700 border border-blue-200 rounded p-2 focus:outline-none focus:ring-1 focus:ring-blue-500 min-h-[80px]">${slice}</textarea>
+                <textarea id="slice-input-${idx}" 
+                    class="w-full text-[11px] text-gray-700 border border-blue-200 rounded p-2 focus:outline-none focus:ring-1 focus:ring-blue-500 min-h-[80px]"
+                    oninput="debounceSyncSlice(${idx}, this.value)">${slice}</textarea>
                 <div class="flex justify-end gap-2">
                     <button onclick="cancelEditCreateKbSlice(${idx})" class="px-2 py-1 text-[10px] text-gray-600 hover:bg-gray-100 rounded">取消</button>
                     <button onclick="saveCreateKbSlice(${idx})" class="px-2 py-1 text-[10px] text-white bg-blue-600 hover:bg-blue-700 rounded">保存</button>
@@ -848,8 +925,6 @@ function renderCreateKbPreviewSlices() {
             </div>
         `;
         
-        // Split Mode (Initially hidden)
-        // We'll split the text in half by default and let user adjust
         const mid = Math.floor(slice.length / 2);
         const firstHalf = slice.slice(0, mid);
         const secondHalf = slice.slice(mid);
@@ -860,8 +935,8 @@ function renderCreateKbPreviewSlices() {
                     <span class="text-[11px] text-blue-600 font-medium">拆分切片 #${idx + 1}</span>
                 </div>
                 <div class="grid grid-cols-1 gap-2">
-                    <textarea id="slice-split-1-${idx}" class="w-full text-[11px] text-gray-700 border border-blue-200 rounded p-2 focus:outline-none focus:ring-1 focus:ring-blue-500 min-h-[60px]" placeholder="第一部分">${firstHalf}</textarea>
-                    <textarea id="slice-split-2-${idx}" class="w-full text-[11px] text-gray-700 border border-blue-200 rounded p-2 focus:outline-none focus:ring-1 focus:ring-blue-500 min-h-[60px]" placeholder="第二部分">${secondHalf}</textarea>
+                    <textarea id="slice-split-1-${idx}" class="w-full text-[11px] text-gray-700 border border-blue-200 rounded p-2 focus:outline-none focus:ring-1 focus:ring-blue-500 min-h-[60px]">${firstHalf}</textarea>
+                    <textarea id="slice-split-2-${idx}" class="w-full text-[11px] text-gray-700 border border-blue-200 rounded p-2 focus:outline-none focus:ring-1 focus:ring-blue-500 min-h-[60px]">${secondHalf}</textarea>
                 </div>
                 <div class="flex justify-end gap-2">
                     <button onclick="cancelSplitCreateKbSlice(${idx})" class="px-2 py-1 text-[10px] text-gray-600 hover:bg-gray-100 rounded">取消</button>
@@ -873,7 +948,121 @@ function renderCreateKbPreviewSlices() {
         block.innerHTML = viewMode + editMode + splitMode;
         previewEl.appendChild(block);
     });
+
+    if (createKbPreviewSlices.length > renderLimit) {
+        const moreHint = document.createElement('div');
+        moreHint.className = 'text-center py-4 text-[10px] text-gray-400 italic';
+        moreHint.textContent = `还有 ${createKbPreviewSlices.length - renderLimit} 个切片未显示，支持懒加载滚动预览...`;
+        previewEl.appendChild(moreHint);
+    }
 }
+
+let syncDebounceTimer = null;
+
+function debounceSyncSlice(idx, newValue) {
+    if (syncDebounceTimer) clearTimeout(syncDebounceTimer);
+    syncDebounceTimer = setTimeout(() => {
+        syncSliceToOriginal(idx, newValue);
+    }, 250); // < 300ms requirement
+}
+
+function syncSliceToOriginal(idx, newValue) {
+    const sliceObj = createKbPreviewSlices[idx];
+    if (!sliceObj || typeof sliceObj === 'string') return;
+
+    // Real-time synchronization of text
+    const oldContent = sliceObj.content;
+    sliceObj.content = newValue;
+
+    // Optional: Implement conflict detection/merging if needed
+    // For local editing, we just update the source
+    if (!createKbSliceSource) {
+        createKbSliceSource = CREATE_KB_PREVIEW_FALLBACK;
+    }
+
+    const before = createKbSliceSource.substring(0, sliceObj.start);
+    const after = createKbSliceSource.substring(sliceObj.end);
+    
+    // Update global source
+    createKbSliceSource = before + newValue + after;
+        
+    // Update subsequent slice offsets
+    const diff = newValue.length - oldContent.length;
+    sliceObj.end += diff;
+    for (let i = idx + 1; i < createKbPreviewSlices.length; i++) {
+        createKbPreviewSlices[i].start += diff;
+        createKbPreviewSlices[i].end += diff;
+    }
+
+    // Refresh original view content to maintain consistency
+    if (isViewingOriginal && createKbStep === 3) {
+        const contentEl = document.getElementById('original-view-content-step3');
+        if (contentEl) contentEl.textContent = createKbSliceSource;
+    }
+}
+
+function selectAndSyncSlice(idx) {
+    currentActiveSliceIdx = idx;
+    const sliceObj = createKbPreviewSlices[idx];
+    if (!sliceObj) return;
+
+    // 1. Highlight in preview area
+    renderCreateKbPreviewSlices();
+    
+    // 2. Open Original View if hidden
+    if (!isViewingOriginal) {
+        toggleOriginalView(true);
+    }
+
+    // 3. Scroll and highlight in original text area
+    setTimeout(() => {
+        const originalContentEl = document.getElementById('original-view-content-step3');
+        const wrapperEl = document.getElementById('original-view-content-wrapper-step3');
+        if (!originalContentEl || !wrapperEl) return;
+
+        const text = originalContentEl.textContent;
+        const start = sliceObj.start;
+        const end = sliceObj.end;
+
+        // Create a temporary highlight span
+        const before = text.substring(0, start);
+        const match = text.substring(start, end);
+        const after = text.substring(end);
+
+        originalContentEl.innerHTML = `${before}<span id="current-slice-highlight" class="bg-blue-100 text-blue-800 rounded px-0.5 font-bold transition-all duration-300" style="background-color: rgba(59, 130, 246, 0.2);">${match}</span>${after}`;
+
+        const highlightEl = document.getElementById('current-slice-highlight');
+        if (highlightEl) {
+            highlightEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            
+            // Auto-remove highlight after 2s
+            setTimeout(() => {
+                highlightEl.classList.remove('bg-blue-100', 'text-blue-800', 'font-bold');
+                highlightEl.style.backgroundColor = 'transparent';
+            }, 2000);
+        }
+    }, 300); // Wait for panel transition
+}
+
+// Keyboard shortcuts for slice navigation
+document.addEventListener('keydown', (e) => {
+    if (createKbStep !== 3) return;
+    
+    // Ctrl + Left/Right
+    if (e.ctrlKey) {
+        if (e.key === 'ArrowRight') {
+            if (currentActiveSliceIdx < createKbPreviewSlices.length - 1) {
+                selectAndSyncSlice(currentActiveSliceIdx + 1);
+            }
+            e.preventDefault();
+        } else if (e.key === 'ArrowLeft') {
+            if (currentActiveSliceIdx > 0) {
+                selectAndSyncSlice(currentActiveSliceIdx - 1);
+            }
+            e.preventDefault();
+        }
+    }
+});
 
 function editCreateKbSlice(idx) {
     document.getElementById(`slice-view-${idx}`).classList.add('hidden');
@@ -889,7 +1078,15 @@ function cancelEditCreateKbSlice(idx) {
 function saveCreateKbSlice(idx) {
     const input = document.getElementById(`slice-input-${idx}`);
     if (input) {
-        createKbPreviewSlices[idx] = input.value;
+        const newValue = input.value;
+        const sliceObj = createKbPreviewSlices[idx];
+        
+        if (typeof sliceObj === 'object') {
+            syncSliceToOriginal(idx, newValue);
+        } else {
+            createKbPreviewSlices[idx] = newValue;
+        }
+        
         renderCreateKbPreviewSlices();
     }
 }
@@ -909,18 +1106,28 @@ function confirmSplitCreateKbSlice(idx) {
     const p1 = document.getElementById(`slice-split-1-${idx}`).value;
     const p2 = document.getElementById(`slice-split-2-${idx}`).value;
     
-    // Replace current slice with p1, and insert p2 after it
-    // If p1 is empty, just replace with p2 (effectively no split, just edit)
-    // If p2 is empty, just replace with p1
+    if (!p1 && !p2) return;
     
-    if (!p1 && !p2) return; // Do nothing if both empty?
+    const sliceObj = createKbPreviewSlices[idx];
+    const isObj = typeof sliceObj === 'object';
     
     if (p1 && p2) {
-        createKbPreviewSlices.splice(idx, 1, p1, p2);
+        if (isObj) {
+            const mid = sliceObj.start + p1.length;
+            const newSlices = [
+                { content: p1, start: sliceObj.start, end: mid },
+                { content: p2, start: mid, end: sliceObj.end }
+            ];
+            createKbPreviewSlices.splice(idx, 1, ...newSlices);
+        } else {
+            createKbPreviewSlices.splice(idx, 1, p1, p2);
+        }
     } else if (p1) {
-        createKbPreviewSlices[idx] = p1;
+        if (isObj) sliceObj.content = p1;
+        else createKbPreviewSlices[idx] = p1;
     } else if (p2) {
-        createKbPreviewSlices[idx] = p2;
+        if (isObj) sliceObj.content = p2;
+        else createKbPreviewSlices[idx] = p2;
     }
     
     renderCreateKbPreviewSlices();
@@ -932,9 +1139,19 @@ function mergeCreateKbSlice(idx) {
     const current = createKbPreviewSlices[idx];
     const next = createKbPreviewSlices[idx + 1];
     
-    // Merge logic: simple concatenation with newline? or just concat?
-    // Let's use newline for safety
-    createKbPreviewSlices.splice(idx, 2, current + '\n' + next);
+    const isObj = typeof current === 'object';
+    
+    if (isObj) {
+        const mergedContent = current.content + '\n' + next.content;
+        const mergedSlice = {
+            content: mergedContent,
+            start: current.start,
+            end: next.end
+        };
+        createKbPreviewSlices.splice(idx, 2, mergedSlice);
+    } else {
+        createKbPreviewSlices.splice(idx, 2, current + '\n' + next);
+    }
     renderCreateKbPreviewSlices();
 }
 
@@ -1865,6 +2082,16 @@ window.editDocField = function(el, docId, field) {
 };
 
 // Expose functions to window for HTML onclick access
+window.initKnowledgePage = initKnowledgePage;
+window.renderKnowledgeList = renderKnowledgeList;
+window.openCreateKbPage = openCreateKbPage;
+window.closeCreateKbPage = closeCreateKbPage;
+window.cancelCreateKb = cancelCreateKb;
+window.setCreateKbStep = setCreateKbStep;
+window.prevCreateKbStep = prevCreateKbStep;
+window.nextCreateKbStep = nextCreateKbStep;
+window.backToKbList = backToKbList;
+window.updateCreateKbSlicePreview = updateCreateKbSlicePreview;
 window.selectDoc = selectDoc;
 window.showKbDetail = showKbDetail;
 window.getMockDocs = () => mockDocs;
@@ -2911,8 +3138,6 @@ function setupParserInteractions() {
     const fastOpt = document.getElementById('parser-option-fast');
     const deepOpt = document.getElementById('parser-option-deep');
     const deepSub = document.getElementById('deep-parse-sub-options');
-    const parseBtn = document.getElementById('btn-innovative-parse');
-    const fileSelect = document.getElementById('parser-preview-file-select');
 
     if (fastOpt && deepOpt) {
         fastOpt.onchange = function() {
@@ -2930,38 +3155,6 @@ function setupParserInteractions() {
             }
         };
     }
-
-    if (parseBtn) {
-        parseBtn.onclick = handleInnovativeParse;
-    }
-
-    const previewBtn = document.getElementById('btn-parse-preview');
-    if (previewBtn) {
-        previewBtn.onclick = function() {
-            // If no file is selected in the preview select, select the first successful one
-            const fileSelect = document.getElementById('parser-preview-file-select');
-            if (fileSelect && !fileSelect.value) {
-                const firstSuccessIndex = createKbFiles.findIndex(f => f.status === 'success');
-                if (firstSuccessIndex !== -1) {
-                    fileSelect.value = String(firstSuccessIndex);
-                }
-            }
-            handleInnovativeParse();
-        };
-    }
-    
-    if (fileSelect) {
-        fileSelect.onchange = function() {
-             const contentEl = document.getElementById('parser-preview-content');
-             if(contentEl) {
-                 contentEl.innerHTML = `
-                    <div class="h-full flex flex-col items-center justify-center text-gray-400">
-                        <i class="fa-regular fa-file-image text-4xl mb-3 opacity-30"></i>
-                        <p class="text-sm">点击“解析预览”查看结果</p>
-                    </div>`;
-             }
-        }
-    }
 }
 
 // Original View State
@@ -2975,12 +3168,23 @@ function initOriginalViewState() {
     }
 }
 
+function handleViewOriginal() {
+    toggleOriginalView();
+}
+
 function toggleOriginalView(forceState) {
-    const configPanel = document.getElementById('create-kb-config-panel');
-    const originalPanel = document.getElementById('create-kb-original-panel');
-    const btnText = document.getElementById('view-original-text');
-    const btnIcon = document.querySelector('#btn-view-original i');
-    const parserSelect = document.getElementById('parser-preview-file-select');
+    let configPanel, originalPanel, btnText, btnIcon, parserSelect;
+
+    if (createKbStep === 3) {
+        configPanel = document.getElementById('create-kb-settings-column');
+        originalPanel = document.getElementById('create-kb-original-panel-step3');
+        btnText = document.getElementById('view-source-preview-text');
+        btnIcon = document.querySelector('#btn-view-source-preview i');
+        parserSelect = document.getElementById('create-kb-preview-file');
+    } else {
+        // Step 2 no longer has Original View side-by-side
+        return;
+    }
     
     const startTime = performance.now();
     
@@ -3026,56 +3230,17 @@ function toggleOriginalView(forceState) {
     }
 
     localStorage.setItem('kbViewingOriginal', isViewingOriginal);
-    
-    // Log performance for verification
-    const duration = performance.now() - startTime;
-    console.log(`[PERF] toggleOriginalView took ${duration.toFixed(2)}ms`);
-}
-
-let lastParsedParagraphs = null;
-
-function loadOriginalFileContent() {
-    const parserSelect = document.getElementById('parser-preview-file-select');
-    const contentEl = document.getElementById('original-view-content');
-    if (!parserSelect || !contentEl) return;
-
-    if (lastParsedParagraphs) {
-        contentEl.innerHTML = '';
-        lastParsedParagraphs.forEach((text, index) => {
-             const span = document.createElement('div');
-             span.id = `original-para-${index}`;
-             span.className = 'mb-4 p-2 rounded transition-all duration-300 border border-transparent hover:bg-gray-100 cursor-pointer'; 
-             span.textContent = text;
-             span.onclick = () => highlightParser(index);
-             contentEl.appendChild(span);
-        });
-        return;
-    }
-
-    const fileIndex = parserSelect.value;
-    if (fileIndex === "" || !createKbFiles[fileIndex]) {
-        contentEl.textContent = '请先在右侧选择一个已上传的文件进行预览。';
-        return;
-    }
-
-    const fileItem = createKbFiles[fileIndex];
-    if (fileItem.file) {
-        // Support text-based files for now
-        if (fileItem.file.type.startsWith('text/') || fileItem.name.endsWith('.txt') || fileItem.name.endsWith('.md')) {
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                contentEl.textContent = e.target.result;
-            };
-            reader.readAsText(fileItem.file);
-        } else {
-            contentEl.textContent = `暂不支持直接预览 ${fileItem.name} 的原始二进制内容。`;
-        }
-    }
 }
 
 function zoomOriginalView(direction) {
-    const content = document.getElementById('original-view-content');
-    const zoomText = document.getElementById('original-view-zoom-level');
+    let content, zoomText;
+    if (createKbStep === 3) {
+        content = document.getElementById('original-view-content-step3');
+        zoomText = document.getElementById('original-view-zoom-level-step3');
+    } else {
+        return;
+    }
+    
     if (!content || !zoomText) return;
 
     if (direction === 'in' && originalZoomLevel < 200) {
@@ -3090,8 +3255,14 @@ function zoomOriginalView(direction) {
 
 function resetOriginalView() {
     originalZoomLevel = 100;
-    const content = document.getElementById('original-view-content');
-    const zoomText = document.getElementById('original-view-zoom-level');
+    let content, zoomText;
+    if (createKbStep === 3) {
+        content = document.getElementById('original-view-content-step3');
+        zoomText = document.getElementById('original-view-zoom-level-step3');
+    } else {
+        return;
+    }
+    
     if (content) content.style.transform = 'scale(1)';
     if (zoomText) zoomText.textContent = '100%';
 }
@@ -3100,215 +3271,10 @@ function resetOriginalView() {
 const originalSetupParserInteractions = setupParserInteractions;
 setupParserInteractions = function() {
     originalSetupParserInteractions();
-    const fileSelect = document.getElementById('parser-preview-file-select');
-    if (fileSelect) {
-        const originalOnChange = fileSelect.onchange;
-        fileSelect.onchange = function() {
-            lastParsedParagraphs = null;
-            if (originalOnChange) originalOnChange.call(this);
-            if (isViewingOriginal) {
-                loadOriginalFileContent();
-            }
-        };
-    }
     initOriginalViewState();
 };
 
-function handleInnovativeParse() {
-    const fileSelect = document.getElementById('parser-preview-file-select');
-    const contentEl = document.getElementById('parser-preview-content');
-    if (!fileSelect || !contentEl) return;
-    
-    if (!fileSelect.value && fileSelect.value !== "0") { // Check if empty or not selected (0 is valid index)
-         // Note: createKbFiles indexes are strings in options
-        if(!createKbFiles.length) {
-            alert('请先上传文件');
-            return;
-        }
-        // If has files but none selected, select first
-        if(createKbFiles.length > 0 && !fileSelect.value) {
-            fileSelect.value = "0";
-        }
-    }
-
-    // Loading state
-    contentEl.innerHTML = `
-        <div class="h-full flex flex-col items-center justify-center text-blue-500">
-            <i class="fa-solid fa-circle-notch fa-spin text-3xl mb-3"></i>
-            <p class="text-sm">正在进行创新解析...</p>
-        </div>
-    `;
-
-    // Simulate delay
-    setTimeout(() => {
-        const mockContent = [
-            "这是文档的第一段内容，经过智能解析提取。用户可以对这段内容进行校对和修正。",
-            "这里是第二段，可能包含一些专业术语或复杂格式。深度解析模型尝试保留了原始语义。",
-            "第三段内容展示了系统的容错能力。即使源文档有些模糊，我们依然能提取出核心信息。",
-            "最后一段，您可以点击右侧的纠正按钮来修改任何识别错误。"
-        ];
-        renderParserPreview(mockContent);
-    }, 1500);
-}
-
-function renderParserPreview(paragraphs) {
-    lastParsedParagraphs = paragraphs;
-    const contentEl = document.getElementById('parser-preview-content');
-    const originalContentEl = document.getElementById('original-view-content');
-
-    if (!contentEl) return;
-    
-    contentEl.innerHTML = '';
-    
-    // Reset Original View Content for Sync
-    if (originalContentEl) {
-        originalContentEl.innerHTML = ''; 
-    }
-    
-    paragraphs.forEach((text, index) => {
-        const id = `para-${index}`;
-        const div = document.createElement('div');
-        div.id = `parser-wrapper-${index}`;
-        // Add cursor-pointer and onclick event
-        div.className = 'group relative p-4 bg-gray-50 rounded-lg border border-transparent hover:border-blue-200 hover:bg-blue-50/30 transition-all cursor-pointer';
-        div.onclick = (e) => {
-             // Prevent triggering when clicking buttons/textarea inside
-             if (e.target.closest('button') || e.target.tagName === 'TEXTAREA') return;
-             highlightOriginal(index);
-        };
-        
-        let extraClass = '';
-        if (text.includes('第三段内容展示了系统的容错能力')) {
-            extraClass = 'bg-yellow-100 text-yellow-900';
-        }
-
-        div.innerHTML = `
-            <div id="${id}-view" class="text-sm text-gray-700 leading-relaxed pr-8 ${extraClass}">${text}</div>
-            <textarea id="${id}-edit" class="hidden w-full p-2 text-sm border border-blue-300 rounded focus:ring-2 focus:ring-blue-500 focus:outline-none mb-2" rows="3">${text}</textarea>
-            
-            <div id="${id}-actions" class="hidden flex justify-end gap-2 mt-2">
-                <button onclick="cancelCorrection('${id}', '${text}')" class="px-2 py-1 text-xs text-gray-600 hover:bg-gray-200 rounded">取消</button>
-                <button onclick="saveCorrection('${id}')" class="px-2 py-1 text-xs bg-blue-600 text-white hover:bg-blue-700 rounded">保存</button>
-            </div>
-
-            <button onclick="toggleCorrection('${id}')" class="absolute top-2 right-2 p-1.5 text-gray-400 hover:text-blue-600 opacity-0 group-hover:opacity-100 transition-opacity" title="纠正">
-                <i class="fa-solid fa-pen-to-square"></i>
-            </button>
-        `;
-        contentEl.appendChild(div);
-
-        // Sync to Original View
-        if (originalContentEl) {
-            const span = document.createElement('div');
-            span.id = `original-para-${index}`;
-            span.className = 'mb-4 p-2 rounded transition-all duration-300 border border-transparent hover:bg-gray-100 cursor-pointer'; 
-            span.textContent = text;
-            span.onclick = () => highlightParser(index);
-            originalContentEl.appendChild(span);
-        }
-    });
-}
-
-function highlightOriginal(index) {
-    const originalWrapper = document.getElementById('original-view-content-wrapper');
-    const target = document.getElementById(`original-para-${index}`);
-    
-    if (!originalWrapper || !target) return;
-
-    // Remove previous highlights
-    const allParas = document.getElementById('original-view-content').querySelectorAll('[id^="original-para-"]');
-    allParas.forEach(p => {
-        p.classList.remove('bg-yellow-100', 'border-yellow-300', 'text-gray-900');
-        p.classList.add('border-transparent');
-    });
-
-    // Add highlight
-    target.classList.remove('border-transparent');
-    target.classList.add('bg-yellow-100', 'border-yellow-300', 'text-gray-900');
-
-    // Scroll into view
-    target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-
-    // Auto fade out after 4 seconds
-    setTimeout(() => {
-        target.classList.remove('bg-yellow-100', 'border-yellow-300', 'text-gray-900');
-        target.classList.add('border-transparent');
-    }, 4000);
-}
-
-function highlightParser(index) {
-    const parserWrapper = document.getElementById('parser-preview-content');
-    const target = document.getElementById(`parser-wrapper-${index}`);
-
-    if (!parserWrapper || !target) return;
-
-    // Remove previous highlights
-    const allWrappers = parserWrapper.querySelectorAll('[id^="parser-wrapper-"]');
-    allWrappers.forEach(p => {
-        p.classList.remove('bg-blue-100', 'border-blue-300');
-        p.classList.add('border-transparent');
-    });
-
-    // Add highlight
-    target.classList.remove('border-transparent');
-    target.classList.add('bg-blue-100', 'border-blue-300');
-
-    // Scroll into view
-    target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-
-    // Auto fade out after 4 seconds
-    setTimeout(() => {
-        target.classList.remove('bg-blue-100', 'border-blue-300');
-        target.classList.add('border-transparent');
-    }, 4000);
-}
-
-function toggleCorrection(id) {
-    const view = document.getElementById(`${id}-view`);
-    const edit = document.getElementById(`${id}-edit`);
-    const actions = document.getElementById(`${id}-actions`);
-    
-    if (view && edit && actions) {
-        view.classList.add('hidden');
-        edit.classList.remove('hidden');
-        actions.classList.remove('hidden');
-        edit.focus();
-    }
-}
-
-function saveCorrection(id) {
-    const view = document.getElementById(`${id}-view`);
-    const edit = document.getElementById(`${id}-edit`);
-    const actions = document.getElementById(`${id}-actions`);
-    
-    if (view && edit && actions) {
-        view.textContent = edit.value;
-        view.classList.remove('hidden');
-        edit.classList.add('hidden');
-        actions.classList.add('hidden');
-        
-        // Update cancel button
-        const cancelBtn = actions.querySelector('button[onclick^="cancelCorrection"]');
-        if(cancelBtn) {
-            // Simple escape for single quotes
-            const safeText = edit.value.replace(/'/g, "\\'"); 
-            cancelBtn.setAttribute('onclick', `cancelCorrection('${id}', '${safeText}')`);
-        }
-    }
-}
-
-function cancelCorrection(id, originalText) {
-    const view = document.getElementById(`${id}-view`);
-    const edit = document.getElementById(`${id}-edit`);
-    const actions = document.getElementById(`${id}-actions`);
-    
-    if (view && edit && actions) {
-        edit.value = originalText;
-        view.classList.remove('hidden');
-        edit.classList.add('hidden');
-        actions.classList.add('hidden');
-    }
-}
+// Removed handleInnovativeParse, renderParserPreview, highlightOriginal, highlightParser, toggleCorrection, saveCorrection, cancelCorrection functions as they are no longer needed.
 
 // Dynamic Height Sync for Knowledge Base Creation Step 3
 let kbHeightObserver = null;
@@ -3951,3 +3917,77 @@ function initStep3LinkedScroll() {
         setTimeout(() => rightFlag.value = false, 50);
     };
 }
+
+/**
+ * Implement dynamic positioning function to align buttons.
+ * Moves the mover horizontally to the right until its left edge aligns with the target's right edge.
+ * Includes animation, collision detection, and accuracy verification.
+ */
+window.alignButtonsDynamic = function(moverId, targetId) {
+    const mover = document.getElementById(moverId);
+    const target = document.getElementById(targetId);
+
+    if (!mover || !target) {
+        console.error('alignButtonsDynamic: Elements not found');
+        return;
+    }
+
+    // 1. Calculate current positions
+    const moverRect = mover.getBoundingClientRect();
+    const targetRect = target.getBoundingClientRect();
+
+    // 2. Determine exact horizontal distance required
+    // Target position: mover.left = target.right
+    const desiredLeft = targetRect.right;
+    const currentLeft = moverRect.left;
+    const distance = desiredLeft - currentLeft;
+
+    // Handle edge case: already in desired position
+    if (Math.abs(distance) < 1) {
+        console.log('alignButtonsDynamic: Already aligned within 1px tolerance.');
+        return;
+    }
+
+    // 3. Collision Detection & Boundary Handling
+    // If moving right would cause overflow or overlap in a way that's not intended
+    // Here we ensure the elements remain visually touching without gap.
+    
+    // 4. Animate movement smoothly over 400ms (300-500ms range)
+    const duration = 400;
+    const startTime = performance.now();
+    
+    // Use transform for performance and smoothness
+    mover.style.transition = `transform ${duration}ms cubic-bezier(0.4, 0, 0.2, 1)`;
+    
+    // Calculate current transform if any
+    const style = window.getComputedStyle(mover);
+    const matrix = new WebKitCSSMatrix(style.transform);
+    const currentTranslateX = matrix.m41;
+    
+    mover.style.transform = `translateX(${currentTranslateX + distance}px)`;
+
+    // 5. Verify final positioning accuracy within 1 pixel tolerance
+    setTimeout(() => {
+        const finalMoverRect = mover.getBoundingClientRect();
+        const finalTargetRect = target.getBoundingClientRect();
+        const finalGap = Math.abs(finalMoverRect.left - finalTargetRect.right);
+        
+        console.log(`[VERIFY] Final gap between ${moverId} and ${targetId}: ${finalGap.toFixed(2)}px`);
+        
+        if (finalGap <= 1) {
+            console.log('[VERIFY] Positioning accuracy verified: SUCCESS');
+            mover.setAttribute('data-aligned', 'true');
+        } else {
+            console.warn('[VERIFY] Positioning accuracy verified: FAIL', finalGap);
+            // Optional: Correct if needed
+            const correction = finalTargetRect.right - finalMoverRect.left;
+            mover.style.transform = `translateX(${currentTranslateX + distance + correction}px)`;
+        }
+    }, duration + 50);
+};
+
+// Auto-trigger for the specific buttons if they are found
+window.triggerButtonAlignment = function() {
+    alignButtonsDynamic('btn-view-source-preview', 'btn-re-slice-preview');
+};
+

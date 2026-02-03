@@ -55,11 +55,11 @@
             ]
         },
         {
-            id: 'orchestrator', label: '编排器管理', children: [
+            id: 'orchestrator', label: '工作流管理', children: [
                 { id: 'orchestrator.list', label: '查看列表' },
-                { id: 'orchestrator.create', label: '新建编排器' },
-                { id: 'orchestrator.edit', label: '编辑编排器' },
-                { id: 'orchestrator.delete', label: '删除编排器' }
+                { id: 'orchestrator.create', label: '新建工作流' },
+                { id: 'orchestrator.edit', label: '编辑工作流' },
+                { id: 'orchestrator.delete', label: '删除工作流' }
             ]
         },
         {
@@ -121,7 +121,7 @@
     // Data Permission Configuration
     const dataResources = [
         { id: 'agent', label: '智能体' },
-        { id: 'orchestrator', label: '编排器' },
+        { id: 'orchestrator', label: '工作流' },
         { id: 'parser', label: '解析器' },
         { id: 'knowledge', label: '知识库' },
         { id: 'knowledge_graph', label: '知识图谱' },

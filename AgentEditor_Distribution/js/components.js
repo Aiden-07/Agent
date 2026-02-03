@@ -83,7 +83,7 @@ window.renderComponentsList = function() {
         const statusText = item.status === 'active' ? '已启用' : '已禁用';
         
         const typeIcon = item.type === 'agent' ? 'fa-robot text-purple-600 bg-purple-100' : 'fa-layer-group text-blue-600 bg-blue-100';
-        const typeText = item.type === 'agent' ? '智能体模板' : '编排器模板';
+        const typeText = item.type === 'agent' ? '智能体模板' : '工作流模板';
 
         tr.innerHTML = `
             <td class="px-6 py-4">
