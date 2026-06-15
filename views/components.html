@@ -10,7 +10,9 @@
                 <select id="comp-filter-type" class="px-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-600" onchange="filterComponents()">
                     <option value="all">所有类型</option>
                     <option value="agent">智能体</option>
-                    <option value="orchestrator">编排器</option>
+                    <option value="orchestrator">工作流</option>
+                    <option value="plugin">插件</option>
+                    <option value="skill">Skill</option>
                 </select>
             </div>
             <button onclick="openCreateComponentModal()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 shadow-sm">
@@ -21,8 +23,8 @@
     </div>
 
     <!-- Component List -->
-    <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-        <table class="w-full text-sm text-left">
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 dt-scroll-wrap rounded-inherit">
+        <table id="components-data-table" class="w-full text-sm text-left">
             <thead class="bg-gray-50 text-gray-500 font-medium border-b border-gray-100">
                 <tr>
                     <th class="px-6 py-4 cursor-pointer hover:bg-gray-100" onclick="sortComponents('name')">名称 <i class="fa-solid fa-sort text-xs text-gray-400 ml-1"></i></th>
@@ -41,63 +43,505 @@
         </table>
     </div>
 
+    <style>
+        #components-data-table tbody td.action-td {
+            background-color: #fff !important;
+            color: #374151 !important;
+        }
+        #components-data-table tbody tr:hover td.action-td {
+            background-color: #f9fafb !important;
+        }
+        .component-create-dialog {
+            width: min(680px, calc(100vw - 32px));
+            border-radius: 14px;
+        }
+        .component-create-header {
+            position: relative;
+            height: 72px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .component-create-close {
+            position: absolute;
+            right: 24px;
+            top: 22px;
+            width: 32px;
+            height: 32px;
+            border-radius: 6px;
+            color: #9ca3af;
+        }
+        .component-create-close:hover {
+            color: #4b5563;
+            background: #f3f4f6;
+        }
+        .component-create-close:focus-visible,
+        .component-type-card:focus-within,
+        .component-create-input:focus,
+        .component-create-select:focus,
+        .component-create-btn:focus-visible {
+            outline: 2px solid #2563eb;
+            outline-offset: 2px;
+        }
+        .component-create-form {
+            padding: 8px 20px 0;
+        }
+        .component-create-label {
+            display: block;
+            margin-bottom: 12px;
+            color: #4b5563;
+            font-size: 14px;
+            line-height: 20px;
+        }
+        .component-create-required {
+            color: #ef4444;
+            margin-right: 3px;
+        }
+        .component-type-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 16px;
+        }
+        .component-type-card {
+            min-height: 170px;
+            border: 1px solid #e5e7eb;
+            border-radius: 6px;
+            background: #fff;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: border-color .16s ease, background .16s ease, box-shadow .16s ease;
+        }
+        .component-type-card:hover {
+            border-color: #93c5fd;
+            background: #f8fbff;
+        }
+        .component-type-card[data-selected="true"] {
+            border: 2px solid #2563ff;
+            background: #eef4ff;
+        }
+        .component-type-icon {
+            width: 64px;
+            height: 64px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+        }
+        .component-type-icon.agent {
+            background: #a977e8;
+        }
+        .component-type-icon.workflow {
+            background: #2f6df6;
+        }
+        .component-type-svg {
+            width: 32px;
+            height: 32px;
+            display: block;
+        }
+        .component-type-title {
+            margin-top: 14px;
+            color: #111827;
+            font-size: 15px;
+            font-weight: 500;
+        }
+        .component-create-select,
+        .component-create-input {
+            height: 32px;
+            border: 1px solid #d7dde8;
+            border-radius: 0;
+            color: #111827;
+            font-size: 14px;
+        }
+        .component-create-input::placeholder,
+        .component-create-select:invalid {
+            color: #9ca3af;
+        }
+        .component-create-footer {
+            margin-top: 36px;
+            border-top: 1px solid #edf0f4;
+            padding: 24px 20px 0;
+        }
+        .component-create-btn {
+            min-width: 74px;
+            height: 32px;
+            border-radius: 4px;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        .component-config-modal {
+            position: fixed;
+            inset: 0;
+            z-index: 60;
+            background: rgba(17, 24, 39, 0.45);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+        }
+        .component-config-modal.hidden {
+            display: none;
+        }
+        .component-config-dialog {
+            width: min(75vw, calc(100vw - 48px));
+            height: min(75vh, calc(100vh - 48px));
+            min-width: min(920px, calc(100vw - 48px));
+            min-height: min(620px, calc(100vh - 48px));
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 24px 80px rgba(15, 23, 42, 0.28);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .component-config-header {
+            height: 56px;
+            padding: 0 20px;
+            border-bottom: 1px solid #e5e7eb;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-shrink: 0;
+        }
+        .component-config-body {
+            flex: 1;
+            overflow-y: auto;
+            background: #fff;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+        }
+        .component-config-body::-webkit-scrollbar,
+        .component-config-param-wrap::-webkit-scrollbar {
+            width: 0;
+            height: 0;
+            display: none;
+        }
+        .component-config-section {
+            padding: 18px 20px;
+            border-bottom: 1px solid #eef0f4;
+        }
+        .component-config-section-title {
+            margin-bottom: 16px;
+            color: #172554;
+            font-size: 16px;
+            font-weight: 600;
+        }
+        .component-config-label {
+            display: block;
+            margin-bottom: 8px;
+            color: #172554;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        .component-config-required {
+            color: #ef4444;
+            margin-left: 3px;
+        }
+        .component-config-field {
+            height: 32px;
+            width: 100%;
+            border: 1px solid #cfd7e6;
+            border-radius: 4px;
+            padding: 0 12px;
+            color: #111827;
+            font-size: 14px;
+            outline: none;
+        }
+        .component-config-field:focus,
+        .component-config-area:focus,
+        .component-config-param-table input:focus,
+        .component-config-param-table select:focus,
+        .component-config-btn:focus-visible,
+        .component-config-close:focus-visible {
+            outline: 2px solid #2563eb;
+            outline-offset: 2px;
+        }
+        .component-config-field::placeholder,
+        .component-config-area::placeholder,
+        .component-config-param-table input::placeholder {
+            color: #b6bfce;
+        }
+        .component-config-area {
+            width: 100%;
+            min-height: 82px;
+            resize: vertical;
+            border: 1px solid #cfd7e6;
+            border-radius: 4px;
+            padding: 10px 12px 28px;
+            color: #111827;
+            font-size: 14px;
+            line-height: 1.6;
+            outline: none;
+        }
+        .component-config-count {
+            position: absolute;
+            right: 12px;
+            bottom: 8px;
+            color: #8b95a7;
+            font-size: 12px;
+            line-height: 16px;
+        }
+        .component-config-subtitle {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 10px;
+            color: #172554;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        .component-config-param-wrap {
+            overflow-x: auto;
+            background: #fafbfc;
+            border-radius: 6px;
+            padding: 10px 12px 10px;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+        }
+        .component-config-param-table {
+            min-width: 900px;
+        }
+        .component-config-param-head,
+        .component-config-param-row {
+            display: grid;
+            grid-template-columns: 145px 90px 148px 104px 80px 80px 112px 88px;
+            gap: 8px;
+            align-items: center;
+        }
+        .component-config-param-head {
+            margin-bottom: 8px;
+            color: #667085;
+            font-size: 12px;
+        }
+        .component-config-param-row input,
+        .component-config-param-row select,
+        .component-config-output-grid input {
+            height: 32px;
+            border: 1px solid #cfd7e6;
+            border-radius: 6px;
+            padding: 0 12px;
+            color: #172554;
+            font-size: 14px;
+            background: #fff;
+            outline: none;
+        }
+        .component-config-param-row input[disabled],
+        .component-config-output-grid input[disabled] {
+            color: #b6bfce;
+            background: #f7f8fb;
+        }
+        .component-config-output-grid {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+            gap: 8px;
+        }
+        .component-config-output-head {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+            gap: 8px;
+            margin-bottom: 8px;
+            color: #667085;
+            font-size: 12px;
+        }
+        .component-config-footer {
+            height: 56px;
+            padding: 0 16px;
+            border-top: 1px solid #e5e7eb;
+            background: #fff;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+        .component-config-btn {
+            height: 32px;
+            border-radius: 6px;
+            padding: 0 16px;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        @media (max-width: 768px) {
+            .component-config-output-grid,
+            .component-config-output-head {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+
     <!-- Create Component Modal -->
-    <div id="create-comp-modal" class="fixed inset-0 bg-gray-900/50 hidden z-50 flex items-center justify-center backdrop-blur-sm">
-        <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg p-6 animate-fade-in-up">
-            <div class="flex justify-between items-center mb-6">
-                <h3 class="text-lg font-semibold text-gray-800">创建新组件</h3>
-                <button onclick="closeCreateComponentModal()" class="text-gray-400 hover:text-gray-600">
+    <div id="create-comp-modal" class="fixed inset-0 bg-gray-900/45 hidden z-50 flex items-center justify-center">
+        <div class="component-create-dialog bg-white shadow-2xl p-6">
+            <div class="component-create-header">
+                <h3 class="text-lg font-semibold text-gray-900" id="create-comp-title">创建新组件</h3>
+                <button type="button" onclick="closeCreateComponentModal()" class="component-create-close inline-flex items-center justify-center" aria-label="关闭">
                     <i class="fa-solid fa-times"></i>
                 </button>
             </div>
-            
-            <div class="space-y-4">
+
+            <div id="create-comp-step-1" class="component-create-form space-y-5">
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">组件类型</label>
-                    <div class="grid grid-cols-2 gap-4">
-                        <label class="border border-gray-200 rounded-lg p-4 cursor-pointer hover:border-blue-500 hover:bg-blue-50 transition-all" onclick="selectCompType('agent')">
-                            <input type="radio" name="comp-type" value="agent" class="hidden" checked>
-                            <div class="flex flex-col items-center gap-2">
-                                <div class="w-10 h-10 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center">
-                                    <i class="fa-solid fa-robot"></i>
-                                </div>
-                                <span class="text-sm font-medium">智能体</span>
-                            </div>
+                    <label class="component-create-label"><span class="component-create-required">*</span>组件类型</label>
+                    <div class="component-type-grid" role="radiogroup" aria-label="组件类型">
+                        <label class="component-type-card" data-comp-type-card="agent" data-selected="false" onclick="selectCompType('agent')">
+                            <input type="radio" name="comp-type" value="agent" class="sr-only" onchange="selectCompType('agent')">
+                            <span class="flex flex-col items-center">
+                                <span class="component-type-icon agent" aria-hidden="true">
+                                    <svg class="component-type-svg" viewBox="0 0 32 32" fill="none">
+                                        <path d="M16 11V7" stroke="white" stroke-width="2.2" stroke-linecap="round"/>
+                                        <path d="M12 7h8" stroke="white" stroke-width="2.2" stroke-linecap="round"/>
+                                        <rect x="8.5" y="11.5" width="15" height="14" rx="2.2" stroke="white" stroke-width="2.2"/>
+                                        <path d="M5.5 17.5h3M23.5 17.5h3" stroke="white" stroke-width="2.2" stroke-linecap="round"/>
+                                        <path d="M13 16.5v4M19 16.5v4" stroke="white" stroke-width="2.2" stroke-linecap="round"/>
+                                        <path d="M13 24h8" stroke="white" stroke-width="2.2" stroke-linecap="round"/>
+                                    </svg>
+                                </span>
+                                <span class="component-type-title">智能体</span>
+                            </span>
                         </label>
-                        <label class="border border-gray-200 rounded-lg p-4 cursor-pointer hover:border-blue-500 hover:bg-blue-50 transition-all" onclick="selectCompType('orchestrator')">
-                            <input type="radio" name="comp-type" value="orchestrator" class="hidden">
-                            <div class="flex flex-col items-center gap-2">
-                                <div class="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center">
-                                    <i class="fa-solid fa-layer-group"></i>
-                                </div>
-                                <span class="text-sm font-medium">编排器</span>
-                            </div>
+                        <label class="component-type-card" data-comp-type-card="orchestrator" data-selected="true" onclick="selectCompType('orchestrator')">
+                            <input type="radio" name="comp-type" value="orchestrator" class="sr-only" checked onchange="selectCompType('orchestrator')">
+                            <span class="flex flex-col items-center">
+                                <span class="component-type-icon workflow" aria-hidden="true">
+                                    <svg class="component-type-svg" viewBox="0 0 32 32" fill="none">
+                                        <rect x="6.5" y="6.5" width="8" height="8" stroke="white" stroke-width="2.2"/>
+                                        <rect x="17.5" y="6.5" width="8" height="8" stroke="white" stroke-width="2.2"/>
+                                        <rect x="6.5" y="17.5" width="8" height="8" stroke="white" stroke-width="2.2"/>
+                                        <rect x="17.5" y="17.5" width="8" height="8" stroke="white" stroke-width="2.2"/>
+                                    </svg>
+                                </span>
+                                <span class="component-type-title">工作流</span>
+                            </span>
                         </label>
                     </div>
                 </div>
-                
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">选择资源</label>
-                    <div class="flex gap-2">
-                        <select id="comp-create-method" class="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                            <!-- Options will be populated by JS -->
+
+                <div id="comp-resource-section">
+                    <label class="component-create-label" for="comp-create-method"><span class="component-create-required">*</span>选择资源</label>
+                    <div class="flex gap-3">
+                        <select id="comp-create-method" required class="component-create-select flex-1 px-3 focus:ring-0">
+                            <option value="" selected disabled>请选择资源</option>
                         </select>
-                        <button onclick="createNewComponentTab()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors whitespace-nowrap flex items-center">
-                            <i class="fa-solid fa-plus mr-1"></i> 新建
+                        <button type="button" onclick="createNewComponentTab()" class="component-create-btn inline-flex items-center justify-center gap-1 bg-blue-700 px-4 text-white hover:bg-blue-800">
+                            <i class="fa-solid fa-plus text-xs"></i>
+                            <span>新建</span>
                         </button>
                     </div>
                 </div>
-                
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">组件名称</label>
-                    <input type="text" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="请输入组件名称">
+
+                <div id="comp-basic-info-section">
+                    <label class="component-create-label" for="comp-name"><span class="component-create-required">*</span>组件名称</label>
+                    <div class="relative">
+                        <input id="comp-name" type="text" maxlength="50" class="component-create-input w-full px-3 pr-14 focus:ring-0" placeholder="请输入组件名称" oninput="updateComponentNameCount()">
+                        <span class="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-500"><span id="comp-name-count">0</span>/50</span>
+                    </div>
                 </div>
             </div>
-            
-            <div class="mt-8 flex justify-end gap-3">
-                <button onclick="closeCreateComponentModal()" class="px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">取消</button>
-                <button onclick="submitCreateComponent()" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm transition-colors">下一步</button>
+
+            <div id="create-comp-step-plugin" class="hidden"></div>
+
+            <div class="component-create-footer flex justify-end gap-3" id="create-comp-actions-step-1">
+                <button type="button" onclick="closeCreateComponentModal()" class="component-create-btn px-4 text-gray-600 hover:bg-gray-100">取消</button>
+                <button type="button" onclick="submitCreateComponent()" class="component-create-btn bg-blue-700 px-4 text-white hover:bg-blue-800">下一步</button>
             </div>
+
+            <div class="hidden" id="create-comp-actions-step-plugin"></div>
+        </div>
+    </div>
+
+    <!-- Component Config Modal -->
+    <div id="component-config-modal" class="component-config-modal hidden" role="dialog" aria-modal="true" aria-labelledby="component-config-title">
+        <div class="component-config-dialog">
+            <header class="component-config-header">
+                <h3 id="component-config-title" class="text-base font-semibold text-gray-900">编辑组件</h3>
+                <button type="button" onclick="closeComponentConfigModal()" class="component-config-close inline-flex h-8 w-8 items-center justify-center rounded-md text-gray-400 hover:bg-gray-100 hover:text-gray-600" aria-label="关闭">
+                    <i class="fa-solid fa-times"></i>
+                </button>
+            </header>
+
+            <main class="component-config-body">
+                <section class="component-config-section">
+                    <h4 class="component-config-section-title">基础信息</h4>
+                    <div class="space-y-5">
+                        <div>
+                            <label class="component-config-label" for="component-config-name">组件名称<span class="component-config-required">*</span></label>
+                            <div class="relative">
+                                <input id="component-config-name" type="text" maxlength="50" class="component-config-field pr-16" placeholder="请输入组件名称" oninput="updateComponentConfigCounts()">
+                                <span class="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-500"><span id="component-config-name-count">0</span> / 50</span>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="component-config-label" for="component-config-desc">组件描述<span class="component-config-required">*</span></label>
+                            <div class="relative">
+                                <textarea id="component-config-desc" maxlength="1000" class="component-config-area" placeholder="请输入组件描述" oninput="updateComponentConfigCounts()"></textarea>
+                                <span class="component-config-count"><span id="component-config-desc-count">0</span> / 1000</span>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="component-config-section">
+                    <h4 class="component-config-section-title mb-6">输入信息<span class="component-config-required">*</span></h4>
+                    <div>
+                        <button type="button" class="component-config-subtitle">
+                            <span>系统参数</span>
+                            <i class="fa-solid fa-chevron-down text-xs text-gray-500"></i>
+                        </button>
+                        <div class="component-config-param-wrap">
+                            <div class="component-config-param-table">
+                                <div class="component-config-param-head">
+                                    <div>参数名称</div>
+                                    <div>别名 <i class="fa-regular fa-circle-question"></i><span class="component-config-required">*</span></div>
+                                    <div>参数描述</div>
+                                    <div>类型</div>
+                                    <div>是否必填</div>
+                                    <div>是否可见</div>
+                                    <div>传参方式</div>
+                                    <div>默认值</div>
+                                </div>
+                                <div class="component-config-param-row">
+                                    <input type="text" value="query" disabled>
+                                    <input id="component-config-query-alias" type="text" value="query" aria-label="query 参数别名">
+                                    <input id="component-config-query-desc" type="text" placeholder="请输入参数描述" aria-label="query 参数描述">
+                                    <input type="text" value="String" disabled aria-label="query 参数类型">
+                                    <select id="component-config-query-required" aria-label="query 是否必填">
+                                        <option selected>是</option>
+                                        <option>否</option>
+                                    </select>
+                                    <select id="component-config-query-visible" aria-label="query 是否可见">
+                                        <option selected>是</option>
+                                        <option>否</option>
+                                    </select>
+                                    <select id="component-config-query-transfer" aria-label="query 传参方式">
+                                        <option selected>模型识别</option>
+                                        <option>固定值</option>
+                                        <option>用户输入</option>
+                                    </select>
+                                    <input id="component-config-query-default" type="text" placeholder="输入默认..." aria-label="query 默认值">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="component-config-section border-b-0">
+                    <h4 class="component-config-section-title mb-6">输出信息<span class="component-config-required">*</span></h4>
+                    <div class="component-config-output-head">
+                        <div>参数名称</div>
+                        <div>参数类型</div>
+                    </div>
+                    <div class="component-config-output-grid">
+                        <input type="text" value="output" disabled aria-label="输出参数名称">
+                        <input type="text" value="String" disabled aria-label="输出参数类型">
+                    </div>
+                </section>
+            </main>
+
+            <footer class="component-config-footer">
+                <button type="button" onclick="publishComponentConfig()" class="component-config-btn bg-[#6254f3] text-white hover:bg-[#5144df]">确定发布</button>
+                <button type="button" onclick="closeComponentConfigModal()" class="component-config-btn border border-gray-200 bg-white text-gray-700 hover:bg-gray-50">取消</button>
+            </footer>
         </div>
     </div>
 

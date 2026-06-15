@@ -80,9 +80,55 @@ window.parserData = [
     }
 ];
 
+window.renderParserRetrievalConfig = function() {
+    const container = document.getElementById('parser-retrieval-config');
+    if (!container) return;
+    container.innerHTML = `
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">匹配度阈值</label>
+            <div class="flex items-center gap-4">
+                <input type="range" id="parser-retrieval-threshold" min="0" max="1" step="0.01" value="0.01"
+                       oninput="document.getElementById('parser-retrieval-threshold-val').textContent = this.value"
+                       class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600">
+                <span id="parser-retrieval-threshold-val" class="text-sm text-gray-600 font-mono w-12 text-right">0.01</span>
+            </div>
+        </div>
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">返回结果数量 (Top K)</label>
+            <div class="flex items-center gap-4">
+                <input type="range" id="parser-retrieval-topk" min="1" max="10" step="1" value="3"
+                       oninput="document.getElementById('parser-retrieval-topk-val').textContent = this.value"
+                       class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600">
+                <span id="parser-retrieval-topk-val" class="text-sm text-gray-600 font-mono w-12 text-right">3</span>
+            </div>
+        </div>
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">权重设置</label>
+            <div class="flex items-center gap-4">
+                <span class="text-xs text-gray-500 w-12 text-right">关键字</span>
+                <input type="range" id="parser-retrieval-weight" min="0" max="1" step="0.1" value="0.5"
+                       oninput="document.getElementById('parser-retrieval-weight-val').textContent = this.value"
+                       class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600">
+                <span class="text-xs text-gray-500 w-12">语义</span>
+                <span id="parser-retrieval-weight-val" class="text-sm text-gray-600 font-mono w-12 text-right">0.5</span>
+            </div>
+        </div>
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Rerank 模型</label>
+            <select id="parser-retrieval-rerank-model" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                <option value="Qwen3-Reranker-8B">Qwen3-Reranker-8B</option>
+                <option value="Qwen3-Reranker-4B">Qwen3-Reranker-4B</option>
+                <option value="Qwen3-Reranker-0.6B">Qwen3-Reranker-0.6B</option>
+            </select>
+        </div>
+    `;
+};
+
 window.initParserSettings = function(id) {
     const parser = window.parserData.find(p => p.id === id);
     if (!parser) return;
+    
+    if (window.renderParserRetrievalConfig) window.renderParserRetrievalConfig();
     
     // Fill Basic Info
     const nameEl = document.getElementById('setting-name');
@@ -471,6 +517,7 @@ window.renderParserList = function() {
     if (!tbody) return;
 
     tbody.innerHTML = '';
+    const esc = window.escapeHtml || function (s) { return String(s == null ? '' : s); };
 
     window.parserData.forEach(item => {
         const tr = document.createElement('tr');
@@ -479,22 +526,20 @@ window.renderParserList = function() {
         const formattedCallCount = item.callCount.toLocaleString() + '次';
 
         tr.innerHTML = `
-            <td class="px-6 py-4">
-                <div class="flex items-center gap-3">
-                    <div class="w-8 h-8 rounded-lg ${item.iconBg} ${item.iconColor} flex items-center justify-center">
+            <td class="px-6 py-4 min-w-0">
+                <div class="flex items-center gap-3 min-w-0">
+                    <div class="w-8 h-8 rounded-lg ${item.iconBg} ${item.iconColor} flex items-center justify-center flex-shrink-0">
                         <i class="fa-solid ${item.icon}"></i>
                     </div>
-                    <span class="font-medium text-gray-900">${item.name}</span>
+                    <span class="font-medium text-gray-900 dt-cell-ellipsis min-w-0 flex-1" title="${esc(item.name)}">${esc(item.name)}</span>
                 </div>
             </td>
-            <td class="px-6 py-4">${item.sourceFormat}</td>
-            <td class="px-6 py-4 text-gray-600 font-medium">${formattedCallCount}</td>
-            <td class="px-6 py-4">
-                 <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700">
-                    ${item.knowledgeBase}
-                </span>
+            <td class="px-6 py-4 whitespace-nowrap"><span class="dt-cell-ellipsis" title="${esc(item.sourceFormat)}">${esc(item.sourceFormat)}</span></td>
+            <td class="px-6 py-4 text-gray-600 font-medium whitespace-nowrap">${formattedCallCount}</td>
+            <td class="px-6 py-4 min-w-0">
+                 <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700 max-w-full dt-cell-ellipsis" title="${esc(item.knowledgeBase)}">${esc(item.knowledgeBase)}</span>
             </td>
-            <td class="px-6 py-4 text-right">
+            <td class="px-6 py-4 text-right whitespace-nowrap min-w-[72px]">
                 <button onclick="window.openParserActions(event, '${item.id}')" class="p-1.5 text-gray-400 hover:text-gray-600 transition-colors rounded hover:bg-gray-100">
                     <i class="fa-solid fa-ellipsis"></i>
                 </button>
@@ -502,12 +547,13 @@ window.renderParserList = function() {
         `;
         tbody.appendChild(tr);
     });
+    if (window.syncDataTable) window.syncDataTable('parser-data-table', { storageKey: 'dt-colwidths-parser' });
 };
 
 window.openParserActions = function(event, id) {
     const actions = [
         {
-            label: '设置',
+            label: '编辑',
             icon: 'fa-solid fa-cog',
             onClick: () => {
                 // 跳转至解析器设置界面 (即带 ID 的详情页)

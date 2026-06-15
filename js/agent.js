@@ -350,95 +350,86 @@ function renderAgentList(reset = false) {
         visibleAgents.forEach((agent, index) => {
             const tr = document.createElement('tr');
             tr.className = 'hover:bg-gray-50 transition-colors group';
-            
-            // Calculate global index (optional, but requested "序号")
-            // Since visibleAgents starts from 0 for current view, and we might have pagination logic...
-            // If simple infinite scroll, index + 1 is fine if we render all. 
-            // If paginated by slice, it's relative. 
-            // Current logic slices: visibleAgents = allFiltered.slice(0, visibleCount);
-            // So visibleAgents contains elements from 0 to visibleCount.
-            // The index in forEach is the correct global index (within filtered set).
+            const esc = window.escapeHtml || function (s) { return String(s == null ? '' : s); };
+            const kbArr = Array.isArray(agent.knowledgeBase) ? agent.knowledgeBase : [];
+            const kbTitle = esc(kbArr.join('、') || '-');
+            const kbText = kbArr.length ? kbArr.join('、') : '-';
+            const kbHtml = `<span class="dt-cell-ellipsis text-sm text-gray-500" title="${kbTitle}">${esc(kbText)}</span>`;
             
             tr.innerHTML = `
-                <td class="px-6 py-4">
-                    <div class="flex items-center gap-3">
-                        <div class="w-8 h-8 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center text-xs font-bold">
+                <td class="px-6 py-4 min-w-0">
+                    <div class="flex items-center gap-3 min-w-0">
+                        <div class="w-8 h-8 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center text-xs font-bold flex-shrink-0">
                             AI
                         </div>
-                        <div class="font-medium text-gray-900">${agent.name}</div>
+                        <button type="button" class="font-medium text-gray-900 text-left cursor-pointer hover:text-blue-600 min-w-0 flex-1 dt-cell-ellipsis" title="${esc(agent.name)}" onclick="window.editAgent && window.editAgent('${agent.id}')">
+                            ${esc(agent.name)}
+                        </button>
                     </div>
                 </td>
-                <td class="px-6 py-4">
+                <td class="px-6 py-4 whitespace-nowrap">
                     <button onclick="toggleAgentStatus('${agent.id}')" class="relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${agent.status === 'running' ? 'bg-green-500' : 'bg-gray-200'}">
                         <span class="sr-only">Use setting</span>
                         <span aria-hidden="true" class="pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${agent.status === 'running' ? 'translate-x-4' : 'translate-x-0'}"></span>
                     </button>
-                    <span class="ml-2 text-xs ${agent.status === 'running' ? 'text-green-600' : 'text-gray-500'}">
+                    <span class="ml-2 text-xs ${agent.status === 'running' ? 'text-green-600' : 'text-gray-500'} whitespace-nowrap">
                         ${agent.status === 'running' ? '运行中' : '已停止'}
                     </span>
                 </td>
-                <td class="px-6 py-4">
-                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                        ${agent.model || '未设置'}
-                    </span>
+                <td class="px-6 py-4 min-w-0 whitespace-nowrap">
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 dt-cell-ellipsis max-w-full" title="${esc(agent.model || '未设置')}">${esc(agent.model || '未设置')}</span>
                 </td>
-                <td class="px-6 py-4 text-sm text-gray-500">
-                     ${Array.isArray(agent.knowledgeBase) && agent.knowledgeBase.length > 0 ? agent.knowledgeBase.map(kb => `<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-50 text-blue-700 mr-1">${kb}</span>`).join('') : '-'}
-                </td>
-                <td class="px-6 py-4 text-sm text-gray-500">
-                     <div class="flex items-center gap-2">
-                        <div class="w-5 h-5 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center text-xs">
+                <td class="px-6 py-4 min-w-0">${kbHtml}</td>
+                <td class="px-6 py-4 text-sm text-gray-500 min-w-0 whitespace-nowrap">
+                     <div class="flex items-center gap-2 min-w-0">
+                        <div class="w-5 h-5 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center text-xs flex-shrink-0">
                             <i class="fa-solid fa-user"></i>
                         </div>
-                        ${agent.creator || 'Admin'}
+                        <span class="dt-cell-ellipsis" title="${esc(agent.creator || 'Admin')}">${esc(agent.creator || 'Admin')}</span>
                     </div>
                 </td>
-                <td class="px-6 py-4 text-xs text-gray-500">
-                    ${agent.createdAt || '-'}
+                <td class="px-6 py-4 text-xs text-gray-500 whitespace-nowrap">
+                    ${esc(String(agent.createdAt || '-').replace(/\s+/g, ' '))}
                 </td>
-                <td class="px-6 py-4 text-xs text-gray-500">
-                    ${agent.updatedAt || '-'}
+                <td class="px-6 py-4 text-xs text-gray-500 whitespace-nowrap">
+                    ${esc(String(agent.updatedAt || '-').replace(/\s+/g, ' '))}
                 </td>
-                <td class="px-6 py-4 text-right">
-                    <button onclick="window.openAgentActions(event, '${agent.id}')" class="p-1.5 text-gray-400 hover:text-gray-600 transition-colors rounded hover:bg-gray-100">
-                        <i class="fa-solid fa-ellipsis"></i>
-                    </button>
+                <td class="px-6 py-4 text-right min-w-[120px] action-td">
                 </td>
             `;
             tbody.appendChild(tr);
+
+            // Add inline actions
+            const actionsTd = tr.querySelector('.action-td');
+            const agentName = agent.name;
+            const actions = [
+                {
+                    label: '配置权限',
+                    onClick: () => {
+                        if (window.navigateToPermissionConfig) {
+                            window.navigateToPermissionConfig(agent.id, 'agent', agentName);
+                        } else {
+                            console.error('navigateToPermissionConfig is not defined');
+                        }
+                    }
+                },
+                {
+                    label: '删除',
+                    className: 'text-red-600 hover:text-red-800',
+                    onClick: () => openDeleteConfirm(agent.id)
+                }
+            ];
+            
+            if (window.createInlineActions) {
+                const actionContainer = window.createInlineActions(actions);
+                actionsTd.appendChild(actionContainer);
+            }
         });
     }
+    if (window.syncDataTable) window.syncDataTable('agent-data-table', { storageKey: 'dt-colwidths-agent' });
 }
 
-// Action Menu Handler
-window.openAgentActions = function(event, id) {
-    window.showActionMenu(event, [
-        {
-            label: '权限配置',
-            icon: 'fa-solid fa-user-shield',
-            onClick: () => {
-                const agent = agentsData.find(a => a.id === id);
-                if (window.navigateToPermissionConfig) {
-                    window.navigateToPermissionConfig(id, 'agent', agent ? agent.name : 'Unknown Agent');
-                }
-            }
-        },
-        {
-            label: '编辑',
-            icon: 'fa-solid fa-pen',
-            onClick: () => editAgent(id)
-        },
-        {
-            label: '删除',
-            icon: 'fa-solid fa-trash',
-            className: 'text-red-600 hover:bg-red-50',
-            iconClass: 'text-red-500',
-            onClick: () => openDeleteConfirm(id)
-        }
-    ]);
-}
-
-// Edit Agent (Ensure it's exposed)
+// --- Status Toggle Logic ---
 window.editAgent = function(id) {
     if (typeof switchView === 'function') {
         switchView('agent-editor', { id: id });
@@ -598,10 +589,397 @@ let editorResources = {
     plugin: []
 };
 
-let experienceConfig;
-let themeConfig;
-let agentI18nConfig;
-let agentI18nModalInitialSelectedCount = 0;
+const AGENT_EDITOR_CONFIG_STORAGE_KEY = 'vagent_agent_editor_configs_v1';
+const AGENT_RESOURCE_PICKER_META = {
+    knowledge: { title: '选择知识库', itemLabel: '知识库', icon: 'fa-book-open', iconClass: 'text-blue-600 bg-blue-50' },
+    plugin: { title: '选择插件', itemLabel: '插件', icon: 'fa-puzzle-piece', iconClass: 'text-purple-600 bg-purple-50' },
+    orchestrator: { title: '选择工作流组件', itemLabel: '工作流组件', icon: 'fa-diagram-project', iconClass: 'text-orange-600 bg-orange-50' },
+    agent: { title: '选择智能体组件', itemLabel: '智能体组件', icon: 'fa-robot', iconClass: 'text-indigo-600 bg-indigo-50' }
+};
+let editorResourceSnapshots = {
+    knowledge: {},
+    agent: {},
+    orchestrator: {},
+    mcp: {},
+    plugin: {}
+};
+let agentResourcePickerState = {
+    type: null,
+    selectedIds: new Set(),
+    search: ''
+};
+
+function cloneAgentEditorValue(value) {
+    return JSON.parse(JSON.stringify(value));
+}
+
+function loadStoredAgentEditorConfig(agentId = currentEditorAgentId) {
+    if (!agentId) return null;
+    try {
+        const raw = localStorage.getItem(AGENT_EDITOR_CONFIG_STORAGE_KEY);
+        const store = raw ? JSON.parse(raw) : {};
+        return store[agentId] || null;
+    } catch (e) {
+        return null;
+    }
+}
+
+function persistStoredAgentEditorConfig(config, agentId = currentEditorAgentId) {
+    if (!agentId) return;
+    try {
+        const raw = localStorage.getItem(AGENT_EDITOR_CONFIG_STORAGE_KEY);
+        const store = raw ? JSON.parse(raw) : {};
+        store[agentId] = cloneAgentEditorValue(config);
+        localStorage.setItem(AGENT_EDITOR_CONFIG_STORAGE_KEY, JSON.stringify(store));
+    } catch (e) {
+        console.error('Failed to persist agent editor config', e);
+    }
+}
+
+function getAgentResourceData(type) {
+    if (type === 'knowledge') {
+        if (typeof knowledgeData !== 'undefined' && knowledgeData.length === 0 && typeof generateMockKnowledge === 'function') {
+            knowledgeData = generateMockKnowledge(10);
+        }
+        return typeof knowledgeData !== 'undefined' ? knowledgeData : [];
+    }
+
+    if (type === 'mcp') return typeof mcpData !== 'undefined' ? mcpData : [];
+
+    if (typeof window.getComponentsData === 'function') {
+        const components = window.getComponentsData();
+        const matches = components.filter(item => item.type === type);
+        if (matches.length > 0) return matches;
+    }
+
+    if (type === 'plugin') return typeof pluginData !== 'undefined' ? pluginData : [];
+    if (type === 'agent') return agentsData.filter(item => item.id !== currentEditorAgentId);
+    if (type === 'orchestrator' && typeof orchestratorData !== 'undefined') return orchestratorData;
+    return [];
+}
+
+function findAgentResource(type, id) {
+    const liveItem = getAgentResourceData(type).find(item => String(item.id) === String(id));
+    return liveItem || editorResourceSnapshots[type]?.[id] || { id, name: id, description: '' };
+}
+
+function snapshotAgentResource(type, item) {
+    if (!item || !item.id) return;
+    if (!editorResourceSnapshots[type]) editorResourceSnapshots[type] = {};
+    editorResourceSnapshots[type][item.id] = {
+        id: item.id,
+        name: item.name || item.title || item.id,
+        description: item.description || item.desc || '',
+        type: item.type || type
+    };
+}
+
+function getAgentResourceIcon(type) {
+    return AGENT_RESOURCE_PICKER_META[type] || { icon: 'fa-link', iconClass: 'text-gray-500 bg-gray-50' };
+}
+
+window.openAgentResourcePicker = function(type) {
+    if (!AGENT_RESOURCE_PICKER_META[type]) return;
+    agentResourcePickerState = {
+        type,
+        selectedIds: new Set((editorResources[type] || []).map(String)),
+        search: ''
+    };
+    renderAgentResourcePickerModal();
+}
+
+window.closeAgentResourcePicker = function() {
+    const modal = document.getElementById('agent-resource-picker-modal');
+    if (modal) modal.remove();
+    agentResourcePickerState = { type: null, selectedIds: new Set(), search: '' };
+}
+
+window.filterAgentResourcePicker = function(value) {
+    agentResourcePickerState.search = value || '';
+    renderAgentResourcePickerModal();
+}
+
+window.toggleAgentResourcePickerSelection = function(id) {
+    if (agentResourcePickerState.selectedIds.has(id)) {
+        agentResourcePickerState.selectedIds.delete(id);
+    } else {
+        agentResourcePickerState.selectedIds.add(id);
+    }
+    renderAgentResourcePickerModal();
+}
+
+window.confirmAgentResourcePicker = function() {
+    const type = agentResourcePickerState.type;
+    if (!type) return;
+    const available = getAgentResourceData(type);
+    const selectedIds = Array.from(agentResourcePickerState.selectedIds);
+    editorResources[type] = selectedIds;
+    selectedIds.forEach(id => snapshotAgentResource(type, available.find(item => String(item.id) === String(id)) || findAgentResource(type, id)));
+    window.closeAgentResourcePicker();
+    renderResourceList(type);
+    saveAgentConfig(true);
+}
+
+window.createAgentResourceFromPicker = function() {
+    const type = agentResourcePickerState.type;
+    window.closeAgentResourcePicker();
+    if (type === 'knowledge') {
+        switchView('knowledge');
+        return;
+    }
+    try {
+        sessionStorage.setItem('pendingComponentsFilterType', type);
+        sessionStorage.setItem('pendingCreateComponentType', type);
+    } catch (e) {
+        // ignore
+    }
+    switchView('components');
+}
+
+function renderAgentResourcePickerModal() {
+    const existing = document.getElementById('agent-resource-picker-modal');
+    if (existing) existing.remove();
+    const type = agentResourcePickerState.type;
+    const meta = AGENT_RESOURCE_PICKER_META[type];
+    if (!type || !meta) return;
+
+    const keyword = agentResourcePickerState.search.trim().toLowerCase();
+    const items = getAgentResourceData(type).filter(item => {
+        if (!keyword) return true;
+        return `${item.name || ''} ${item.description || ''} ${item.id || ''}`.toLowerCase().includes(keyword);
+    });
+    const modal = document.createElement('div');
+    modal.id = 'agent-resource-picker-modal';
+    modal.className = 'fixed inset-0 z-[120] flex items-center justify-center bg-gray-900/45';
+    modal.innerHTML = `
+        <div class="w-[680px] max-w-[92vw] h-[620px] max-h-[88vh] flex flex-col overflow-hidden rounded-xl border border-gray-200 bg-white shadow-2xl">
+            <div class="h-16 flex items-center justify-between px-6 border-b border-gray-100">
+                <div>
+                    <h3 class="text-base font-semibold text-gray-900">${meta.title}</h3>
+                    <p class="mt-1 text-xs text-gray-400">支持多选，确认后同步更新当前智能体配置</p>
+                </div>
+                <button type="button" onclick="closeAgentResourcePicker()" class="w-8 h-8 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors" aria-label="关闭">
+                    <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+                </button>
+            </div>
+            <div class="px-6 py-4 flex items-center justify-between gap-4">
+                <label class="relative flex-1">
+                    <span class="sr-only">搜索${meta.itemLabel}</span>
+                    <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-400" aria-hidden="true"></i>
+                    <input type="text" value="${escapeAgentResourceHtml(agentResourcePickerState.search)}" oninput="filterAgentResourcePicker(this.value)" placeholder="搜索${meta.itemLabel}名称" class="w-full rounded-lg border border-gray-200 py-2 pl-9 pr-3 text-sm text-gray-700 placeholder:text-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
+                </label>
+                <button type="button" onclick="createAgentResourceFromPicker()" class="flex items-center gap-2 rounded-lg border border-gray-200 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
+                    <i class="fa-solid fa-plus text-blue-500" aria-hidden="true"></i>
+                    <span>创建${meta.itemLabel}</span>
+                </button>
+            </div>
+            <div class="flex-1 overflow-y-auto px-6 pb-4 space-y-3">
+                ${items.length
+                    ? items.map(item => getAgentResourcePickerItemHTML(type, item)).join('')
+                    : '<div class="h-full flex items-center justify-center text-sm text-gray-400">暂无匹配资源</div>'}
+            </div>
+            <div class="h-16 flex items-center justify-between px-6 border-t border-gray-100 bg-gray-50/70">
+                <div class="text-xs text-gray-400">已选择 <span class="font-medium text-blue-600">${agentResourcePickerState.selectedIds.size}</span> 项</div>
+                <div class="flex items-center gap-2">
+                    <button type="button" onclick="closeAgentResourcePicker()" class="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm text-gray-600 hover:bg-gray-50 transition-colors">取消</button>
+                    <button type="button" onclick="confirmAgentResourcePicker()" class="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 transition-colors">确定</button>
+                </div>
+            </div>
+        </div>
+    `;
+    modal.addEventListener('click', event => {
+        if (event.target === modal) window.closeAgentResourcePicker();
+    });
+    document.body.appendChild(modal);
+
+    const searchInput = modal.querySelector('input[type="text"]');
+    if (searchInput && agentResourcePickerState.search) {
+        searchInput.focus();
+        searchInput.setSelectionRange(searchInput.value.length, searchInput.value.length);
+    }
+}
+
+function getAgentResourcePickerItemHTML(type, item) {
+    const meta = getAgentResourceIcon(type);
+    const id = String(item.id);
+    const selected = agentResourcePickerState.selectedIds.has(id);
+    return `
+        <button type="button" data-resource-id="${escapeAgentResourceHtml(id)}" onclick="toggleAgentResourcePickerSelection(this.dataset.resourceId)" class="w-full flex items-center gap-3 rounded-lg border ${selected ? 'border-blue-400 bg-blue-50/50' : 'border-gray-200 bg-white hover:border-blue-200'} px-4 py-4 text-left transition-colors">
+            <span class="w-4 h-4 flex items-center justify-center rounded border ${selected ? 'border-blue-600 bg-blue-600 text-white' : 'border-gray-300 bg-white text-transparent'}">
+                <i class="fa-solid fa-check text-[10px]" aria-hidden="true"></i>
+            </span>
+            <span class="w-10 h-10 rounded-lg flex items-center justify-center ${meta.iconClass}">
+                <i class="fa-solid ${meta.icon}" aria-hidden="true"></i>
+            </span>
+            <span class="min-w-0 flex-1">
+                <span class="block truncate text-sm font-medium text-gray-800">${escapeAgentResourceHtml(item.name || item.id)}</span>
+                <span class="mt-1 block truncate text-xs text-gray-400">${escapeAgentResourceHtml(item.description || item.id || '')}</span>
+            </span>
+            <span class="text-xs ${selected ? 'text-blue-600' : 'text-gray-400'}">${selected ? '已选择' : '可选择'}</span>
+        </button>
+    `;
+}
+
+function escapeAgentResourceHtml(value) {
+    return String(value == null ? '' : value)
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#39;');
+}
+
+function getAgentSourceRefUtils() {
+    if (window.SourceReferenceUtils) return window.SourceReferenceUtils;
+    return {
+        escapeHtml: escapeAgentResourceHtml,
+        getSourceSummary(content, limit = 50) {
+            const text = String(content == null ? '' : content).replace(/\s+/g, ' ').trim();
+            return text.length > limit ? text.slice(0, limit) + '\u2026' : text;
+        },
+        normalizeSourceReference(source) {
+            const input = source && typeof source === 'object' ? source : {};
+            const range = Array.isArray(input.source_range) ? input.source_range : input.sourceRange;
+            return {
+                document_id: String(input.document_id || input.documentId || input.id || ''),
+                document_name: String(input.document_name || input.documentName || input.title || input.name || ''),
+                chunk_id: String(input.chunk_id || input.chunkId || ''),
+                chunk_content: String(input.chunk_content || input.chunkContent || input.content || input.summary || ''),
+                source_range: Array.isArray(range) && range.length >= 2 ? [Number(range[0]), Number(range[1])] : null,
+                kb_id: input.kb_id || input.kbId || ''
+            };
+        },
+        fileIconClass(documentName) {
+            const ext = String(documentName || '').split('.').pop().toLowerCase();
+            if (ext === 'pdf') return 'fa-file-pdf';
+            if (['doc', 'docx'].includes(ext)) return 'fa-file-word';
+            if (['xls', 'xlsx', 'csv'].includes(ext)) return 'fa-file-excel';
+            return 'fa-file-lines';
+        }
+    };
+}
+
+function getAgentPreviewSourceReferences() {
+    const kbId = editorResources.knowledge && editorResources.knowledge[0] ? editorResources.knowledge[0] : '';
+    return [
+        {
+            kb_id: kbId,
+            document_id: 'DOC-EXPENSE-001',
+            document_name: '员工报销制度.pdf',
+            chunk_id: 'chunk-expense-001',
+            chunk_content: '差旅报销需在出差结束后 7 个工作日内提交报销申请，逾期需补充说明并由直属负责人确认后再进入财务审核。',
+            source_range: [1024, 1156]
+        },
+        {
+            kb_id: kbId,
+            document_id: 'DOC-EXPENSE-001',
+            document_name: '员工报销制度.pdf',
+            chunk_id: 'chunk-expense-002',
+            chunk_content: '住宿费、交通费和市内通勤费用需分别上传有效票据，系统会按费用类型进入对应的审批节点。',
+            source_range: [2048, 2160]
+        },
+        {
+            kb_id: kbId,
+            document_id: 'DOC-ATTENDANCE-2026',
+            document_name: '员工考勤与加班管理办法.docx',
+            chunk_id: 'chunk-overtime-003',
+            chunk_content: '工作日加班原则上优先安排调休，确需折算加班费时应以审批通过的加班申请和考勤记录作为依据。',
+            source_range: [512, 638]
+        }
+    ];
+}
+
+function hasAgentKnowledgeResources() {
+    return Array.isArray(editorResources.knowledge) && editorResources.knowledge.length > 0;
+}
+
+function groupAgentSourceRefsByDocument(refs) {
+    const groups = [];
+    const indexByDoc = new Map();
+    (Array.isArray(refs) ? refs : []).forEach(ref => {
+        if (!ref || !ref.document_id) return;
+        const key = ref.document_id;
+        if (!indexByDoc.has(key)) {
+            indexByDoc.set(key, groups.length);
+            groups.push({
+                document_id: ref.document_id,
+                document_name: ref.document_name || ref.document_id,
+                primary: ref,
+                sources: []
+            });
+        }
+        groups[indexByDoc.get(key)].sources.push(ref);
+    });
+    return groups;
+}
+
+function renderAgentPreviewKnowledgeSources() {
+    const sourceEl = document.getElementById('preview-knowledge-source');
+    if (!sourceEl) return;
+
+    const enabled = !!agentReferenceSourceConfig.enabled;
+    if (!enabled || !hasAgentKnowledgeResources()) {
+        sourceEl.classList.add('hidden');
+        sourceEl.innerHTML = '';
+        return;
+    }
+
+    const utils = getAgentSourceRefUtils();
+    const refs = getAgentPreviewSourceReferences()
+        .map(item => ({
+            ...(item && typeof item === 'object' ? item : {}),
+            ...utils.normalizeSourceReference(item)
+        }))
+        .filter(ref => ref.document_id && (ref.chunk_id || ref.source_range || ref.chunk_content));
+    const docGroups = groupAgentSourceRefsByDocument(refs);
+
+    if (!docGroups.length) {
+        sourceEl.classList.add('hidden');
+        sourceEl.innerHTML = '';
+        return;
+    }
+
+    sourceEl.classList.remove('hidden');
+    sourceEl.innerHTML = `
+        <div class="font-medium text-gray-600 mb-2">引用来源(${docGroups.length})</div>
+        <div class="space-y-1.5">
+            ${docGroups.map((group, index) => {
+                const docName = group.document_name || group.document_id;
+                return `
+                    <button type="button" class="agent-preview-source-link w-full flex items-start gap-2 rounded-md border border-blue-100 bg-white px-2 py-1.5 text-left text-blue-600 hover:bg-blue-50 hover:border-blue-200 transition-colors" data-source-index="${index}">
+                        <i class="fa-solid ${utils.fileIconClass(docName)} text-blue-500 mt-0.5"></i>
+                        <span class="min-w-0 flex-1 leading-5">
+                            <span class="font-medium">${index + 1}. 《${utils.escapeHtml(docName)}》</span>
+                        </span>
+                    </button>
+                `;
+            }).join('')}
+        </div>
+    `;
+
+    sourceEl.querySelectorAll('.agent-preview-source-link').forEach(button => {
+        button.addEventListener('click', () => {
+            const index = Number(button.dataset.sourceIndex);
+            const group = docGroups[index];
+            if (!group) return;
+            if (typeof window.openKnowledgeSourcePreview === 'function') {
+                window.openKnowledgeSourcePreview(group.primary, refs);
+            } else if (typeof window.openKnowledgeSource === 'function') {
+                window.openKnowledgeSource(group.primary);
+            }
+        });
+    });
+}
+
+function syncAgentReferenceSourceToggles(enabled) {
+    const next = !!enabled;
+    agentReferenceSourceConfig.enabled = next;
+    const knowledgeToggle = document.getElementById('show-knowledge-source');
+    const referenceToggle = document.getElementById('agent-reference-source-toggle');
+    if (knowledgeToggle) knowledgeToggle.checked = next;
+    if (referenceToggle) referenceToggle.checked = next;
+    renderAgentPreviewKnowledgeSources();
+}
 
 function loadResources() {
     // Check and load Knowledge Data
@@ -671,6 +1049,7 @@ function addResource(type) {
     if (!editorResources[type].includes(id)) {
         editorResources[type].push(id);
         renderResourceList(type);
+        saveAgentConfig(true);
     }
     
     // Reset select
@@ -678,8 +1057,9 @@ function addResource(type) {
 }
 
 function removeResource(type, id) {
-    editorResources[type] = editorResources[type].filter(item => item !== id);
+    editorResources[type] = editorResources[type].filter(item => String(item) !== String(id));
     renderResourceList(type);
+    saveAgentConfig(true);
 }
 
 function renderResourceList(type) {
@@ -689,24 +1069,19 @@ function renderResourceList(type) {
     container.innerHTML = '';
     
     editorResources[type].forEach(id => {
-        let name = id;
-        let data = [];
-        
-        if (type === 'knowledge' && typeof knowledgeData !== 'undefined') data = knowledgeData;
-        else if (type === 'agent') data = agentsData;
-        else if (type === 'orchestrator' && typeof orchestratorData !== 'undefined') data = orchestratorData;
-        else if (type === 'mcp' && typeof mcpData !== 'undefined') data = mcpData;
-        else if (type === 'plugin' && typeof pluginData !== 'undefined') data = pluginData;
-        
-        const item = data.find(x => x.id === id);
-        if (item) name = item.name;
+        const item = findAgentResource(type, id);
+        const name = item.name || id;
+        snapshotAgentResource(type, item);
+        const iconMeta = getAgentResourceIcon(type);
         
         const div = document.createElement('div');
         div.className = 'flex items-center justify-between p-2 bg-white rounded-md border border-gray-200 text-xs shadow-sm group hover:border-blue-300 transition-all';
         div.innerHTML = `
             <span class="text-gray-700 truncate mr-2 flex-1 flex items-center gap-2">
-                <i class="fa-solid fa-link text-gray-300 text-[10px]"></i>
-                ${name}
+                <span class="w-6 h-6 rounded flex items-center justify-center ${iconMeta.iconClass}">
+                    <i class="fa-solid ${iconMeta.icon} text-[10px]"></i>
+                </span>
+                <span class="truncate">${escapeAgentResourceHtml(name)}</span>
             </span>
             <button onclick="removeResource('${type}', '${id}')" class="text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity">
                 <i class="fa-solid fa-times"></i>
@@ -714,6 +1089,19 @@ function renderResourceList(type) {
         `;
         container.appendChild(div);
     });
+
+    if (editorResources[type].length === 0 && AGENT_RESOURCE_PICKER_META[type]) {
+        const empty = document.createElement('button');
+        empty.type = 'button';
+        empty.className = 'w-full rounded-lg border border-dashed border-gray-200 px-3 py-4 text-xs text-gray-400 hover:border-blue-300 hover:bg-blue-50 hover:text-blue-600 transition-colors';
+        empty.onclick = () => window.openAgentResourcePicker(type);
+        empty.innerHTML = `<i class="fa-solid fa-plus mr-1"></i>添加${AGENT_RESOURCE_PICKER_META[type].itemLabel}`;
+        container.appendChild(empty);
+    }
+
+    if (type === 'knowledge') {
+        renderAgentPreviewKnowledgeSources();
+    }
 }
 
 function saveAgentConfig(silent = false) {
@@ -723,37 +1111,82 @@ function saveAgentConfig(silent = false) {
     const promptInput = document.getElementById('agent-prompt');
     const contextMemoryInput = document.getElementById('agent-context-memory');
     
+    let existingAgent = currentEditorAgentId ? agentsData.find(a => a.id === currentEditorAgentId) : null;
+    const storedConfig = loadStoredAgentEditorConfig();
+    const nameDisplay = document.getElementById('agent-name-display');
+    const descDisplay = document.getElementById('agent-desc-display');
     const config = {
-        name: nameInput ? nameInput.value : '',
-        model: modelInput ? modelInput.value : '',
-        prompt: promptInput ? promptInput.value : '',
-        contextMemory: contextMemoryInput ? parseInt(contextMemoryInput.value) : 10,
+        name: nameInput ? nameInput.value : (existingAgent?.name || storedConfig?.name || nameDisplay?.textContent || ''),
+        description: nameInput?.dataset?.description || descDisplay?.textContent || existingAgent?.description || storedConfig?.description || '',
+        model: modelInput ? modelInput.value : (existingAgent?.model || storedConfig?.model || 'GPT-4o'),
+        prompt: promptInput ? promptInput.value : (existingAgent?.prompt || storedConfig?.prompt || ''),
+        contextMemory: contextMemoryInput ? parseInt(contextMemoryInput.value) : (storedConfig?.contextMemory || 10),
         knowledge: [...editorResources.knowledge],
         relatedAgents: [...editorResources.agent],
-        orchestrators: [...editorResources.orchestrator]
+        orchestrators: [...editorResources.orchestrator],
+        mcp: [...editorResources.mcp],
+        plugins: [...editorResources.plugin],
+        resourceSnapshots: cloneAgentEditorValue(editorResourceSnapshots),
+        showKnowledgeSource: !!agentReferenceSourceConfig.enabled,
+        referenceSource: cloneAgentEditorValue(agentReferenceSourceConfig),
+        capabilities: {
+            uploadAttachment: !!document.getElementById('agent-upload-attachment-toggle')?.checked,
+            dataInterpretation: !!document.getElementById('agent-data-interpretation-toggle')?.checked,
+            ignoreContext: !!document.getElementById('agent-ignore-context-toggle')?.checked
+        },
+        experience: cloneAgentEditorValue(experienceConfig),
+        theme: cloneAgentEditorValue(themeConfig),
+        i18nCustom: cloneAgentEditorValue(agentI18nCustomConfig)
     };
 
     if (currentEditorAgentId) {
+        if (!existingAgent) {
+            existingAgent = {
+                id: currentEditorAgentId,
+                name: config.name || '未命名智能体',
+                description: config.description || '',
+                model: config.model || 'GPT-4o',
+                status: 'running',
+                creator: 'Admin',
+                createdAt: new Date().toLocaleString(),
+                timestamp: Date.now(),
+                hot: 0
+            };
+            agentsData.unshift(existingAgent);
+        }
+
         // Update existing agent
-        const agent = agentsData.find(a => a.id === currentEditorAgentId);
+        const agent = existingAgent;
         if (agent) {
             agent.name = config.name;
+            agent.description = config.description;
             agent.model = config.model;
             agent.prompt = config.prompt;
             agent.contextMemory = config.contextMemory;
             agent.knowledge = config.knowledge;
             agent.relatedAgents = config.relatedAgents;
             agent.orchestrators = config.orchestrators;
+            agent.mcp = config.mcp;
+            agent.plugins = config.plugins;
+            agent.resourceSnapshots = config.resourceSnapshots;
+            agent.showKnowledgeSource = config.showKnowledgeSource;
+            agent.referenceSource = config.referenceSource;
+            agent.capabilities = config.capabilities;
             agent.updatedAt = new Date().toLocaleString();
             agent.timestamp = Date.now();
-            agent.experience = JSON.parse(JSON.stringify(experienceConfig));
-            agent.i18n = JSON.parse(JSON.stringify(agentI18nConfig));
+            
+            // Save experience config
+            agent.experience = config.experience;
+            agent.theme = config.theme;
+            agent.i18nCustom = config.i18nCustom;
         }
     } else {
         // Create new (if not already created via modal? Logic is user creates via modal then edits)
         // But if we are here, we might be editing a draft?
         // For now assume agent exists.
     }
+
+    persistStoredAgentEditorConfig(config);
 
     if (!silent) {
         showToast('配置已保存');
@@ -765,6 +1198,7 @@ function initAgentEditor(params) {
     console.log('Initializing Agent Editor', params);
     
     currentEditorAgentId = params && params.id ? params.id : null;
+    const storedConfig = loadStoredAgentEditorConfig(currentEditorAgentId);
     
     // Reset Resources
     editorResources = {
@@ -774,6 +1208,13 @@ function initAgentEditor(params) {
         mcp: [],
         plugin: []
     };
+    editorResourceSnapshots = cloneAgentEditorValue(storedConfig?.resourceSnapshots || {
+        knowledge: {},
+        agent: {},
+        orchestrator: {},
+        mcp: {},
+        plugin: {}
+    });
     
     // Load Data if editing
     if (currentEditorAgentId) {
@@ -796,9 +1237,15 @@ function initAgentEditor(params) {
             if (agent.relatedAgents) editorResources.agent = [...agent.relatedAgents];
             if (agent.orchestrators) editorResources.orchestrator = [...agent.orchestrators];
             
+            // Init Experience Config
             initExperienceConfig(agent);
             initThemeConfig(agent);
-            initAgentI18nConfig(agent);
+
+            if (agent.i18nCustom) {
+                agentI18nCustomConfig = JSON.parse(JSON.stringify(agent.i18nCustom));
+            } else {
+                agentI18nCustomConfig = {};
+            }
 
             // Update Header Info
             const nameDisplay = document.getElementById('agent-name-display');
@@ -834,15 +1281,72 @@ function initAgentEditor(params) {
         
         initExperienceConfig(null);
         initThemeConfig(null);
-        initAgentI18nConfig(null);
     }
-    
+
+    const liveAgentForEditor = currentEditorAgentId ? agentsData.find(a => a.id == currentEditorAgentId) : null;
+    const editorConfig = storedConfig || liveAgentForEditor;
+    if (editorConfig) {
+        const nameInput = document.getElementById('agent-name');
+        const modelInput = document.getElementById('agent-model');
+        const promptInput = document.getElementById('agent-prompt');
+        const contextMemoryInput = document.getElementById('agent-context-memory');
+        const editorTitle = document.getElementById('editor-title');
+        const nameDisplay = document.getElementById('agent-name-display');
+        const descDisplay = document.getElementById('agent-desc-display');
+        const avatarDisplay = document.getElementById('agent-avatar-display') || document.getElementById('editor-agent-avatar');
+        const showKnowledgeSourceInput = document.getElementById('show-knowledge-source');
+        const uploadAttachmentInput = document.getElementById('agent-upload-attachment-toggle');
+        const dataInterpretationInput = document.getElementById('agent-data-interpretation-toggle');
+        const ignoreContextInput = document.getElementById('agent-ignore-context-toggle');
+
+        const displayName = editorConfig.name || '未命名智能体';
+        const displayDesc = editorConfig.description || '暂无描述';
+        if (nameInput) {
+            nameInput.value = displayName;
+            nameInput.dataset.description = displayDesc;
+        }
+        if (modelInput && editorConfig.model) modelInput.value = editorConfig.model;
+        if (promptInput) promptInput.value = editorConfig.prompt || editorConfig.description || '';
+        if (contextMemoryInput) contextMemoryInput.value = editorConfig.contextMemory !== undefined ? editorConfig.contextMemory : 10;
+        if (editorTitle) editorTitle.textContent = `编辑智能体 ${displayName}`;
+        if (nameDisplay) nameDisplay.textContent = displayName;
+        if (descDisplay) descDisplay.textContent = displayDesc;
+        if (avatarDisplay) {
+            avatarDisplay.innerHTML = editorConfig.avatar
+                ? `<img src="${editorConfig.avatar}" class="w-full h-full object-cover rounded-xl">`
+                : '<i class="fa-solid fa-robot"></i>';
+        }
+        if (showKnowledgeSourceInput) showKnowledgeSourceInput.checked = !!editorConfig.showKnowledgeSource;
+        if (uploadAttachmentInput) uploadAttachmentInput.checked = !!editorConfig.capabilities?.uploadAttachment;
+        if (dataInterpretationInput) dataInterpretationInput.checked = !!editorConfig.capabilities?.dataInterpretation;
+        if (ignoreContextInput) ignoreContextInput.checked = !!editorConfig.capabilities?.ignoreContext;
+
+        editorResources.knowledge = [...(editorConfig.knowledge || editorConfig.knowledgeBase || [])];
+        editorResources.agent = [...(editorConfig.relatedAgents || [])];
+        editorResources.orchestrator = [...(editorConfig.orchestrators || [])];
+        editorResources.mcp = [...(editorConfig.mcp || [])];
+        editorResources.plugin = [...(editorConfig.plugins || [])];
+        editorResourceSnapshots = cloneAgentEditorValue(editorConfig.resourceSnapshots || editorResourceSnapshots);
+
+        initExperienceConfig(editorConfig);
+        initThemeConfig(editorConfig);
+        agentI18nCustomConfig = cloneAgentEditorValue(editorConfig.i18nCustom || {});
+    } else if (currentEditorAgentId) {
+        initExperienceConfig(null);
+        initThemeConfig(null);
+        agentI18nCustomConfig = {};
+    }
+
     loadResources();
     renderResourceList('knowledge');
     renderResourceList('agent');
     renderResourceList('orchestrator');
     renderResourceList('mcp');
     renderResourceList('plugin');
+    const referenceSourceEnabled = editorConfig
+        ? !!(editorConfig.referenceSource?.enabled ?? editorConfig.showKnowledgeSource)
+        : false;
+    syncAgentReferenceSourceToggles(referenceSourceEnabled);
     
     // Init Tabs
     // Default to 'config' tab
@@ -855,7 +1359,7 @@ function initAgentEditor(params) {
 }
 
 function switchEditorTab(tabName) {
-    const tabs = ['config', 'publish', 'logs', 'analytics'];
+    const tabs = ['config', 'publish', 'logs', 'analytics', 'statistics'];
     
     tabs.forEach(t => {
         const btn = document.getElementById(`tab-btn-${t}`);
@@ -875,6 +1379,10 @@ function switchEditorTab(tabName) {
                 if (t === 'analytics' && window.renderAnalytics) {
                     // Delay slightly to ensure container is visible for size calculation
                     setTimeout(() => window.renderAnalytics(), 50);
+                }
+                // Special handling for statistics tab
+                if (t === 'statistics' && window.renderStatistics) {
+                    window.renderStatistics();
                 }
             }
         } else {
@@ -1156,6 +1664,8 @@ function renderLogList(reset = false) {
         }
     }
 
+    persistStoredAgentEditorConfig(config);
+
     const tbody = document.getElementById('logs-list-body');
     const emptyState = document.getElementById('logs-list-empty');
     if (!tbody) return;
@@ -1177,6 +1687,9 @@ function renderLogList(reset = false) {
     } else {
         if (emptyState) emptyState.classList.add('hidden');
         
+        const esc = window.escapeHtml || function (s) { return String(s == null ? '' : s); };
+        const idJson = (id) => JSON.stringify(id);
+
         filtered.forEach(log => {
             const tr = document.createElement('tr');
             tr.className = 'hover:bg-gray-50 transition-colors cursor-pointer';
@@ -1185,66 +1698,48 @@ function renderLogList(reset = false) {
                 if (e.target.closest('button')) return;
                 openLogDetailModal(log.id);
             };
-            
-            const statusClass = log.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800';
-            const statusText = log.status === 'active' ? '进行中' : '已结束';
 
             tr.innerHTML = `
                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-blue-600 font-mono">
-                    ${log.id}
+                    ${esc(log.id)}
                 </td>
-                <td class="px-6 py-4 text-sm text-gray-900 max-w-xs truncate" title="${log.topic}">
-                    ${log.topic}
+                <td class="px-6 py-4 text-sm text-gray-900 min-w-0 max-w-xs">
+                    <span class="dt-cell-ellipsis" title="${esc(log.topic)}">${esc(log.topic)}</span>
                 </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    <div class="flex items-center gap-2">
-                        <div class="w-6 h-6 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center text-xs">
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 min-w-0">
+                    <div class="flex items-center gap-2 min-w-0">
+                        <div class="w-6 h-6 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center text-xs flex-shrink-0">
                             <i class="fa-solid fa-user"></i>
                         </div>
-                        ${log.user}
+                        <span class="dt-cell-ellipsis" title="${esc(log.user)}">${esc(log.user)}</span>
                     </div>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 font-mono">
-                    ${log.userId}
+                    ${esc(log.userId)}
                 </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs bg-gray-100 text-gray-700">
-                        ${log.department || '无部门'}
-                    </span>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 min-w-0">
+                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs bg-gray-100 text-gray-700 dt-cell-ellipsis max-w-full" title="${esc(log.department || '无部门')}">${esc(log.department || '无部门')}</span>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     <span class="inline-flex items-center px-2 py-0.5 rounded text-xs ${log.platform === 'WEB' ? 'bg-blue-50 text-blue-700 border border-blue-100' : 'bg-purple-50 text-purple-700 border border-purple-100'}">
-                        ${log.platform || 'WEB'}
+                        ${esc(log.platform || 'WEB')}
                     </span>
                 </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    ${log.createdAt}
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    ${log.updatedAt}
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    ${log.messageCount}
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    ${(log.copyCount || 0).toLocaleString()}
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    ${(log.regenerateCount || 0).toLocaleString()}
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    ${(log.translateCount || 0).toLocaleString()}
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    ${(log.summarizeCount || 0).toLocaleString()}
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <button onclick="openLogDetailModal('${log.id}')" class="text-blue-600 hover:text-blue-900">查看</button>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${esc(String(log.createdAt).replace(/\s+/g, ' '))}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${esc(String(log.updatedAt).replace(/\s+/g, ' '))}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${log.messageCount}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${(log.copyCount || 0).toLocaleString()}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${(log.regenerateCount || 0).toLocaleString()}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${(log.translateCount || 0).toLocaleString()}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${(log.summarizeCount || 0).toLocaleString()}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium min-w-[72px]">
+                    <button onclick="event.stopPropagation();openLogDetailModal(${idJson(log.id)})" class="text-blue-600 hover:text-blue-900">查看</button>
                 </td>
             `;
             tbody.appendChild(tr);
         });
     }
+    if (window.syncDataTable) window.syncDataTable('agent-logs-data-table', { storageKey: 'dt-colwidths-agent-logs' });
 }
 
 function openLogDetailModal(logId) {
@@ -1307,7 +1802,6 @@ function openLogDetailModal(logId) {
 }
 
 // Expose functions
-window.renderLogList = renderLogList;
 window.openLogDetailModal = openLogDetailModal;
 
 // --- Edit Agent Info (Name & Desc & Avatar) ---
@@ -1498,7 +1992,11 @@ function publishAgent() {
         return;
     }
     
-    const agent = agentsData.find(a => a.id === currentEditorAgentId);
+    let agent = agentsData.find(a => a.id === currentEditorAgentId);
+    if (!agent) {
+        saveAgentConfig(true);
+        agent = agentsData.find(a => a.id === currentEditorAgentId);
+    }
     if (!agent) return;
 
     // Capture current config
@@ -1512,7 +2010,20 @@ function publishAgent() {
         prompt: promptInput ? promptInput.value : agent.prompt,
         knowledge: [...editorResources.knowledge],
         relatedAgents: [...editorResources.agent],
-        orchestrators: [...editorResources.orchestrator]
+        orchestrators: [...editorResources.orchestrator],
+        mcp: [...editorResources.mcp],
+        plugins: [...editorResources.plugin],
+        resourceSnapshots: cloneAgentEditorValue(editorResourceSnapshots),
+        showKnowledgeSource: !!agentReferenceSourceConfig.enabled,
+        referenceSource: cloneAgentEditorValue(agentReferenceSourceConfig),
+        capabilities: {
+            uploadAttachment: !!document.getElementById('agent-upload-attachment-toggle')?.checked,
+            dataInterpretation: !!document.getElementById('agent-data-interpretation-toggle')?.checked,
+            ignoreContext: !!document.getElementById('agent-ignore-context-toggle')?.checked
+        },
+        experience: cloneAgentEditorValue(experienceConfig),
+        theme: cloneAgentEditorValue(themeConfig),
+        i18nCustom: cloneAgentEditorValue(agentI18nCustomConfig)
     };
 
     // Update agent current config
@@ -1522,8 +2033,18 @@ function publishAgent() {
     agent.knowledge = config.knowledge;
     agent.relatedAgents = config.relatedAgents;
     agent.orchestrators = config.orchestrators;
+    agent.mcp = config.mcp;
+    agent.plugins = config.plugins;
+    agent.resourceSnapshots = config.resourceSnapshots;
+    agent.showKnowledgeSource = config.showKnowledgeSource;
+    agent.referenceSource = config.referenceSource;
+    agent.capabilities = config.capabilities;
+    agent.experience = config.experience;
+    agent.theme = config.theme;
+    agent.i18nCustom = config.i18nCustom;
     agent.updatedAt = new Date().toLocaleString();
     agent.timestamp = Date.now();
+    persistStoredAgentEditorConfig(config);
 
     // Create version
     if (!agent.versions) agent.versions = [];
@@ -1554,8 +2075,15 @@ function confirmPublish() {
 }
 
 // --- Permission Management (Removed) ---
-
+//
 // --- Experience Configuration Logic ---
+let experienceConfig = {
+    welcomeMsg: '',
+    welcomeQuestions: { enabled: false, list: [] },
+    responseQuestions: { enabled: false, list: [] },
+    feedback: { enabled: false, mandatory: false, custom: false, options: ['内容不准确', '答非所问', '逻辑混乱'] },
+    translation: { enabled: false, targetLang: 'en' }
+};
 
 function initExperienceConfig(agent) {
     // Default Config
@@ -1677,254 +2205,6 @@ function initThemeConfig(agent) {
     toggleThemeFeature('background', false);
 }
 
-function getAgentI18nLanguages() {
-    return [
-        { code: 'zh', label: '中文 (Chinese)' },
-        { code: 'en', label: '英语 (English)' },
-        { code: 'ja', label: '日语 (Japanese)' },
-        { code: 'ko', label: '韩语 (Korean)' },
-        { code: 'fr', label: '法语 (French)' },
-        { code: 'de', label: '德语 (German)' },
-        { code: 'es', label: '西班牙语 (Spanish)' }
-    ];
-}
-
-function initAgentI18nConfig(agent) {
-    agentI18nConfig = {
-        enabled: false,
-        languages: [],
-        customInfo: {}
-    };
-    if (agent && agent.i18n) {
-        if (typeof agent.i18n.enabled === 'boolean') agentI18nConfig.enabled = agent.i18n.enabled;
-        if (Array.isArray(agent.i18n.languages)) agentI18nConfig.languages = [...agent.i18n.languages];
-        if (agent.i18n.customInfo && typeof agent.i18n.customInfo === 'object') {
-            agentI18nConfig.customInfo = JSON.parse(JSON.stringify(agent.i18n.customInfo));
-        }
-    }
-    if (!Array.isArray(agentI18nConfig.languages) || !agentI18nConfig.languages.length) {
-        agentI18nConfig.languages = ['zh'];
-    } else if (!agentI18nConfig.languages.includes('zh')) {
-        agentI18nConfig.languages = ['zh', ...agentI18nConfig.languages];
-    }
-    const switchEl = document.getElementById('agent-i18n-switch');
-    const displayEl = document.getElementById('agent-i18n-display');
-    if (switchEl) switchEl.checked = !!agentI18nConfig.enabled;
-    if (displayEl) {
-        if (agentI18nConfig.enabled) displayEl.classList.remove('hidden');
-        else displayEl.classList.add('hidden');
-    }
-    updateAgentI18nSelectedLanguagesUI();
-}
-
-function updateAgentI18nSelectedLanguagesUI() {
-    const container = document.getElementById('agent-i18n-selected-languages');
-    if (!container) return;
-    container.innerHTML = '';
-    const langs = agentI18nConfig && Array.isArray(agentI18nConfig.languages) ? agentI18nConfig.languages : [];
-    if (!langs.length) {
-        const span = document.createElement('span');
-        span.className = 'text-gray-400';
-        span.textContent = '暂无选中语言';
-        container.appendChild(span);
-        return;
-    }
-    const all = getAgentI18nLanguages();
-    langs.forEach(code => {
-        const meta = all.find(l => l.code === code);
-        const label = meta ? meta.label : code;
-        const span = document.createElement('span');
-        span.className = 'px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-100';
-        span.textContent = label;
-        container.appendChild(span);
-    });
-}
-
-function toggleAgentI18n() {
-    const switchEl = document.getElementById('agent-i18n-switch');
-    const displayEl = document.getElementById('agent-i18n-display');
-    const enabled = switchEl && switchEl.checked;
-    if (!agentI18nConfig) {
-        agentI18nConfig = { enabled: false, languages: [], customInfo: {} };
-    }
-    agentI18nConfig.enabled = !!enabled;
-    if (displayEl) {
-        if (enabled) displayEl.classList.remove('hidden');
-        else displayEl.classList.add('hidden');
-    }
-    if (enabled && (!agentI18nConfig.languages || !agentI18nConfig.languages.length)) {
-        openAgentI18nLanguagesModal();
-    }
-    saveAgentConfig(true);
-}
-
-function openAgentI18nLanguagesModal() {
-    const langs = agentI18nConfig && Array.isArray(agentI18nConfig.languages) ? agentI18nConfig.languages : [];
-    agentI18nModalInitialSelectedCount = langs.filter(code => code !== 'zh').length;
-    const searchInput = document.getElementById('agent-i18n-search');
-    if (searchInput) {
-        searchInput.value = '';
-        searchInput.oninput = function (e) {
-            renderAgentI18nLanguageList(e.target.value);
-        };
-    }
-    renderAgentI18nLanguageList('');
-    openModal('agent-i18n-modal');
-}
-
-function cancelAgentI18nSelection() {
-    if (!agentI18nConfig) {
-        closeModal('agent-i18n-modal');
-        return;
-    }
-    if (agentI18nModalInitialSelectedCount === 0) {
-        const switchEl = document.getElementById('agent-i18n-switch');
-        const displayEl = document.getElementById('agent-i18n-display');
-        if (switchEl) switchEl.checked = false;
-        agentI18nConfig.enabled = false;
-        if (displayEl) displayEl.classList.add('hidden');
-        saveAgentConfig(true);
-    }
-    closeModal('agent-i18n-modal');
-}
-
-function openAgentI18nModalFromDisplay() {
-    const switchEl = document.getElementById('agent-i18n-switch');
-    if (switchEl && !switchEl.checked) {
-        switchEl.checked = true;
-        toggleAgentI18n();
-    }
-    openAgentI18nLanguagesModal();
-}
-
-function renderAgentI18nLanguageList(keyword) {
-    const container = document.getElementById('agent-i18n-language-list');
-    if (!container) return;
-    const all = getAgentI18nLanguages();
-    const selected = agentI18nConfig && Array.isArray(agentI18nConfig.languages) ? agentI18nConfig.languages : [];
-    const kw = (keyword || '').toLowerCase();
-    container.innerHTML = '';
-    all.filter(l => {
-        if (!kw) return true;
-        return l.code.toLowerCase().includes(kw) || l.label.toLowerCase().includes(kw);
-    }).forEach(lang => {
-        const id = `agent-i18n-lang-${lang.code}`;
-        const isFixed = lang.code === 'zh';
-        const wrapper = document.createElement('div');
-        wrapper.className = 'flex items-center justify-between px-3 py-2 rounded-lg border border-gray-100 hover:border-blue-300 hover:bg-blue-50/40 cursor-pointer';
-        const left = document.createElement('div');
-        left.className = 'flex flex-col';
-        const labelEl = document.createElement('span');
-        labelEl.className = 'text-sm text-gray-800';
-        labelEl.textContent = lang.label;
-        const codeEl = document.createElement('span');
-        codeEl.className = 'text-xs text-gray-400';
-        codeEl.textContent = lang.code;
-        left.appendChild(labelEl);
-        left.appendChild(codeEl);
-        const right = document.createElement('div');
-        const input = document.createElement('input');
-        input.type = 'checkbox';
-        input.id = id;
-        input.className = 'w-4 h-4 text-blue-600 border-gray-300 rounded';
-        input.checked = isFixed || selected.includes(lang.code);
-        if (isFixed) input.disabled = true;
-        right.appendChild(input);
-        wrapper.appendChild(left);
-        wrapper.appendChild(right);
-        wrapper.onclick = function (e) {
-            if (isFixed) return;
-            if (e.target.tagName !== 'INPUT') {
-                input.checked = !input.checked;
-            }
-        };
-        container.appendChild(wrapper);
-    });
-}
-
-function confirmAgentI18nSelection() {
-    const all = getAgentI18nLanguages();
-    const selectedCodes = [];
-    all.forEach(lang => {
-        const input = document.getElementById(`agent-i18n-lang-${lang.code}`);
-        if (input && input.checked) selectedCodes.push(lang.code);
-    });
-    if (!agentI18nConfig) {
-        agentI18nConfig = { enabled: true, languages: [], customInfo: {} };
-    }
-    const existingCustom = agentI18nConfig.customInfo || {};
-    const nextCustom = {};
-    selectedCodes.forEach(code => {
-        if (existingCustom[code]) nextCustom[code] = existingCustom[code];
-    });
-    agentI18nConfig.languages = selectedCodes;
-    agentI18nConfig.customInfo = nextCustom;
-    updateAgentI18nSelectedLanguagesUI();
-    closeModal('agent-i18n-modal');
-    saveAgentConfig(true);
-}
-
-function openAgentI18nCustomModal() {
-    if (!agentI18nConfig || !agentI18nConfig.languages || !agentI18nConfig.languages.length) {
-        showToast('请先选择语言', 'warning');
-        return;
-    }
-    const container = document.getElementById('agent-i18n-custom-columns');
-    if (!container) return;
-    const langs = agentI18nConfig.languages;
-    const custom = agentI18nConfig.customInfo || {};
-    container.innerHTML = '';
-    const gridTemplate = langs.length <= 3 ? `repeat(${langs.length}, minmax(0, 1fr))` : `repeat(${langs.length}, minmax(220px, 1fr))`;
-    container.style.gridTemplateColumns = gridTemplate;
-    const all = getAgentI18nLanguages();
-    langs.forEach(code => {
-        const meta = all.find(l => l.code === code);
-        const title = meta ? meta.label : code;
-        const values = custom[code] || {};
-        const column = document.createElement('div');
-        column.className = 'bg-white border border-gray-100 rounded-lg p-4 space-y-3';
-        column.innerHTML = `
-            <div class="flex items-center justify-between mb-2">
-                <span class="text-sm font-medium text-gray-900">${title}</span>
-                <span class="text-xs text-gray-400">${code}</span>
-            </div>
-            <div>
-                <label class="block text-xs font-medium text-gray-600 mb-1">名称</label>
-                <input type="text" id="agent-i18n-name-${code}" value="${values.name || ''}" class="w-full px-3 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
-            </div>
-            <div>
-                <label class="block text-xs font-medium text-gray-600 mb-1">描述</label>
-                <textarea id="agent-i18n-desc-${code}" rows="2" class="w-full px-3 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 resize-none">${values.description || ''}</textarea>
-            </div>
-            <div>
-                <label class="block text-xs font-medium text-gray-600 mb-1">欢迎语</label>
-                <textarea id="agent-i18n-welcome-${code}" rows="2" class="w-full px-3 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 resize-none">${values.welcomeMsg || ''}</textarea>
-            </div>
-        `;
-        container.appendChild(column);
-    });
-    openModal('agent-i18n-custom-modal');
-}
-
-function confirmAgentI18nCustom() {
-    if (!agentI18nConfig) return;
-    const langs = agentI18nConfig.languages || [];
-    const nextCustom = {};
-    langs.forEach(code => {
-        const nameInput = document.getElementById(`agent-i18n-name-${code}`);
-        const descInput = document.getElementById(`agent-i18n-desc-${code}`);
-        const welcomeInput = document.getElementById(`agent-i18n-welcome-${code}`);
-        nextCustom[code] = {
-            name: nameInput ? nameInput.value : '',
-            description: descInput ? descInput.value : '',
-            welcomeMsg: welcomeInput ? welcomeInput.value : ''
-        };
-    });
-    agentI18nConfig.customInfo = nextCustom;
-    closeModal('agent-i18n-custom-modal');
-    saveAgentConfig(true);
-}
-
 function toggleThemeFeature(type, save = true) {
      if (type === 'background') {
         const check = document.getElementById('background-check');
@@ -2001,6 +2281,595 @@ function toggleExperienceFeature(type, save = true) {
     if (save) saveAgentConfig(true);
 }
 
+// --- Advanced Settings: Reference Source ---
+let agentReferenceSourceConfig = {
+    enabled: false
+};
+window.agentReferenceSourceConfig = agentReferenceSourceConfig;
+
+function toggleKnowledgeSource() {
+    const toggle = document.getElementById('show-knowledge-source');
+    if (!toggle) return;
+
+    syncAgentReferenceSourceToggles(toggle.checked);
+    saveAgentConfig(true);
+}
+window.toggleKnowledgeSource = toggleKnowledgeSource;
+
+function toggleAgentReferenceSource() {
+    const toggle = document.getElementById('agent-reference-source-toggle');
+    if (!toggle) return;
+
+    syncAgentReferenceSourceToggles(toggle.checked);
+    saveAgentConfig(true);
+}
+window.toggleAgentReferenceSource = toggleAgentReferenceSource;
+
+// --- Advanced Settings: Internationalization ---
+
+let agentI18nConfig = {
+    enabled: false,
+    languages: []
+};
+
+let agentI18nCustomConfig = {};
+
+window.agentI18nConfig = agentI18nConfig;
+window.agentI18nCustomConfig = agentI18nCustomConfig;
+
+const AGENT_I18N_LANGUAGES = [
+    { code: 'zh-CN', name: '简体中文' },
+    { code: 'en', name: 'English' },
+    { code: 'ja', name: '日本語' },
+    { code: 'ko', name: '한국어' },
+    { code: 'fr', name: 'Français' },
+    { code: 'de', name: 'Deutsch' }
+];
+
+function toggleAgentI18n(fromToggle = true) {
+    const toggle = document.getElementById('agent-i18n-toggle');
+    if (!toggle) return;
+
+    const enabled = toggle.checked;
+    if (enabled && fromToggle) {
+        openAgentI18nModal();
+    } else if (!enabled && fromToggle) {
+        agentI18nConfig.enabled = false;
+        agentI18nConfig.languages = [];
+        saveAgentConfig(true);
+        renderAgentI18nSummary();
+    }
+}
+
+function renderAgentI18nSummary() {
+    const container = document.getElementById('agent-i18n-summary');
+    const listEl = document.getElementById('agent-i18n-summary-list');
+    if (!container || !listEl) return;
+
+    if (!agentI18nConfig.enabled) {
+        container.classList.add('hidden');
+        listEl.innerHTML = '';
+        return;
+    }
+
+    container.classList.remove('hidden');
+    listEl.innerHTML = '';
+
+    if (!agentI18nConfig.languages || agentI18nConfig.languages.length === 0) {
+        const span = document.createElement('span');
+        span.className = 'text-xs text-gray-400';
+        span.textContent = '暂无选中语言';
+        listEl.appendChild(span);
+        return;
+    }
+
+    const nameMap = new Map(AGENT_I18N_LANGUAGES.map(l => [l.code, l.name]));
+    agentI18nConfig.languages.forEach(code => {
+        const name = nameMap.get(code) || code;
+        const pill = document.createElement('span');
+        pill.className = 'inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-blue-50 text-blue-700 border border-blue-100';
+        pill.textContent = name;
+        listEl.appendChild(pill);
+    });
+}
+
+function syncAgentI18nCustomColumnHeights() {
+    const modal = document.getElementById('agent-i18n-custom-modal');
+    const columns = document.getElementById('agent-i18n-custom-columns');
+    if (!modal || !columns) return;
+    if (modal.classList.contains('hidden')) return;
+
+    const colEls = Array.from(columns.children);
+    colEls.forEach(col => {
+        col.style.height = '';
+    });
+
+    if (colEls.length <= 1) {
+        columns.classList.remove('ring-1', 'ring-blue-100');
+        return;
+    }
+
+    let maxHeight = 0;
+    colEls.forEach(col => {
+        const h = col.offsetHeight;
+        if (h > maxHeight) maxHeight = h;
+    });
+
+    let desync = false;
+    colEls.forEach(col => {
+        if (Math.abs(col.offsetHeight - maxHeight) > 1) desync = true;
+    });
+
+    if (desync) {
+        colEls.forEach(col => {
+            col.style.height = maxHeight + 'px';
+        });
+        columns.classList.add('ring-1', 'ring-blue-100');
+    } else {
+        columns.classList.remove('ring-1', 'ring-blue-100');
+    }
+
+    const firstCol = colEls[0];
+    if (firstCol) {
+        const welcomeDisplay = firstCol.querySelector('.min-h-\\[40px\\]');
+        if (welcomeDisplay) {
+            const targetHeight = welcomeDisplay.offsetHeight;
+            const welcomeAreas = columns.querySelectorAll('textarea[data-field="welcomeMsg"]');
+            welcomeAreas.forEach(area => {
+                area.style.height = targetHeight + 'px';
+            });
+        }
+    }
+}
+
+function scheduleAgentI18nCustomHeightSync() {
+    if (window.__agentI18nHeightSyncRaf) {
+        cancelAnimationFrame(window.__agentI18nHeightSyncRaf);
+    }
+    window.__agentI18nHeightSyncRaf = requestAnimationFrame(syncAgentI18nCustomColumnHeights);
+
+    if (!window.__agentI18nHeightSyncResizeBound) {
+        window.__agentI18nHeightSyncResizeBound = true;
+        window.addEventListener('resize', scheduleAgentI18nCustomHeightSync);
+    }
+}
+
+function openAgentI18nCustomModal() {
+    const modal = document.getElementById('agent-i18n-custom-modal');
+    const columns = document.getElementById('agent-i18n-custom-columns');
+    if (!modal || !columns) return;
+
+    columns.innerHTML = '';
+
+    const selectedCodes = Array.isArray(agentI18nConfig.languages) ? agentI18nConfig.languages.slice() : [];
+
+    if (!selectedCodes.length) {
+        columns.style.gridTemplateColumns = '';
+        const empty = document.createElement('div');
+        empty.className = 'text-xs text-gray-400 p-3';
+        empty.textContent = '暂无选中语言，请先在上方选择语言后再配置自定义信息。';
+        columns.appendChild(empty);
+        modal.classList.remove('hidden');
+        return;
+    }
+
+    const selectedLangs = AGENT_I18N_LANGUAGES.filter(l => selectedCodes.includes(l.code));
+
+    const sorted = selectedLangs.sort((a, b) => {
+        if (a.code === 'zh-CN') return -1;
+        if (b.code === 'zh-CN') return 1;
+        return 0;
+    });
+
+    let baseName = '';
+    const editNameInput = document.getElementById('edit-agent-name');
+    const nameInput = document.getElementById('agent-name');
+    if (editNameInput) {
+        baseName = editNameInput.value.trim();
+    } else if (nameInput) {
+        baseName = nameInput.value.trim();
+    }
+
+    let exp = null;
+    if (typeof experienceConfig !== 'undefined' && experienceConfig) {
+        exp = experienceConfig;
+    }
+
+    let welcomeMsg = '';
+    const welcomeInput = document.getElementById('welcome-msg-input');
+    if (welcomeInput) {
+        welcomeMsg = welcomeInput.value.trim();
+    } else if (exp && typeof exp.welcomeMsg === 'string') {
+        welcomeMsg = exp.welcomeMsg.trim();
+    }
+    const welcomeQuestions = exp && exp.welcomeQuestions && Array.isArray(exp.welcomeQuestions.list) ? exp.welcomeQuestions.list : [];
+    const responseQuestions = exp && exp.responseQuestions && Array.isArray(exp.responseQuestions.list) ? exp.responseQuestions.list : [];
+    const feedbackOptions = exp && exp.feedback && Array.isArray(exp.feedback.options) ? exp.feedback.options : [];
+
+    const showNameRow = true;
+    const showWelcomeRow = true;
+    const showWelcomeQuestionsRow = !!(exp && exp.welcomeQuestions && exp.welcomeQuestions.enabled && welcomeQuestions.length > 0);
+    const showResponseQuestionsRow = !!(exp && exp.responseQuestions && exp.responseQuestions.enabled);
+    const showFeedbackRow = !!(exp && exp.feedback && exp.feedback.enabled && feedbackOptions.length > 0);
+
+    sorted.forEach((lang, index) => {
+        const active = index === 0;
+        const col = document.createElement('div');
+        col.className = `min-w-[240px] flex-1 rounded-lg border ${
+            active ? 'border-blue-500 bg-blue-50/40' : 'border-gray-200 bg-gray-50'
+        }`;
+
+        let bodyHtml = '';
+
+        if (active) {
+            const sections = [];
+
+            if (showNameRow) {
+                sections.push(`
+                    <div class="space-y-1">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-medium text-gray-500">智能体名称</span>
+                        </div>
+                        <div class="px-2 py-1.5 bg-white rounded border border-gray-200 text-xs text-gray-800 break-words min-h-[32px] flex items-center">${baseName || '未配置'}</div>
+                    </div>
+                `);
+            }
+
+            if (showWelcomeRow) {
+                sections.push(`
+                    <div class="space-y-1">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-medium text-gray-500">欢迎语</span>
+                        </div>
+                        <div class="px-2 py-1.5 bg-white rounded border border-gray-200 text-xs text-gray-800 break-words min-h-[40px]">${welcomeMsg || '未配置'}</div>
+                    </div>
+                `);
+            }
+
+            if (showWelcomeQuestionsRow) {
+                const items = welcomeQuestions.map(q => `<li class="px-2 py-1 bg-white rounded border border-gray-200 text-xs text-gray-800 break-words">${q}</li>`).join('');
+                sections.push(`
+                    <div class="space-y-1">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-medium text-gray-500">开场推荐问题</span>
+                        </div>
+                        <ul class="space-y-1">${items}</ul>
+                    </div>
+                `);
+            }
+
+            if (showResponseQuestionsRow) {
+                const items = responseQuestions.map(q => `<li class="px-2 py-1 bg-white rounded border border-gray-200 text-xs text-gray-800 break-words">${q}</li>`).join('');
+                sections.push(`
+                    <div class="space-y-1">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-medium text-gray-500">回答后推荐问题</span>
+                        </div>
+                        <ul class="space-y-1">${items}</ul>
+                    </div>
+                `);
+            }
+
+            if (showFeedbackRow) {
+                const items = feedbackOptions.map(text => `<li class="px-2 py-1 bg-white rounded border border-gray-200 text-xs text-gray-800 break-words">${text}</li>`).join('');
+                sections.push(`
+                    <div class="space-y-1">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-medium text-gray-500">点踩反馈</span>
+                        </div>
+                        <ul class="space-y-1">${items}</ul>
+                    </div>
+                `);
+            }
+
+            if (sections.length === 0) {
+                sections.push(`
+                    <div class="text-xs text-gray-400">暂无可展示的原始配置</div>
+                `);
+            }
+
+            bodyHtml = sections.join('');
+        } else {
+            const sections = [];
+
+            if (showNameRow) {
+                sections.push(`
+                    <div class="space-y-1">
+                        <label class="block text-xs text-gray-500" for="agent-i18n-custom-${lang.code}-name">智能体名称</label>
+                        <input id="agent-i18n-custom-${lang.code}-name" data-lang="${lang.code}" data-field="name" type="text" class="w-full px-2 py-1.5 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white min-h-[32px]" placeholder="填写 ${lang.name} 的名称翻译">
+                    </div>
+                `);
+            }
+
+            if (showWelcomeRow) {
+                sections.push(`
+                    <div class="space-y-1">
+                        <label class="block text-xs text-gray-500" for="agent-i18n-custom-${lang.code}-welcome">欢迎语</label>
+                        <textarea id="agent-i18n-custom-${lang.code}-welcome" data-lang="${lang.code}" data-field="welcomeMsg" class="w-full px-2 py-1.5 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 resize-none bg-white min-h-[40px]" rows="3" placeholder="填写 ${lang.name} 的欢迎语翻译"></textarea>
+                    </div>
+                `);
+            }
+
+            if (showWelcomeQuestionsRow) {
+                const count = welcomeQuestions.length;
+                const inputsHtml = Array.from({ length: count }).map((_, idx) => `
+                    <input
+                        id="agent-i18n-custom-${lang.code}-welcome-questions-${idx}"
+                        data-lang="${lang.code}"
+                        data-field="welcomeQuestions"
+                        data-index="${idx}"
+                        type="text"
+                        class="w-full px-2 py-1.5 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white"
+                        placeholder="开场推荐问题 ${idx + 1}"
+                    >
+                `).join('');
+
+                sections.push(`
+                    <div class="space-y-1">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-medium text-gray-500">开场推荐问题</span>
+                        </div>
+                        <div class="space-y-1">
+                            ${inputsHtml}
+                        </div>
+                    </div>
+                `);
+            }
+
+            if (showResponseQuestionsRow) {
+                sections.push(`
+                    <div class="space-y-1">
+                        <label class="block text-xs text-gray-500" for="agent-i18n-custom-${lang.code}-response-questions">回答后推荐问题</label>
+                        <textarea id="agent-i18n-custom-${lang.code}-response-questions" data-lang="${lang.code}" data-field="responseQuestions" class="w-full px-2 py-1.5 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 resize-none bg-white" rows="4" placeholder="为 ${lang.name} 配置回答后推荐问题翻译，建议一行一个问题"></textarea>
+                    </div>
+                `);
+            }
+
+            if (showFeedbackRow) {
+                const count = feedbackOptions.length;
+                const inputsHtml = Array.from({ length: count }).map((_, idx) => `
+                    <input
+                        id="agent-i18n-custom-${lang.code}-feedback-${idx}"
+                        data-lang="${lang.code}"
+                        data-field="feedback"
+                        data-index="${idx}"
+                        type="text"
+                        class="w-full px-2 py-1.5 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white"
+                        placeholder="点踩反馈选项 ${idx + 1}"
+                    >
+                `).join('');
+
+                sections.push(`
+                    <div class="space-y-1">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-medium text-gray-500">点踩反馈</span>
+                        </div>
+                        <div class="space-y-1">
+                            ${inputsHtml}
+                        </div>
+                    </div>
+                `);
+            }
+
+            if (sections.length === 0) {
+                sections.push(`
+                    <div class="text-xs text-gray-400">暂无可配置项</div>
+                `);
+            }
+
+            bodyHtml = sections.join('');
+        }
+
+        col.innerHTML = `
+            <div class="px-3 py-2 border-b ${active ? 'border-blue-200 bg-blue-50' : 'border-gray-100 bg-gray-100'} flex items-center justify-between">
+                <span class="text-xs font-medium ${active ? 'text-blue-700' : 'text-gray-700'}">${lang.name}</span>
+                ${active
+                    ? '<span class="text-[10px] px-1.5 py-0.5 rounded bg-blue-100 text-blue-700">默认</span>'
+                    : '<i class="fa-solid fa-language text-[14px] text-gray-500" title="翻译"></i>'
+                }
+            </div>
+            <div class="p-3 space-y-3">
+                ${bodyHtml}
+            </div>
+        `;
+        columns.appendChild(col);
+    });
+
+    columns.style.gridTemplateColumns = `repeat(${sorted.length}, minmax(240px, 1fr))`;
+
+    sorted.forEach((lang, index) => {
+        if (!agentI18nCustomConfig || index === 0) return;
+        const stored = agentI18nCustomConfig[lang.code];
+        if (stored === undefined) return;
+
+        if (stored && typeof stored === 'object') {
+            Object.keys(stored).forEach(field => {
+                const value = stored[field] || '';
+
+                if (field === 'welcomeQuestions' || field === 'feedback') {
+                    const parts = value ? String(value).split('\n') : [];
+                    parts.forEach((text, idx) => {
+                        const el = columns.querySelector(
+                            `[data-lang="${lang.code}"][data-field="${field}"][data-index="${idx}"]`
+                        );
+                        if (el) el.value = text;
+                    });
+                } else {
+                    const el = columns.querySelector(`[data-lang="${lang.code}"][data-field="${field}"]`);
+                    if (el) el.value = value;
+                }
+            });
+        } else if (typeof stored === 'string') {
+            const el = columns.querySelector(`[data-lang="${lang.code}"][data-field="welcomeMsg"]`);
+            if (el) el.value = stored;
+        }
+    });
+
+    modal.classList.remove('hidden');
+    scheduleAgentI18nCustomHeightSync();
+}
+
+function closeAgentI18nCustomModal() {
+    const modal = document.getElementById('agent-i18n-custom-modal');
+    if (modal) modal.classList.add('hidden');
+}
+
+function confirmAgentI18nCustom() {
+    const columns = document.getElementById('agent-i18n-custom-columns');
+    if (!columns) return;
+
+    const inputs = columns.querySelectorAll('[data-lang][data-field]');
+    const nextConfig = {};
+    const grouped = {};
+
+    inputs.forEach(el => {
+        const code = el.getAttribute('data-lang');
+        const field = el.getAttribute('data-field');
+        if (!code || !field) return;
+        const value = el.value.trim();
+        const indexAttr = el.getAttribute('data-index');
+
+        if (field === 'welcomeQuestions' || field === 'feedback') {
+            if (!grouped[code]) {
+                grouped[code] = { welcomeQuestions: [], feedback: [] };
+            }
+            const arr = grouped[code][field];
+            const idx = indexAttr ? parseInt(indexAttr, 10) : arr.length;
+            if (!Number.isNaN(idx)) {
+                arr[idx] = value;
+            }
+        } else {
+            if (!value) return;
+            if (!nextConfig[code]) nextConfig[code] = {};
+            nextConfig[code][field] = value;
+        }
+    });
+
+    Object.keys(grouped).forEach(code => {
+        const data = grouped[code];
+        ['welcomeQuestions', 'feedback'].forEach(field => {
+            const arr = (data[field] || []).filter(text => text && text.trim());
+            if (arr.length) {
+                if (!nextConfig[code]) nextConfig[code] = {};
+                nextConfig[code][field] = arr.join('\n');
+            }
+        });
+    });
+
+    agentI18nCustomConfig = nextConfig;
+    saveAgentConfig(true);
+    closeAgentI18nCustomModal(false);
+}
+
+function openAgentI18nModal() {
+    const list = document.getElementById('agent-i18n-lang-list');
+    const search = document.getElementById('agent-i18n-search');
+    const modal = document.getElementById('agent-i18n-modal');
+    if (!list || !modal) return;
+
+    list.innerHTML = '';
+    const selected = new Set(agentI18nConfig.languages || []);
+    selected.add('zh-CN');
+
+    AGENT_I18N_LANGUAGES.forEach(lang => {
+        const id = `agent-i18n-lang-${lang.code}`;
+        const isDefault = lang.code === 'zh-CN';
+        const disabledAttr = isDefault ? 'disabled' : '';
+        const checkedAttr = selected.has(lang.code) || isDefault ? 'checked' : '';
+        const labelBase =
+            'flex items-center gap-2 px-3 py-2 rounded-lg border cursor-pointer transition-colors';
+        const labelClass = isDefault
+            ? `${labelBase} border-blue-300 bg-blue-50 cursor-not-allowed`
+            : `${labelBase} border-gray-200 hover:border-blue-400 hover:bg-blue-50`;
+        const label = document.createElement('label');
+        label.className = labelClass;
+        label.setAttribute('data-code', lang.code);
+        label.setAttribute('data-name', lang.name.toLowerCase());
+        label.innerHTML = `
+            <input type="checkbox" class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 ${isDefault ? 'cursor-not-allowed' : ''}" id="${id}" value="${lang.code}" ${checkedAttr} ${disabledAttr}>
+            <span class="text-xs text-gray-700">${lang.name} (${lang.code})</span>
+        `;
+        list.appendChild(label);
+    });
+
+    if (search) search.value = '';
+    modal.classList.remove('hidden');
+}
+
+function closeAgentI18nModal(resetToggle = false) {
+    const modal = document.getElementById('agent-i18n-modal');
+    if (modal) modal.classList.add('hidden');
+    if (resetToggle) {
+        const toggle = document.getElementById('agent-i18n-toggle');
+        if (toggle) toggle.checked = agentI18nConfig.enabled;
+    }
+}
+
+function filterAgentI18nLanguages() {
+    const search = document.getElementById('agent-i18n-search');
+    const list = document.getElementById('agent-i18n-lang-list');
+    if (!search || !list) return;
+
+    const keyword = search.value.trim().toLowerCase();
+    const items = list.querySelectorAll('label[data-code]');
+    items.forEach(item => {
+        const name = item.getAttribute('data-name') || '';
+        const code = item.getAttribute('data-code') || '';
+        if (!keyword || name.includes(keyword) || code.toLowerCase().includes(keyword)) {
+            item.classList.remove('hidden');
+        } else {
+            item.classList.add('hidden');
+        }
+    });
+}
+
+function toggleAgentI18nSelectAll(selectAll) {
+    const list = document.getElementById('agent-i18n-lang-list');
+    if (!list) return;
+    const inputs = list.querySelectorAll('input[type="checkbox"]');
+    inputs.forEach(input => {
+        input.checked = !!selectAll;
+    });
+}
+
+function confirmAgentI18nSelection() {
+    const list = document.getElementById('agent-i18n-lang-list');
+    const toggle = document.getElementById('agent-i18n-toggle');
+    if (!list || !toggle) return;
+
+    const inputs = list.querySelectorAll('input[type="checkbox"]');
+    const selected = [];
+    inputs.forEach(input => {
+        if (input.checked) selected.push(input.value);
+    });
+
+    if (!selected.includes('zh-CN')) {
+        selected.unshift('zh-CN');
+    }
+
+    if (selected.length === 0) {
+        alert('请至少选择一种语言');
+        return;
+    }
+
+    agentI18nConfig.enabled = true;
+    agentI18nConfig.languages = selected;
+    toggle.checked = true;
+    saveAgentConfig(true);
+    renderAgentI18nSummary();
+    closeAgentI18nModal(false);
+}
+
+window.toggleAgentI18n = toggleAgentI18n;
+window.openAgentI18nModal = openAgentI18nModal;
+window.filterAgentI18nLanguages = filterAgentI18nLanguages;
+window.toggleAgentI18nSelectAll = toggleAgentI18nSelectAll;
+window.confirmAgentI18nSelection = confirmAgentI18nSelection;
+window.closeAgentI18nModal = closeAgentI18nModal;
+window.openAgentI18nCustomModal = openAgentI18nCustomModal;
+window.closeAgentI18nCustomModal = closeAgentI18nCustomModal;
+window.confirmAgentI18nCustom = confirmAgentI18nCustom;
+
 function addQuestion(type) {
     const list = type === 'welcome' ? experienceConfig.welcomeQuestions.list : experienceConfig.responseQuestions.list;
     
@@ -2015,6 +2884,14 @@ function addQuestion(type) {
     list.push(`示例问题 ${list.length + 1}`);
     renderQuestionsList(type);
     saveAgentConfig(true);
+
+    const newIndex = list.length - 1;
+    const inputId = `question-${type}-${newIndex}`;
+    const input = document.getElementById(inputId);
+    if (input) {
+        input.focus();
+        input.select();
+    }
 }
 
 function removeQuestion(type, index) {
@@ -2382,13 +3259,6 @@ window.removeBackground = removeBackground;
 window.updateBackgroundOpacity = updateBackgroundOpacity;
 window.updateThemeColor = updateThemeColor;
 window.toggleThemeFeature = toggleThemeFeature;
-window.initAgentI18nConfig = initAgentI18nConfig;
-window.toggleAgentI18n = toggleAgentI18n;
-window.openAgentI18nModalFromDisplay = openAgentI18nModalFromDisplay;
-window.openAgentI18nCustomModal = openAgentI18nCustomModal;
-window.confirmAgentI18nSelection = confirmAgentI18nSelection;
-window.confirmAgentI18nCustom = confirmAgentI18nCustom;
-window.cancelAgentI18nSelection = cancelAgentI18nSelection;
 
 // --- Feedback Logic ---
 

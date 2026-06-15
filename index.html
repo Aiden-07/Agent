@@ -11,6 +11,11 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
+    <!-- Flatpickr CSS & JS (for date range picker) -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/zh.js"></script>
     
     <!-- Custom Config & Styles -->
     <script>
@@ -26,153 +31,216 @@
         }
     </script>
     <link href="css/style.css" rel="stylesheet">
+    <link href="css/data-tables.css?v=1.0.1" rel="stylesheet">
 </head>
 <body class="bg-gray-50 h-screen flex overflow-hidden">
 
     <!-- Sidebar Navigation -->
-    <aside id="main-sidebar" class="w-64 bg-white border-r border-gray-200 flex flex-col transition-all duration-300 z-10">
+    <aside id="main-sidebar" class="w-64 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 flex flex-col transition-all duration-300 z-50 flex-shrink-0 md:relative absolute inset-y-0 left-0 transform -translate-x-full md:translate-x-0">
         <!-- Logo Area -->
-        <div class="h-16 flex items-center px-6 border-b border-gray-100">
-            <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold mr-3">
-                <i class="fa-solid fa-robot"></i>
+        <div class="sidebar-header h-16 flex items-center px-6 border-b border-gray-100 dark:border-gray-800 justify-between transition-all duration-300">
+            <div class="sidebar-logo-wrapper flex items-center overflow-hidden">
+                <div class="w-8 h-8 flex-shrink-0 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold mr-3">
+                    <i class="fa-solid fa-robot"></i>
+                </div>
+                <span class="text-xl font-bold text-gray-800 dark:text-gray-100 whitespace-nowrap transition-opacity duration-300" id="sidebar-logo-text">VAgent</span>
             </div>
-            <span class="text-xl font-bold text-gray-800">VAgent</span>
+            <!-- Desktop Collapse Button -->
+            <button id="sidebar-toggle-btn" class="hidden md:flex text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors flex-shrink-0" onclick="toggleSidebar()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="w-5 h-5">
+                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                    <line x1="15" y1="3" x2="15" y2="21"></line>
+                </svg>
+            </button>
+            <!-- Close button for mobile drawer -->
+            <button class="md:hidden text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors flex-shrink-0" onclick="toggleMobileSidebar()">
+                <i class="fa-solid fa-times"></i>
+            </button>
         </div>
 
         <!-- Main Navigation -->
         <nav class="flex-1 overflow-y-auto py-4">
             <ul class="space-y-1 px-3">
-                <div class="px-3 pt-4 pb-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                <div class="px-3 pt-4 pb-2 text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider nav-group-title transition-all duration-300">
                     构建
                 </div>
 
                 <!-- Agent Section -->
-                <li>
-                    <a href="javascript:void(0)" onclick="switchView('agent')" class="flex items-center px-3 py-2.5 text-gray-600 hover:text-blue-600 hover:bg-gray-50 rounded-lg group transition-colors">
-                        <i class="fa-solid fa-wand-magic-sparkles w-6 text-center mr-2"></i>
-                        <span class="font-medium">智能体</span>
+                <li id="nav-agent" class="nav-item">
+                    <a href="javascript:void(0)" onclick="switchView('agent')" class="nav-link-content px-3 py-2.5 text-gray-600 hover:text-blue-600 hover:bg-gray-50 dark:text-gray-300 dark:hover:text-blue-400 dark:hover:bg-gray-800 rounded-lg group transition-colors" title="智能体应用">
+                        <i class="fa-solid fa-wand-magic-sparkles text-lg mr-3 nav-icon"></i>
+                        <span class="font-medium nav-text transition-opacity duration-300">智能体应用</span>
                     </a>
                 </li>
                 
                 <!-- Orchestrator -->
-                <li>
-                    <a href="javascript:void(0)" onclick="switchView('orchestrator')" class="flex items-center px-3 py-2.5 text-gray-600 hover:text-blue-600 hover:bg-gray-50 rounded-lg group transition-colors">
-                        <i class="fa-solid fa-layer-group w-6 text-center mr-2"></i>
-                        <span class="font-medium">编排器</span>
-                    </a>
-                </li>
-
-                <!-- Parser -->
-                <li>
-                    <a href="javascript:void(0)" onclick="switchView('parser')" class="flex items-center px-3 py-2.5 text-gray-600 hover:text-blue-600 hover:bg-gray-50 rounded-lg group transition-colors">
-                        <i class="fa-solid fa-code w-6 text-center mr-2"></i>
-                        <span class="font-medium">解析器</span>
+                <li id="nav-orchestrator" class="nav-item">
+                    <a href="javascript:void(0)" onclick="switchView('orchestrator')" class="nav-link-content px-3 py-2.5 text-gray-600 hover:text-blue-600 hover:bg-gray-50 dark:text-gray-300 dark:hover:text-blue-400 dark:hover:bg-gray-800 rounded-lg group transition-colors" title="工作流应用">
+                        <i class="fa-solid fa-layer-group text-lg mr-3 nav-icon"></i>
+                        <span class="font-medium nav-text transition-opacity duration-300">工作流应用</span>
                     </a>
                 </li>
                 
+                <div class="px-3 pt-4 pb-2 text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider nav-group-title transition-all duration-300">
+                    数据
+                </div>
+
                 <!-- Knowledge Base -->
-                <li>
-                    <a href="javascript:void(0)" onclick="switchView('knowledge')" class="flex items-center px-3 py-2.5 text-gray-600 hover:text-blue-600 hover:bg-gray-50 rounded-lg group transition-colors">
-                        <i class="fa-solid fa-book w-6 text-center mr-2"></i>
-                        <span class="font-medium">知识库</span>
+                <li id="nav-knowledge" class="nav-item">
+                    <a href="javascript:void(0)" onclick="localStorage.removeItem('currentView'); localStorage.removeItem('currentKbId'); switchView('knowledge')" class="nav-link-content px-3 py-2.5 text-gray-600 hover:text-blue-600 hover:bg-gray-50 dark:text-gray-300 dark:hover:text-blue-400 dark:hover:bg-gray-800 rounded-lg group transition-colors" title="知识库">
+                        <i class="fa-solid fa-book text-lg mr-3 nav-icon"></i>
+                        <span class="font-medium nav-text transition-opacity duration-300">知识库</span>
                     </a>
                 </li>
 
                 <!-- Knowledge Graph (New) -->
-                <li>
-                    <a href="javascript:void(0)" onclick="switchView('knowledge-graph')" class="flex items-center px-3 py-2.5 text-gray-600 hover:text-blue-600 hover:bg-gray-50 rounded-lg group transition-colors">
-                        <i class="fa-solid fa-project-diagram w-6 text-center mr-2"></i>
-                        <span class="font-medium">知识图谱</span>
+                <li id="nav-knowledge-graph" class="nav-item">
+                    <a href="javascript:void(0)" onclick="switchView('knowledge-graph')" class="nav-link-content px-3 py-2.5 text-gray-600 hover:text-blue-600 hover:bg-gray-50 dark:text-gray-300 dark:hover:text-blue-400 dark:hover:bg-gray-800 rounded-lg group transition-colors" title="知识图谱">
+                        <i class="fa-solid fa-project-diagram text-lg mr-3 nav-icon"></i>
+                        <span class="font-medium nav-text transition-opacity duration-300">知识图谱</span>
                     </a>
                 </li>
 
-                <!-- Plugins/Tools -->
-                <li>
-                    <a href="javascript:void(0)" onclick="switchView('components')" class="flex items-center px-3 py-2.5 text-gray-600 hover:text-blue-600 hover:bg-gray-50 rounded-lg group transition-colors">
-                        <i class="fa-solid fa-puzzle-piece w-6 text-center mr-2"></i>
-                        <span class="font-medium">组件</span>
+                <!-- Data Source Management -->
+                <li id="nav-data-source" class="nav-item">
+                    <a href="javascript:void(0)" onclick="switchView('data-source')" class="nav-link-content px-3 py-2.5 text-gray-600 hover:text-blue-600 hover:bg-gray-50 dark:text-gray-300 dark:hover:text-blue-400 dark:hover:bg-gray-800 rounded-lg group transition-colors" title="数据源管理">
+                        <i class="fa-solid fa-database text-lg mr-3 nav-icon"></i>
+                        <span class="font-medium nav-text transition-opacity duration-300">数据源管理</span>
+                    </a>
+                </li>
+
+                <div class="px-3 pt-4 pb-2 text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider nav-group-title transition-all duration-300">
+                    组件
+                </div>
+
+                <!-- Components -->
+                <li id="nav-components" class="nav-item">
+                    <a href="javascript:void(0)" onclick="switchView('components')" class="nav-link-content px-3 py-2.5 text-gray-600 hover:text-blue-600 hover:bg-gray-50 dark:text-gray-300 dark:hover:text-blue-400 dark:hover:bg-gray-800 rounded-lg group transition-colors" title="应用组件">
+                        <i class="fa-solid fa-puzzle-piece text-lg mr-3 nav-icon"></i>
+                        <span class="font-medium nav-text transition-opacity duration-300">应用组件</span>
+                    </a>
+                </li>
+
+                <!-- MCP -->
+                <li id="nav-mcp" class="nav-item">
+                    <a href="javascript:void(0)" onclick="switchView('mcp')" class="nav-link-content px-3 py-2.5 text-gray-600 hover:text-blue-600 hover:bg-gray-50 dark:text-gray-300 dark:hover:text-blue-400 dark:hover:bg-gray-800 rounded-lg group transition-colors" title="MCP">
+                        <i class="fa-solid fa-layer-group text-lg mr-3 nav-icon"></i>
+                        <span class="font-medium nav-text transition-opacity duration-300">MCP</span>
+                    </a>
+                </li>
+
+                <!-- Skill -->
+                <li id="nav-skill" class="nav-item">
+                    <a href="javascript:void(0)" onclick="switchView('components'); try{sessionStorage.setItem('pendingComponentsFilterType','skill')}catch(e){}" class="nav-link-content px-3 py-2.5 text-gray-600 hover:text-blue-600 hover:bg-gray-50 dark:text-gray-300 dark:hover:text-blue-400 dark:hover:bg-gray-800 rounded-lg group transition-colors" title="Skill">
+                        <i class="fa-solid fa-wand-magic-sparkles text-lg mr-3 nav-icon"></i>
+                        <span class="font-medium nav-text transition-opacity duration-300">Skill</span>
                     </a>
                 </li>
 
 
-                <div class="px-3 pt-4 pb-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                <div class="px-3 pt-4 pb-2 text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider nav-group-title transition-all duration-300">
                     运营
                 </div>
 
-                <!-- Evaluation -->
-                <li>
-                    <a href="javascript:void(0)" onclick="switchView('evaluation')" class="flex items-center px-3 py-2.5 text-gray-600 hover:text-blue-600 hover:bg-gray-50 rounded-lg group transition-colors">
-                        <i class="fa-solid fa-vial w-6 text-center mr-2"></i>
-                        <span class="font-medium">效果测评</span>
+                <!-- App Monitoring -->
+                <li id="nav-monitoring" class="nav-item">
+                    <a href="javascript:void(0)" onclick="switchView('monitoring')" class="nav-link-content px-3 py-2.5 text-gray-600 hover:text-blue-600 hover:bg-gray-50 dark:text-gray-300 dark:hover:text-blue-400 dark:hover:bg-gray-800 rounded-lg group transition-colors" title="应用监控">
+                        <i class="fa-solid fa-chart-line text-lg mr-3 nav-icon"></i>
+                        <span class="font-medium nav-text transition-opacity duration-300">应用监控</span>
                     </a>
                 </li>
 
-                 <div class="px-3 pt-4 pb-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                <!-- Evaluation -->
+                <li id="nav-evaluation" class="nav-item">
+                    <a href="javascript:void(0)" onclick="switchView('evaluation')" class="nav-link-content px-3 py-2.5 text-gray-600 hover:text-blue-600 hover:bg-gray-50 dark:text-gray-300 dark:hover:text-blue-400 dark:hover:bg-gray-800 rounded-lg group transition-colors" title="效果测评">
+                        <i class="fa-solid fa-vial text-lg mr-3 nav-icon"></i>
+                        <span class="font-medium nav-text transition-opacity duration-300">效果测评</span>
+                    </a>
+                </li>
+
+                 <div class="px-3 pt-4 pb-2 text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider nav-group-title transition-all duration-300">
                     设置
                 </div>
 
                 <!-- System Settings -->
-                <li>
-                    <button onclick="toggleSettingsMenu()" id="settings-menu-btn" class="w-full flex items-center justify-between px-3 py-2.5 text-gray-600 hover:text-blue-600 hover:bg-gray-50 rounded-lg group transition-colors focus:outline-none">
+                <li id="nav-settings" class="nav-item submenu-item">
+                    <button onclick="toggleSettingsMenu()" id="settings-menu-btn" class="w-full nav-link-content justify-between px-3 py-2.5 text-gray-600 hover:text-blue-600 hover:bg-gray-50 dark:text-gray-300 dark:hover:text-blue-400 dark:hover:bg-gray-800 rounded-lg group transition-colors focus:outline-none" title="系统设置">
                         <div class="flex items-center">
-                            <i class="fa-solid fa-cog w-6 text-center mr-2"></i>
-                            <span class="font-medium">系统设置</span>
+                            <i class="fa-solid fa-cog text-lg mr-3 nav-icon"></i>
+                            <span class="font-medium nav-text transition-opacity duration-300">系统设置</span>
                         </div>
-                        <i id="settings-chevron" class="fa-solid fa-chevron-right text-xs transition-transform duration-200 text-gray-400"></i>
+                        <i id="settings-chevron" class="fa-solid fa-chevron-right text-xs transition-transform duration-200 text-gray-400 user-menu-icon"></i>
                     </button>
                     <!-- Submenu -->
-                    <ul id="settings-submenu" class="hidden mt-1 space-y-1">
+                    <ul id="settings-submenu" class="hidden mt-1 space-y-1 nav-text transition-opacity duration-300">
                         <li>
-                            <a href="javascript:void(0)" onclick="switchView('settings-info')" class="flex items-center px-3 py-2 text-sm text-gray-600 hover:text-blue-600 hover:bg-gray-50 rounded-lg transition-colors pl-11">
+                            <a href="javascript:void(0)" onclick="switchView('settings-info')" class="nav-link-content px-5 py-2 text-sm text-gray-600 hover:text-blue-600 hover:bg-gray-50 dark:text-gray-300 dark:hover:text-blue-400 dark:hover:bg-gray-800 rounded-lg transition-colors" title="企业信息">
+                                <i class="fa-solid fa-building text-base mr-3 nav-icon"></i>
                                 <span class="font-medium">企业信息</span>
                             </a>
                         </li>
                         <li>
-                            <a href="javascript:void(0)" onclick="switchView('settings-logs')" class="flex items-center px-3 py-2 text-sm text-gray-600 hover:text-blue-600 hover:bg-gray-50 rounded-lg transition-colors pl-11">
+                            <a href="javascript:void(0)" onclick="switchView('settings-sdk')" class="nav-link-content px-5 py-2 text-sm text-gray-600 hover:text-blue-600 hover:bg-gray-50 dark:text-gray-300 dark:hover:text-blue-400 dark:hover:bg-gray-800 rounded-lg transition-colors" title="SDK配置">
+                                <i class="fa-solid fa-code text-base mr-3 nav-icon"></i>
+                                <span class="font-medium">SDK配置</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="javascript:void(0)" onclick="switchView('settings-logs')" class="nav-link-content px-5 py-2 text-sm text-gray-600 hover:text-blue-600 hover:bg-gray-50 dark:text-gray-300 dark:hover:text-blue-400 dark:hover:bg-gray-800 rounded-lg transition-colors" title="系统日志">
+                                <i class="fa-solid fa-file-lines text-base mr-3 nav-icon"></i>
                                 <span class="font-medium">系统日志</span>
                             </a>
                         </li>
                     </ul>
                 </li>
 
+                <!-- Model Config -->
+                <li id="nav-model-config" class="nav-item">
+                    <a href="javascript:void(0)" onclick="switchView('model-config')" class="nav-link-content px-3 py-2.5 text-gray-600 hover:text-blue-600 hover:bg-gray-50 dark:text-gray-300 dark:hover:text-blue-400 dark:hover:bg-gray-800 rounded-lg group transition-colors" title="模型配置">
+                        <i class="fa-solid fa-server text-lg mr-3 nav-icon"></i>
+                        <span class="font-medium nav-text transition-opacity duration-300">模型配置</span>
+                    </a>
+                </li>
+
                 <!-- User Management -->
-                <li>
-                    <a href="javascript:void(0)" onclick="switchView('user-mgmt')" class="flex items-center px-3 py-2.5 text-gray-600 hover:text-blue-600 hover:bg-gray-50 rounded-lg group transition-colors">
-                        <i class="fa-solid fa-users-cog w-6 text-center mr-2"></i>
-                        <span class="font-medium">用户管理</span>
+                <li id="nav-user-mgmt" class="nav-item">
+                    <a href="javascript:void(0)" onclick="switchView('user-mgmt')" class="nav-link-content px-3 py-2.5 text-gray-600 hover:text-blue-600 hover:bg-gray-50 dark:text-gray-300 dark:hover:text-blue-400 dark:hover:bg-gray-800 rounded-lg group transition-colors" title="用户管理">
+                        <i class="fa-solid fa-users-cog text-lg mr-3 nav-icon"></i>
+                        <span class="font-medium nav-text transition-opacity duration-300">用户管理</span>
                     </a>
                 </li>
 
                 <!-- Role Policy Management -->
-                <li>
-                    <a href="javascript:void(0)" onclick="switchView('role-mgmt')" class="flex items-center px-3 py-2.5 text-gray-600 hover:text-blue-600 hover:bg-gray-50 rounded-lg group transition-colors">
-                        <i class="fa-solid fa-user-shield w-6 text-center mr-2"></i>
-                        <span class="font-medium">角色管理</span>
+                <li id="nav-role-mgmt" class="nav-item">
+                    <a href="javascript:void(0)" onclick="switchView('role-mgmt')" class="nav-link-content px-3 py-2.5 text-gray-600 hover:text-blue-600 hover:bg-gray-50 dark:text-gray-300 dark:hover:text-blue-400 dark:hover:bg-gray-800 rounded-lg group transition-colors" title="角色管理">
+                        <i class="fa-solid fa-user-shield text-lg mr-3 nav-icon"></i>
+                        <span class="font-medium nav-text transition-opacity duration-300">角色管理</span>
                     </a>
                 </li>
+
             </ul>
         </nav>
 
         <!-- User Profile -->
-        <div class="border-t border-gray-200 p-4 relative">
-            <div class="flex items-center gap-3 cursor-pointer hover:bg-gray-50 p-2 rounded-lg transition-colors" onclick="document.getElementById('user-menu').classList.toggle('hidden')">
+        <div class="border-t border-gray-200 dark:border-gray-800 p-4 relative">
+            <div class="flex items-center gap-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 p-2 rounded-lg transition-colors" onclick="document.getElementById('user-menu').classList.toggle('hidden')">
                 <div class="w-10 h-10 rounded-full bg-gradient-to-tr from-purple-500 to-blue-500 flex items-center justify-center text-white font-bold">
                     PM
                 </div>
-                <div class="flex-1 min-w-0">
-                    <p class="text-sm font-medium text-gray-900 truncate">Product Manager</p>
-                    <p class="text-xs text-gray-500 truncate">pm@vagent.ai</p>
+                <div class="flex-1 min-w-0 user-info-text transition-opacity duration-300">
+                    <p class="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">Product Manager</p>
+                    <p class="text-xs text-gray-500 dark:text-gray-400 truncate">pm@vagent.ai</p>
                 </div>
-                <i class="fa-solid fa-chevron-up text-gray-400 text-xs"></i>
+                <i class="fa-solid fa-chevron-up text-gray-400 text-xs user-menu-icon"></i>
             </div>
 
             <!-- Popup Menu -->
-            <div id="user-menu" class="hidden absolute bottom-full left-4 right-4 mb-2 bg-white rounded-lg shadow-lg border border-gray-100 py-1 animate-fade-in z-50">
-                <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-blue-600">
+            <div id="user-menu" class="hidden absolute bottom-full left-4 right-4 mb-2 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-100 dark:border-gray-700 py-1 animate-fade-in z-50">
+                <a href="#" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-blue-600 dark:hover:text-blue-400">
                     <i class="fa-regular fa-user mr-2"></i> 个人中心
                 </a>
-                <div class="border-t border-gray-100 my-1"></div>
-                <a href="javascript:logout()" class="block px-4 py-2 text-sm text-red-600 hover:bg-red-50">
+                <div class="border-t border-gray-100 dark:border-gray-700 my-1"></div>
+                <a href="javascript:logout()" class="block px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30">
                     <i class="fa-solid fa-arrow-right-from-bracket mr-2"></i> 退出登录
                 </a>
             </div>
@@ -180,10 +248,17 @@
     </aside>
 
     <!-- Main Content Area -->
-    <main class="flex-1 flex flex-col min-w-0 overflow-hidden bg-gray-50">
+    <main class="flex-1 flex flex-col min-w-0 overflow-hidden bg-gray-50 relative z-0">
+        <!-- Overlay for mobile drawer -->
+        <div id="mobile-overlay" class="fixed inset-0 bg-black/50 z-40 hidden md:hidden transition-opacity opacity-0" onclick="toggleMobileSidebar()"></div>
+        
         <!-- Header -->
-        <header id="main-header" class="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-8">
+        <header id="main-header" class="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-4 md:px-8">
             <div class="flex items-center gap-4">
+                <!-- Mobile Menu Button -->
+                <button class="md:hidden text-gray-500 hover:text-gray-700 p-2 -ml-2 rounded-lg hover:bg-gray-100 transition-colors" onclick="toggleMobileSidebar()">
+                    <i class="fa-solid fa-bars text-lg"></i>
+                </button>
                 <h1 id="page-title" class="text-xl font-semibold text-gray-800">仪表盘</h1>
             </div>
             <div class="flex items-center gap-4">
@@ -294,12 +369,12 @@
                     <!-- Search -->
                     <div class="relative">
                         <i class="fa-solid fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
-                        <input type="text" id="selector-search-input" placeholder="搜索用户或角色..." class="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 focus:bg-white transition-colors">
+                        <input type="text" id="selector-search-input" placeholder="搜索角色..." class="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 focus:bg-white transition-colors">
                     </div>
                     
                     <!-- Tabs -->
                     <div class="flex border-b border-gray-200">
-                        <button onclick="switchSelectorTab('user')" id="selector-tab-user" class="px-4 py-2 text-xs font-medium border-b-2 border-blue-600 text-blue-600 transition-colors">用户</button>
+                        <button onclick="switchSelectorTab('user')" id="selector-tab-user" class="hidden px-4 py-2 text-xs font-medium border-b-2 border-blue-600 text-blue-600 transition-colors">用户</button>
                         <button onclick="switchSelectorTab('role')" id="selector-tab-role" class="px-4 py-2 text-xs font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700 transition-colors">角色</button>
                     </div>
                 </div>
@@ -353,23 +428,32 @@
     </div>
 
     <!-- Scripts -->
-    <script src="js/utils.js?v=1.0.2"></script>
-    <script src="js/router.js?v=1.0.1"></script>
+    <script src="js/utils.js?v=1.0.4"></script>
+    <script src="js/data-table.js"></script>
+    <script src="js/router.js?v=1.0.4"></script>
     <script src="js/settings-logs.js"></script>
     <script src="js/auth-logic.js"></script>
-    <script src="js/agent.js"></script>
+    <script src="js/agent.js?v=1.1.1"></script>
     <script src="js/orchestrator.js"></script>
-    <script src="js/orchestrator-editor.js"></script>
-    <script src="js/knowledge.js"></script>
+    <script src="js/data-source.js?v=1.0.12"></script>
+    <script src="js/orchestrator-editor.js?v=1.2.28"></script>
+    <script src="js/source-references.js?v=1.0.3"></script>
+    <script src="js/knowledge.js?v=1.4.9"></script>
+    <script src="js/enterprise-sdk.js?v=0.8.6"></script>
+    <script src="js/batch-slice-settings-page.js"></script>
     <script src="js/knowledge-graph.js"></script>
     <script src="js/knowledge-graph-detail.js?v=1.0.3"></script>
-    <script src="js/knowledge-settings.js"></script>
+    <script src="js/knowledge-settings.js?v=1.1.9"></script>
     <script src="js/knowledge-testing.js"></script>
-    <script src="js/components.js"></script>
+    <script src="js/components.js?v=1.0.10"></script>
+    <script src="js/mcp.js?v=1.0.1"></script>
     <script src="js/parser.js"></script>
     <script src="js/evaluation.js"></script>
+    <script src="js/monitoring.js"></script>
     <script src="js/user-mgmt.js"></script>
-    <script src="js/role-mgmt.js"></script>
+    <script src="js/role-mgmt.js?v=1.0.1"></script>
+    <script src="js/statistics.js"></script>
+    <script src="js/model-config.js"></script>
 
     <script>
         function toggleSettingsMenu() {

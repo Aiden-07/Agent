@@ -55,6 +55,9 @@
                 <div v-else>
                     <div v-for="(paragraph, index) in document.paragraphs" :key="index" 
                          :id="'para-' + index"
+                         :data-chunk-id="paragraphMeta[index] && paragraphMeta[index].chunk_id"
+                         :data-source-start="paragraphMeta[index] && paragraphMeta[index].source_range ? paragraphMeta[index].source_range[0] : ''"
+                         :data-source-end="paragraphMeta[index] && paragraphMeta[index].source_range ? paragraphMeta[index].source_range[1] : ''"
                          :class="{'highlight-anim p-2 rounded-lg -mx-2': isHighlighted(index), 'mb-6': true}">
                         
                         <p>{{ paragraph }}</p>
@@ -71,8 +74,9 @@
 
     </div>
 
+    <script src="../js/source-references.js"></script>
     <script>
-        const { createApp, ref, onMounted, computed } = Vue;
+        const { createApp, ref, onMounted, nextTick } = Vue;
 
         createApp({
             setup() {
@@ -84,7 +88,69 @@
                     tag: '',
                     paragraphs: []
                 });
+                const paragraphMeta = ref([]);
                 const highlightIndices = ref([]);
+
+                const getSourceUtils = () => window.SourceReferenceUtils || {
+                    normalizeSourceReference(source) {
+                        return {
+                            document_id: source.document_id || source.documentId || source.id || '',
+                            document_name: source.document_name || source.documentName || source.title || source.name || '',
+                            chunk_id: source.chunk_id || source.chunkId || '',
+                            chunk_content: source.chunk_content || source.chunkContent || source.content || '',
+                            source_range: Array.isArray(source.source_range) ? source.source_range : null
+                        };
+                    },
+                    sourceRangeOverlaps(a, b) {
+                        if (!Array.isArray(a) || !Array.isArray(b)) return false;
+                        return Number(a[0]) < Number(b[1]) && Number(b[0]) < Number(a[1]);
+                    }
+                };
+
+                const getSourceRefFromParams = (urlParams) => {
+                    const raw = {};
+                    ['document_id', 'document_name', 'chunk_id', 'chunk_content', 'source_range'].forEach(key => {
+                        const value = urlParams.get(key);
+                        if (value != null) raw[key] = value;
+                    });
+                    raw.document_id = raw.document_id || urlParams.get('id') || '';
+                    return getSourceUtils().normalizeSourceReference(raw);
+                };
+
+                const buildParagraphMeta = (paragraphs, sourceRef, insertedIndex) => {
+                    let cursor = 0;
+                    return paragraphs.map((text, index) => {
+                        const isInsertedSource = index === insertedIndex;
+                        const range = isInsertedSource && sourceRef.source_range
+                            ? sourceRef.source_range
+                            : [cursor, cursor + String(text || '').length];
+                        cursor = Math.max(cursor + String(text || '').length + 1, range[1] + 1);
+                        return {
+                            chunk_id: isInsertedSource && sourceRef.chunk_id ? sourceRef.chunk_id : `chunk-${index + 1}`,
+                            source_range: range
+                        };
+                    });
+                };
+
+                const locateHighlights = (meta, sourceRef, insertedIndex) => {
+                    if (Number.isFinite(insertedIndex) && insertedIndex >= 0) return [insertedIndex];
+                    const utils = getSourceUtils();
+                    return meta
+                        .map((item, index) => {
+                            if (sourceRef.chunk_id && item.chunk_id === sourceRef.chunk_id) return index;
+                            if (sourceRef.source_range && utils.sourceRangeOverlaps(item.source_range, sourceRef.source_range)) return index;
+                            return -1;
+                        })
+                        .filter(index => index >= 0);
+                };
+
+                const scrollToHighlighted = async () => {
+                    await nextTick();
+                    const first = highlightIndices.value[0];
+                    if (!Number.isFinite(first)) return;
+                    const target = document.getElementById(`para-${first}`);
+                    if (target) target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                };
 
                 const fetchDocument = async () => {
                     loading.value = true;
@@ -92,31 +158,40 @@
 
                     const urlParams = new URLSearchParams(window.location.search);
                     const docId = urlParams.get('id') || 'doc-default';
-                    
+                    const sourceRef = getSourceRefFromParams(urlParams);
+                    let paragraphs = [
+                        "1. 引言：本文档旨在详细描述系统的功能需求和非功能需求，作为系统设计和开发的依据。本项目的目标是构建一个高效、稳定、易用的企业级管理平台，以满足公司日益增长的业务需求。文档涵盖了从用户界面设计到后端数据处理的各个方面，确保所有利益相关者对系统有统一的理解。",
+                        "1.1 编写目的：明确用户需求，统一项目组对需求的理解，为后续的系统架构设计、数据库设计、编码实现及测试工作提供基础。通过本文档，我们希望能够减少开发过程中的沟通成本，避免因需求不清导致的返工，确保项目按时按质完成。同时，本文档也将作为验收测试的重要依据。",
+                        "1.2 适用范围：本项目的所有开发人员、测试人员、项目经理及相关的业务干系人。无论是前端工程师、后端工程师，还是产品经理和QA团队，都应仔细阅读本文档，以确保对系统的功能和非功能需求有深入的了解。此外，本文档也适用于后期维护人员，帮助他们快速理解系统逻辑。",
+                        "2. 系统概述：本系统是一个基于Web的企业级管理平台，旨在提高企业的办公效率和管理水平。系统采用现代化的微服务架构，支持高并发访问和弹性扩展。前端采用响应式设计，适配PC端和移动端设备，为用户提供一致的操作体验。后端集成多种第三方服务，如短信网关、支付接口等。",
+                        "2.1 核心功能：包括用户管理、权限控制、工作流审批、报表统计等模块。用户管理模块支持复杂的组织架构和角色定义；权限控制模块基于RBAC模型，确保数据安全；工作流审批模块支持自定义流程配置，满足不同企业的审批需求；报表统计模块提供丰富的数据可视化图表，辅助管理层决策。",
+                        "3. 功能需求：",
+                        "3.1 用户管理：系统应支持用户的增删改查操作，支持批量导入导出用户数据。管理员可以查看用户的登录日志和操作记录，对异常账号进行冻结或重置密码。此外，系统还应支持用户头像上传、个人信息修改等自助服务功能，提升用户体验。",
+                        "3.2 权限控制：采用RBAC模型，支持角色与权限的动态配置，确保数据安全。系统应预置多种标准角色，如管理员、普通用户、审计员等，同时允许管理员创建自定义角色。权限应细化到菜单级和按钮级，甚至支持字段级的数据权限控制。",
+                        "4. 非功能需求：",
+                        "4.1 性能要求：系统应支持至少1000用户并发访问，平均响应时间不超过2秒。在高负载情况下，系统应具备自动降级和熔断机制，保证核心功能的可用性。数据库查询应进行优化，避免全表扫描，确保在大数据量下的查询效率。",
+                        "4.2 安全要求：所有敏感数据需加密存储，传输过程需使用HTTPS协议。系统应具备防SQL注入、XSS攻击、CSRF攻击等常见Web安全漏洞的能力。用户密码应使用强哈希算法（如BCrypt）存储，禁止明文传输和存储。",
+                        "5. 附录：相关术语解释及参考资料。包括但不限于RESTful API规范、OAuth2.0认证协议说明、Docker部署指南等。本附录旨在帮助开发人员更好地理解文档中的技术细节，确保开发工作的顺利进行。"
+                    ];
+                    let insertedIndex = -1;
+                    if (sourceRef.chunk_content && !paragraphs.some(text => text.includes(sourceRef.chunk_content))) {
+                        insertedIndex = Math.min(2, paragraphs.length);
+                        paragraphs.splice(insertedIndex, 0, sourceRef.chunk_content);
+                    }
+
                     documentData.value = {
                         id: docId,
-                        title: '用户需求规格说明书 (示例文档)',
+                        title: sourceRef.document_name || '用户需求规格说明书 (示例文档)',
                         updatedAt: '2024-05-20 14:30',
                         tag: '产品文档',
-                        paragraphs: [
-                            "1. 引言：本文档旨在详细描述系统的功能需求和非功能需求，作为系统设计和开发的依据。本项目的目标是构建一个高效、稳定、易用的企业级管理平台，以满足公司日益增长的业务需求。文档涵盖了从用户界面设计到后端数据处理的各个方面，确保所有利益相关者对系统有统一的理解。",
-                            "1.1 编写目的：明确用户需求，统一项目组对需求的理解，为后续的系统架构设计、数据库设计、编码实现及测试工作提供基础。通过本文档，我们希望能够减少开发过程中的沟通成本，避免因需求不清导致的返工，确保项目按时按质完成。同时，本文档也将作为验收测试的重要依据。",
-                            "1.2 适用范围：本项目的所有开发人员、测试人员、项目经理及相关的业务干系人。无论是前端工程师、后端工程师，还是产品经理和QA团队，都应仔细阅读本文档，以确保对系统的功能和非功能需求有深入的了解。此外，本文档也适用于后期维护人员，帮助他们快速理解系统逻辑。",
-                            "2. 系统概述：本系统是一个基于Web的企业级管理平台，旨在提高企业的办公效率和管理水平。系统采用现代化的微服务架构，支持高并发访问和弹性扩展。前端采用响应式设计，适配PC端和移动端设备，为用户提供一致的操作体验。后端集成多种第三方服务，如短信网关、支付接口等。",
-                            "2.1 核心功能：包括用户管理、权限控制、工作流审批、报表统计等模块。用户管理模块支持复杂的组织架构和角色定义；权限控制模块基于RBAC模型，确保数据安全；工作流审批模块支持自定义流程配置，满足不同企业的审批需求；报表统计模块提供丰富的数据可视化图表，辅助管理层决策。",
-                            "3. 功能需求：",
-                            "3.1 用户管理：系统应支持用户的增删改查操作，支持批量导入导出用户数据。管理员可以查看用户的登录日志和操作记录，对异常账号进行冻结或重置密码。此外，系统还应支持用户头像上传、个人信息修改等自助服务功能，提升用户体验。",
-                            "3.2 权限控制：采用RBAC模型，支持角色与权限的动态配置，确保数据安全。系统应预置多种标准角色，如管理员、普通用户、审计员等，同时允许管理员创建自定义角色。权限应细化到菜单级和按钮级，甚至支持字段级的数据权限控制。",
-                            "4. 非功能需求：",
-                            "4.1 性能要求：系统应支持至少1000用户并发访问，平均响应时间不超过2秒。在高负载情况下，系统应具备自动降级和熔断机制，保证核心功能的可用性。数据库查询应进行优化，避免全表扫描，确保在大数据量下的查询效率。",
-                            "4.2 安全要求：所有敏感数据需加密存储，传输过程需使用HTTPS协议。系统应具备防SQL注入、XSS攻击、CSRF攻击等常见Web安全漏洞的能力。用户密码应使用强哈希算法（如BCrypt）存储，禁止明文传输和存储。",
-                            "5. 附录：相关术语解释及参考资料。包括但不限于RESTful API规范、OAuth2.0认证协议说明、Docker部署指南等。本附录旨在帮助开发人员更好地理解文档中的技术细节，确保开发工作的顺利进行。"
-                        ]
+                        paragraphs
                     };
 
-                    highlightIndices.value = [6, 7, 9, 10];
+                    paragraphMeta.value = buildParagraphMeta(paragraphs, sourceRef, insertedIndex);
+                    highlightIndices.value = locateHighlights(paragraphMeta.value, sourceRef, insertedIndex);
 
                     loading.value = false;
+                    scrollToHighlighted();
                 };
 
                 const isHighlighted = (index) => {
@@ -130,6 +205,7 @@
                 return {
                     loading,
                     document: documentData,
+                    paragraphMeta,
                     isHighlighted
                 };
             }

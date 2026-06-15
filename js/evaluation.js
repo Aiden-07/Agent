@@ -62,6 +62,8 @@ function renderEvaluationList() {
     if (!tbody) return;
 
     tbody.innerHTML = '';
+    const esc = window.escapeHtml || function (s) { return String(s == null ? '' : s); };
+
     evaluationData.forEach((item, index) => {
         const tr = document.createElement('tr');
         tr.className = 'hover:bg-gray-50 transition-colors';
@@ -69,47 +71,43 @@ function renderEvaluationList() {
         let statusHtml = '';
         
         if (item.status === 'completed') {
-            statusHtml = `<span class="px-2 py-1 rounded-full text-xs font-medium bg-green-50 text-green-600">已完成</span>`;
+            statusHtml = `<span class="px-2 py-1 rounded-full text-xs font-medium bg-green-50 text-green-600 whitespace-nowrap">已完成</span>`;
         } else if (item.status === 'running') {
             statusHtml = `
-                <div class="flex flex-col gap-1 w-24">
-                    <div class="flex justify-between text-xs text-blue-600">
-                        <span>进行中</span>
-                        <span>${item.progress}%</span>
-                    </div>
-                    <div class="w-full bg-blue-100 rounded-full h-1.5">
+                <div class="flex items-center gap-2 min-w-0 whitespace-nowrap">
+                    <span class="text-xs text-blue-600">进行中</span>
+                    <div class="w-20 bg-blue-100 rounded-full h-1.5 flex-shrink-0">
                         <div class="bg-blue-600 h-1.5 rounded-full" style="width: ${item.progress}%"></div>
                     </div>
+                    <span class="text-xs text-blue-600">${item.progress}%</span>
                 </div>`;
         } else if (item.status === 'failed') {
             statusHtml = `
-                <div class="group relative">
+                <div class="group relative whitespace-nowrap">
                     <span class="px-2 py-1 rounded-full text-xs font-medium bg-red-50 text-red-600 cursor-help">已失败</span>
                     <div class="hidden group-hover:block absolute bottom-full left-0 mb-2 w-48 p-2 bg-gray-800 text-white text-xs rounded shadow-lg z-10">
-                        原因: ${item.errorMsg || '未知错误'}
+                        原因: ${esc(item.errorMsg || '未知错误')}
                     </div>
                 </div>`;
         } else {
-             statusHtml = `<span class="px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-500">排队中</span>`;
+             statusHtml = `<span class="px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-500 whitespace-nowrap">排队中</span>`;
         }
 
         tr.innerHTML = `
-            <td class="px-6 py-4">
-                <div class="flex items-center gap-3">
-                    <div class="w-8 h-8 rounded-lg bg-orange-100 text-orange-600 flex items-center justify-center">
+            <td class="px-6 py-4 min-w-0">
+                <div class="flex items-center gap-3 min-w-0">
+                    <div class="w-8 h-8 rounded-lg bg-orange-100 text-orange-600 flex items-center justify-center flex-shrink-0">
                         <i class="fa-solid fa-vial"></i>
                     </div>
-                    <div class="font-medium text-gray-900">${item.name}</div>
+                    <div class="font-medium text-gray-900 dt-cell-ellipsis min-w-0 flex-1" title="${esc(item.name)}">${esc(item.name)}</div>
                 </div>
             </td>
-            <td class="px-6 py-4 text-sm text-gray-600">${item.agent}</td>
-            <td class="px-6 py-4">
-                ${statusHtml}
-            </td>
-            <td class="px-6 py-4 text-sm text-gray-600">${item.creator}</td>
-            <td class="px-6 py-4 text-xs text-gray-500">${item.createdAt}</td>
-            <td class="px-6 py-4 text-xs text-gray-500">${item.completedAt}</td>
-            <td class="px-6 py-4 text-right">
+            <td class="px-6 py-4 text-sm text-gray-600 min-w-0"><span class="dt-cell-ellipsis" title="${esc(item.agent)}">${esc(item.agent)}</span></td>
+            <td class="px-6 py-4 min-w-0">${statusHtml}</td>
+            <td class="px-6 py-4 text-sm text-gray-600 whitespace-nowrap"><span class="dt-cell-ellipsis" title="${esc(item.creator)}">${esc(item.creator)}</span></td>
+            <td class="px-6 py-4 text-xs text-gray-500 whitespace-nowrap">${esc(String(item.createdAt).replace(/\s+/g, ' '))}</td>
+            <td class="px-6 py-4 text-xs text-gray-500 whitespace-nowrap">${esc(String(item.completedAt).replace(/\s+/g, ' '))}</td>
+            <td class="px-6 py-4 text-right whitespace-nowrap min-w-[56px]">
                 <button onclick="window.openEvalActions(event, '${item.id}', '${item.status}')" class="p-1.5 text-gray-400 hover:text-gray-600 transition-colors rounded hover:bg-gray-100">
                     <i class="fa-solid fa-ellipsis"></i>
                 </button>
@@ -117,6 +115,7 @@ function renderEvaluationList() {
         `;
         tbody.appendChild(tr);
     });
+    if (window.syncDataTable) window.syncDataTable('evaluation-data-table', { storageKey: 'dt-colwidths-evaluation' });
 }
 
 window.openEvalActions = function(event, id, status) {

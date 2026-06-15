@@ -1,0 +1,119 @@
+/* Reusable data tables: horizontal scroll, sticky last column, column resize, ellipsis */
+
+.dt-scroll-wrap {
+    overflow-x: auto;
+    overflow-y: visible;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+    max-width: 100%;
+}
+
+.dt-scroll-wrap.rounded-inherit {
+    border-radius: inherit;
+}
+
+.dt-scroll-fill {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: auto;
+}
+
+.dt-table {
+    table-layout: fixed;
+    width: 100%;
+    min-width: 720px;
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+.dt-table thead th {
+    position: relative;
+    vertical-align: middle;
+}
+
+.dt-table thead th.dt-th-sticky-end,
+.dt-table tbody td.dt-td-sticky-end {
+    position: sticky;
+    right: 0;
+    z-index: 2;
+    background-color: #fff;
+    box-shadow: -4px 0 8px -4px rgba(15, 23, 42, 0.12);
+}
+
+.dt-table thead th.dt-th-sticky-end {
+    z-index: 11;
+    background-color: #f9fafb;
+}
+
+.dark .dt-table thead th.dt-th-sticky-end,
+html.dark .dt-table thead th.dt-th-sticky-end {
+    background-color: #111827;
+}
+
+.dark .dt-table tbody td.dt-td-sticky-end,
+html.dark .dt-table tbody td.dt-td-sticky-end {
+    background-color: #111827;
+}
+
+@media (prefers-color-scheme: dark) {
+    html:not(.light) .dt-table thead th.dt-th-sticky-end:not(.dt-no-dark-bg) {
+        background-color: #111827;
+    }
+    html:not(.light) .dt-table tbody td.dt-td-sticky-end:not(.dt-no-dark-bg) {
+        background-color: #111827;
+    }
+}
+
+.dt-table tbody tr:hover td.dt-td-sticky-end {
+    background-color: #f9fafb;
+}
+
+.dark .dt-table tbody tr:hover td.dt-td-sticky-end,
+html.dark .dt-table tbody tr:hover td.dt-td-sticky-end {
+    background-color: #1f2937;
+}
+
+@media (prefers-color-scheme: dark) {
+    html:not(.light) .dt-table tbody tr:hover td.dt-td-sticky-end:not(.dt-no-dark-bg) {
+        background-color: #1f2937;
+    }
+}
+
+/* Single-line ellipsis cell content */
+.dt-cell-ellipsis {
+    display: block;
+    min-width: 0;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.dt-td-flex {
+    min-width: 0;
+}
+
+.dt-td-flex .dt-cell-ellipsis {
+    display: block;
+}
+
+/* Column resize hit area (injected into th) */
+.dt-col-resizer {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 8px;
+    height: 100%;
+    cursor: col-resize;
+    z-index: 5;
+    user-select: none;
+    touch-action: none;
+}
+
+.dt-col-resizer:hover {
+    background: rgba(59, 130, 246, 0.15);
+}
+
+.dt-table thead th.dt-th-sticky-end .dt-col-resizer {
+    right: 0;
+}

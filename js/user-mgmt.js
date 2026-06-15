@@ -38,7 +38,81 @@
         }
     });
 
+    let isFilterExpanded = false;
+
+    window.toggleUserFilters = function() {
+        isFilterExpanded = !isFilterExpanded;
+        const btn = document.getElementById('toggle-filter-btn');
+        const advancedFilters = document.querySelectorAll('.filter-advanced');
+        
+        if (isFilterExpanded) {
+            advancedFilters.forEach(el => el.classList.remove('hidden'));
+            btn.innerHTML = `<span>收起筛选</span><i class="fa-solid fa-chevron-up ml-1 text-xs"></i>`;
+        } else {
+            advancedFilters.forEach(el => el.classList.add('hidden'));
+            btn.innerHTML = `<span>展开筛选</span><i class="fa-solid fa-chevron-down ml-1 text-xs"></i>`;
+        }
+    };
+
+    window.executeUserSearch = function() {
+        const searchParams = {
+            keyword: document.getElementById('user-search-input')?.value || '',
+            role: document.getElementById('user-role-filter')?.value || '所有角色',
+            dept: document.getElementById('user-dept-filter')?.value || '所有部门',
+            status: document.getElementById('user-status-filter')?.value || '所有状态',
+            dateRange: document.getElementById('user-date-filter')?.value || ''
+        };
+        localStorage.setItem('userMgmtFilters', JSON.stringify(searchParams));
+        renderUserTable();
+    };
+
+    window.resetUserSearch = function() {
+        if(document.getElementById('user-search-input')) document.getElementById('user-search-input').value = '';
+        if(document.getElementById('user-role-filter')) document.getElementById('user-role-filter').value = '所有角色';
+        if(document.getElementById('user-dept-filter')) document.getElementById('user-dept-filter').value = '所有部门';
+        if(document.getElementById('user-status-filter')) document.getElementById('user-status-filter').value = '所有状态';
+        
+        const dateInput = document.getElementById('user-date-filter');
+        if(dateInput && dateInput._flatpickr) {
+            dateInput._flatpickr.clear();
+        } else if (dateInput) {
+            dateInput.value = '';
+        }
+        
+        localStorage.removeItem('userMgmtFilters');
+        renderUserTable();
+    };
+
+    function restoreFilters() {
+        try {
+            const saved = localStorage.getItem('userMgmtFilters');
+            if (saved) {
+                const params = JSON.parse(saved);
+                if(document.getElementById('user-search-input')) document.getElementById('user-search-input').value = params.keyword || '';
+                if(document.getElementById('user-role-filter')) document.getElementById('user-role-filter').value = params.role || '所有角色';
+                if(document.getElementById('user-dept-filter')) document.getElementById('user-dept-filter').value = params.dept || '所有部门';
+                if(document.getElementById('user-status-filter')) document.getElementById('user-status-filter').value = params.status || '所有状态';
+                if(document.getElementById('user-date-filter')) document.getElementById('user-date-filter').value = params.dateRange || '';
+            }
+        } catch (e) {
+            console.error("Failed to restore filters", e);
+        }
+    }
+
+    function initDateRangePicker() {
+        const dateInput = document.getElementById('user-date-filter');
+        if (dateInput && window.flatpickr) {
+            flatpickr(dateInput, {
+                mode: 'range',
+                locale: 'zh',
+                dateFormat: 'Y-m-d'
+            });
+        }
+    }
+
     function initUserMgmt() {
+        restoreFilters();
+        initDateRangePicker();
         renderUserTable();
         setupEventListeners();
         setupSmartContactInput();
@@ -61,19 +135,12 @@
     }
 
     function setupEventListeners() {
-        // Search
         const searchInput = document.getElementById('user-search-input');
         if (searchInput) {
-            searchInput.addEventListener('input', (e) => {
-                renderUserTable(e.target.value);
-            });
-        }
-        
-        // Role Filter
-        const roleFilter = document.getElementById('user-role-filter');
-        if (roleFilter) {
-            roleFilter.addEventListener('change', () => {
-                renderUserTable(searchInput ? searchInput.value : '');
+            searchInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    executeUserSearch();
+                }
             });
         }
     }
@@ -125,12 +192,35 @@
         }
     }
 
-    function renderUserTable(searchTerm = '') {
+    function renderUserTable() {
         const tbody = document.getElementById('user-table-body');
         if (!tbody) return;
 
+        const searchInput = document.getElementById('user-search-input');
         const roleFilter = document.getElementById('user-role-filter');
+        const deptFilter = document.getElementById('user-dept-filter');
+        const statusFilter = document.getElementById('user-status-filter');
+        const dateFilter = document.getElementById('user-date-filter');
+
+        const searchTerm = searchInput ? searchInput.value : '';
         const selectedRole = roleFilter ? roleFilter.value : '所有角色';
+        const selectedDept = deptFilter ? deptFilter.value : '所有部门';
+        const selectedStatus = statusFilter ? statusFilter.value : '所有状态';
+        const dateRange = dateFilter ? dateFilter.value : '';
+
+        let startDate = null;
+        let endDate = null;
+        if (dateRange && dateRange.includes('至')) {
+            const parts = dateRange.split('至');
+            startDate = new Date(parts[0].trim());
+            endDate = new Date(parts[1].trim());
+            endDate.setHours(23, 59, 59, 999);
+        } else if (dateRange && dateRange.includes('to')) {
+            const parts = dateRange.split('to');
+            startDate = new Date(parts[0].trim());
+            endDate = new Date(parts[1].trim());
+            endDate.setHours(23, 59, 59, 999);
+        }
 
         tbody.innerHTML = '';
 
@@ -151,13 +241,25 @@
                 }
             }
             
-            return matchesSearch && matchesRole;
+            let matchesDept = selectedDept === '所有部门' || user.department === selectedDept;
+            let matchesStatus = selectedStatus === '所有状态' || user.status === selectedStatus;
+            
+            let matchesDate = true;
+            if (startDate && endDate && user.joinDate) {
+                const joinDate = new Date(user.joinDate);
+                matchesDate = joinDate >= startDate && joinDate <= endDate;
+            }
+            
+            return matchesSearch && matchesRole && matchesDept && matchesStatus && matchesDate;
         });
 
         if (filteredUsers.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="6" class="px-6 py-8 text-center text-gray-400">暂无用户数据</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="7" class="px-6 py-8 text-center text-gray-400">暂无用户数据</td></tr>`;
+            if (window.syncDataTable) window.syncDataTable('user-data-table', { storageKey: 'dt-colwidths-users' });
             return;
         }
+
+        const esc = window.escapeHtml || function (s) { return String(s == null ? '' : s); };
 
         filteredUsers.forEach(user => {
             const tr = document.createElement('tr');
@@ -180,63 +282,84 @@
                 roleDisplay = roles.join(', ');
             }
 
+            const rolesJoined = roles.join('、');
+
             // Avatar Initials
             const initials = user.name.substring(0, 2).toUpperCase();
             const avatarColor = user.status === 'normal' ? 'bg-blue-100 text-blue-600' : 'bg-gray-200 text-gray-500';
 
             tr.innerHTML = `
-                <td class="px-6 py-4">
-                    <div class="flex items-center gap-3">
-                        <div class="w-8 h-8 rounded-full ${avatarColor} flex items-center justify-center font-bold text-xs">
+                <td class="px-6 py-4 min-w-0">
+                    <div class="flex items-center gap-3 min-w-0">
+                        <div class="w-8 h-8 rounded-full ${avatarColor} flex items-center justify-center font-bold text-xs flex-shrink-0">
                             ${initials}
                         </div>
-                        <div>
-                            <p class="font-medium text-gray-800">${user.name}</p>
+                        <div class="min-w-0 flex-1">
+                            <p class="font-medium text-gray-800 dt-cell-ellipsis" title="${esc(user.name)}">${esc(user.name)}</p>
                         </div>
                     </div>
                 </td>
-                <td class="px-6 py-4 text-gray-600">${user.phone || '-'}</td>
-                <td class="px-6 py-4 text-gray-600">${user.email || '-'}</td>
-                <td class="px-6 py-4">
-                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs bg-gray-100 text-gray-700">
-                        ${user.department || '无部门'}
-                    </span>
+                <td class="px-6 py-4 text-gray-600 whitespace-nowrap"><span class="dt-cell-ellipsis" title="${esc(user.phone || '-')}">${esc(user.phone || '-')}</span></td>
+                <td class="px-6 py-4 text-gray-600 min-w-0"><span class="dt-cell-ellipsis" title="${esc(user.email || '-')}">${esc(user.email || '-')}</span></td>
+                <td class="px-6 py-4 min-w-0 whitespace-nowrap">
+                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs bg-gray-100 text-gray-700 dt-cell-ellipsis max-w-full" title="${esc(user.department || '无部门')}">${esc(user.department || '无部门')}</span>
                 </td>
-                <td class="px-6 py-4">
-                    <span class="bg-gray-100 text-gray-700 px-2 py-1 rounded text-xs font-medium" title="${roles.join(', ')}">${roleDisplay}</span>
+                <td class="px-6 py-4 min-w-0 whitespace-nowrap">
+                    <span class="bg-gray-100 text-gray-700 px-2 py-1 rounded text-xs font-medium dt-cell-ellipsis inline-block max-w-full" title="${esc(rolesJoined)}">${esc(roleDisplay)}</span>
                 </td>
-                <td class="px-6 py-4">${statusBadge}</td>
-                <td class="px-6 py-4 text-right">
-                    <button onclick="window.openUserActions(event, ${user.id}, '${user.status}')" class="p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors">
-                        <i class="fa-solid fa-ellipsis"></i>
-                    </button>
+                <td class="px-6 py-4 whitespace-nowrap">${statusBadge}</td>
+                <td class="px-6 py-4 text-right min-w-[140px] action-td">
                 </td>
             `;
             tbody.appendChild(tr);
-        });
-    }
 
-    window.openUserActions = function(event, id, status) {
-        const statusLabel = status === 'normal' ? '离职' : '激活';
-        const statusIcon = status === 'normal' ? 'fa-solid fa-ban' : 'fa-solid fa-check';
-        const statusClass = status === 'normal' ? 'text-red-600 hover:bg-red-50' : 'text-green-600 hover:bg-green-50';
-        const statusIconClass = status === 'normal' ? 'text-red-500' : 'text-green-500';
-        const newStatus = status === 'normal' ? 'resigned' : 'normal';
-
-        window.showActionMenu(event, [
-            {
-                label: '编辑',
-                icon: 'fa-solid fa-pen',
-                onClick: () => openEditUserModal(id)
-            },
-            {
-                label: statusLabel,
-                icon: statusIcon,
-                className: statusClass,
-                iconClass: statusIconClass,
-                onClick: () => changeUserStatus(id, newStatus)
+            // Add inline actions
+            const actionsTd = tr.querySelector('.action-td');
+            const statusLabel = user.status === 'normal' ? '禁用' : '激活';
+            const newStatus = user.status === 'normal' ? 'resigned' : 'normal';
+            
+            const actions = [
+                {
+                    label: '编辑',
+                    onClick: () => openEditUserModal(user.id)
+                },
+                {
+                    label: statusLabel,
+                    className: user.status === 'normal' ? 'text-orange-600 hover:text-orange-800' : 'text-green-600 hover:text-green-800',
+                    onClick: () => changeUserStatus(user.id, newStatus)
+                },
+                {
+                    label: '删除',
+                    className: 'text-red-600 hover:text-red-800',
+                    onClick: () => {
+                        // Add basic delete functionality if not explicitly provided
+                        if(confirm(`确定要删除用户 "${user.name}" 吗？`)) {
+                            users = users.filter(u => u.id !== user.id);
+                            renderUserTable();
+                        }
+                    }
+                }
+            ];
+            
+            if (window.createInlineActions) {
+                // To prevent actions from being collapsed into "More", we can pass an optional parameter or bypass the function
+                // However, since createInlineActions splits at index 2 by default, we can just build our own simple flex container
+                // Or if we know it's just 3 items, we can render them directly
+                const container = document.createElement('div');
+                container.className = 'flex items-center justify-end gap-3';
+                
+                actions.forEach(act => {
+                    const btn = document.createElement('button');
+                    btn.className = 'text-blue-600 hover:text-blue-800 text-sm font-medium transition-colors ' + (act.className || '');
+                    btn.textContent = act.label;
+                    btn.onclick = (e) => { e.stopPropagation(); act.onClick(); };
+                    container.appendChild(btn);
+                });
+                
+                actionsTd.appendChild(container);
             }
-        ]);
+        });
+        if (window.syncDataTable) window.syncDataTable('user-data-table', { storageKey: 'dt-colwidths-users' });
     }
 
     // Expose to window

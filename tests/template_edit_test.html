@@ -1,0 +1,133 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>Template Edit Tests</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div id="test-container" class="p-8">
+        <h1 class="text-2xl font-bold mb-4">Template Edit Logic Tests</h1>
+        <div id="test-results" class="space-y-2 mb-8"></div>
+        <div id="template-list-custom" class="grid grid-cols-3 gap-4"></div>
+    </div>
+
+    <script>
+        // --- Mocks ---
+        window.showToast = (msg, type) => console.log(`[${type}] ${msg}`);
+        window.TEMPLATE_DATA = {
+            custom: [
+                { id: 'c1', name: 'Template 1', icon: 'fa-file' },
+                { id: 'c2', name: 'Template 2', icon: 'fa-file' }
+            ]
+        };
+        window.selectedTemplateId = null;
+        window.editingTemplateId = null;
+
+        // --- Mocked Functions (Copied Logic) ---
+        window.renderTemplateList = function(type, items, deletable) {
+            const container = document.getElementById(`template-list-${type}`);
+            container.innerHTML = items.map(item => `
+                <div class="template-card relative p-4 border rounded" data-id="${item.id}">
+                    <h4 id="title-${item.id}">${item.name}</h4>
+                    ${deletable ? `
+                    <div class="actions">
+                        <button id="btn-edit-${item.id}" onclick="toggleEditTemplate('${item.id}')">
+                            <i class="fa-regular fa-pen-to-square"></i>
+                        </button>
+                    </div>` : ''}
+                </div>
+            `).join('');
+        };
+
+        window.toggleEditTemplate = function(id) {
+            const titleEl = document.getElementById(`title-${id}`);
+            const btnEl = document.getElementById(`btn-edit-${id}`);
+            const iconEl = btnEl.querySelector('i');
+            
+            if (window.editingTemplateId === id) {
+                // Save
+                const newName = titleEl.innerText.trim();
+                if (newName) {
+                    const template = window.TEMPLATE_DATA.custom.find(t => t.id === id);
+                    if (template) template.name = newName;
+                    
+                    // Exit Edit Mode
+                    titleEl.contentEditable = "false";
+                    titleEl.classList.remove('editing');
+                    iconEl.className = 'fa-regular fa-pen-to-square';
+                    window.editingTemplateId = null;
+                }
+            } else {
+                // Enter Edit Mode
+                if (window.editingTemplateId) {
+                     // Cancel previous
+                     const prevId = window.editingTemplateId;
+                     const prevTitle = document.getElementById(`title-${prevId}`);
+                     const prevBtn = document.getElementById(`btn-edit-${prevId}`);
+                     if(prevTitle) {
+                         prevTitle.contentEditable = "false";
+                         prevTitle.innerText = window.TEMPLATE_DATA.custom.find(t => t.id === prevId)?.name;
+                         prevTitle.classList.remove('editing');
+                         prevBtn.querySelector('i').className = 'fa-regular fa-pen-to-square';
+                     }
+                }
+                
+                window.editingTemplateId = id;
+                titleEl.contentEditable = "true";
+                titleEl.classList.add('editing');
+                
+                // Change Icon
+                iconEl.className = 'fa-solid fa-check';
+            }
+        };
+
+        // --- Test Runner ---
+        const resultsEl = document.getElementById('test-results');
+        function assert(desc, condition) {
+            const div = document.createElement('div');
+            div.className = condition ? 'text-green-600' : 'text-red-600 font-bold';
+            div.innerText = (condition ? 'PASS: ' : 'FAIL: ') + desc;
+            resultsEl.appendChild(div);
+        }
+
+        async function runTests() {
+            renderTemplateList('custom', window.TEMPLATE_DATA.custom, true);
+            const title1 = document.getElementById('title-c1');
+            const btn1 = document.getElementById('btn-edit-c1');
+            const icon1 = btn1.querySelector('i');
+
+            // Test 1: Initial State
+            assert('Initially not editable', title1.contentEditable !== 'true');
+            assert('Icon is edit', icon1.className.includes('fa-pen-to-square'));
+
+            // Test 2: Enter Edit Mode
+            toggleEditTemplate('c1');
+            assert('Editable after click', title1.contentEditable === 'true');
+            assert('Icon is check', icon1.className.includes('fa-check'));
+            assert('State is editing c1', window.editingTemplateId === 'c1');
+
+            // Test 3: Save Changes
+            title1.innerText = 'Updated Name';
+            toggleEditTemplate('c1'); // Click check
+            assert('Not editable after save', title1.contentEditable === 'false');
+            assert('Icon reverted to edit', icon1.className.includes('fa-pen-to-square'));
+            assert('Data updated', window.TEMPLATE_DATA.custom[0].name === 'Updated Name');
+            assert('State cleared', window.editingTemplateId === null);
+
+            // Test 4: Switch Edit (Cancel previous)
+            toggleEditTemplate('c1');
+            title1.innerText = 'Temp Name';
+            toggleEditTemplate('c2'); // Switch to c2
+            
+            assert('c1 edit cancelled (reverted)', document.getElementById('title-c1').innerText === 'Updated Name');
+            assert('c1 not editable', document.getElementById('title-c1').contentEditable === 'false');
+            assert('c2 is editable', document.getElementById('title-c2').contentEditable === 'true');
+        }
+
+        setTimeout(runTests, 100);
+    </script>
+</body>
+</html>

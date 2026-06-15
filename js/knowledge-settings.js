@@ -1,34 +1,296 @@
 // Knowledge Base Settings Logic
 
 let currentSettingsKbId = null;
-
+let kbParserSelectPrevValue = null;
 const FIELD_TYPE_MAP = {
     'text': '文本',
     'textarea': '多行文本',
     'number': '数字',
     'date': '日期',
-    'select': '下拉列表',
-    'category': '下拉列表', // Map legacy category to select
-    'boolean': '布尔值'
+    'single_select': '单选',
+    'multi_select': '多选',
+    'progress': '进度',
+    'boolean': '布尔值',
+    'switch': '开关',
+    'user': '人员',
+    'cascade': '级联',
+    'checklist': '清单',
+    'button': '按钮',
+    'relation_single': '单向关联',
+    'relation_double': '双向关联',
+    'custom_number': '自定义编号',
+    'rating': '评分',
+    'department': '部门',
+    'attachment': '附件'
 };
 
 function getTypeName(type) {
     return FIELD_TYPE_MAP[type] || type;
 }
 
+function setNumberFormatPanels(format, mode) {
+    const prefix = mode === 'add' ? 'new-' : '';
+    const numberPanel = document.getElementById(`${prefix}number-format-number`);
+    const currencyPanel = document.getElementById(`${prefix}number-format-currency`);
+    const percentPanel = document.getElementById(`${prefix}number-format-percent`);
+    if (!numberPanel || !currencyPanel || !percentPanel) return;
+    numberPanel.classList.toggle('hidden', format !== 'number');
+    currencyPanel.classList.toggle('hidden', format !== 'currency');
+    percentPanel.classList.toggle('hidden', format !== 'percent');
+}
+
+window.handleNumberFormatChange = function(format, mode) {
+    setNumberFormatPanels(format, mode === 'add' ? 'add' : 'edit');
+};
+
+function getNumberConfigFromUI(mode) {
+    const prefix = mode === 'add' ? 'new-' : '';
+    const formatEl = document.getElementById(`${prefix}number-format-select`);
+    const format = (formatEl?.value || 'number');
+    if (format === 'currency') {
+        return {
+            format,
+            decimals: Number(document.getElementById(`${prefix}currency-decimals`)?.value ?? 2),
+            currencyCode: String(document.getElementById(`${prefix}currency-code`)?.value || 'CNY'),
+            thousands: !!document.getElementById(`${prefix}currency-thousands`)?.checked
+        };
+    }
+    if (format === 'percent') {
+        return {
+            format,
+            decimals: Number(document.getElementById(`${prefix}percent-decimals`)?.value ?? 0)
+        };
+    }
+    return {
+        format: 'number',
+        decimals: Number(document.getElementById(`${prefix}number-decimals`)?.value ?? 0),
+        thousands: !!document.getElementById(`${prefix}number-thousands`)?.checked
+    };
+}
+
+function setNumberConfigToUI(cfg, mode) {
+    const prefix = mode === 'add' ? 'new-' : '';
+    const formatEl = document.getElementById(`${prefix}number-format-select`);
+    if (!formatEl) return;
+    const format = cfg?.format || 'number';
+    formatEl.value = format;
+    setNumberFormatPanels(format, mode);
+
+    if (format === 'currency') {
+        const dec = document.getElementById(`${prefix}currency-decimals`);
+        const code = document.getElementById(`${prefix}currency-code`);
+        const th = document.getElementById(`${prefix}currency-thousands`);
+        if (dec) dec.value = String(cfg?.decimals ?? 2);
+        if (code) code.value = cfg?.currencyCode || 'CNY';
+        if (th) th.checked = !!cfg?.thousands;
+        return;
+    }
+    if (format === 'percent') {
+        const dec = document.getElementById(`${prefix}percent-decimals`);
+        if (dec) dec.value = String(cfg?.decimals ?? 0);
+        return;
+    }
+    const dec = document.getElementById(`${prefix}number-decimals`);
+    const th = document.getElementById(`${prefix}number-thousands`);
+    if (dec) dec.value = String(cfg?.decimals ?? 0);
+    if (th) th.checked = !!cfg?.thousands;
+}
+
+// 字段类型变更：单选/多选显示枚举配置；数字显示数字格式配置
+window.handleFieldTypeChange = function(type, mode) {
+    const isEnumType = type === 'single_select' || type === 'multi_select';
+    const isNumberType = type === 'number';
+    if (mode === 'edit') {
+        const enumArea = document.getElementById('enum-config-area');
+        const numArea = document.getElementById('number-config-area');
+        if (enumArea) enumArea.classList.toggle('hidden', !isEnumType);
+        if (numArea) numArea.classList.toggle('hidden', !isNumberType);
+
+        if (!isEnumType) {
+            enumOptions = [];
+            const err = document.getElementById('enum-error-msg');
+            if (err) err.classList.add('hidden');
+            if (typeof renderEnumValues === 'function') renderEnumValues();
+        } else {
+            if (!Array.isArray(enumOptions) || enumOptions.length === 0) {
+                enumOptions = [{ label: '选项1', value: 'option1' }];
+            }
+            if (typeof renderEnumValues === 'function') renderEnumValues();
+        }
+
+        if (isNumberType) {
+            setNumberConfigToUI(getNumberConfigFromUI('edit'), 'edit');
+        }
+    } else if (mode === 'add') {
+        const enumArea = document.getElementById('new-enum-config-area');
+        const numArea = document.getElementById('new-number-config-area');
+        if (enumArea) enumArea.classList.toggle('hidden', !isEnumType);
+        if (numArea) numArea.classList.toggle('hidden', !isNumberType);
+
+        const list = document.getElementById('new-enum-options-list');
+        if (list) {
+            if (!isEnumType) list.innerHTML = '';
+            else if (list.children.length === 0 && typeof addNewEnumOption === 'function') addNewEnumOption();
+        }
+        if (isNumberType) {
+            setNumberConfigToUI(getNumberConfigFromUI('add'), 'add');
+        }
+    }
+};
+
 let kbCustomFields = [
     { id: 'f1', name: '适用版本', type: 'text' },
-    { id: 'f2', name: '机密等级', type: 'select' }
+    { id: 'f2', name: '机密等级', type: 'single_select', enumConfig: { mode: 'single', searchable: false, options: [{ label: '公开', value: '公开' }, { label: '内部', value: '内部' }] } }
 ];
 
 let kbDocFields = [
-    { id: 'df1', name: '标题', type: 'text', system: true },
-    { id: 'df2', name: '创建时间', type: 'date', system: true },
-    { id: 'df3', name: '作者', type: 'text', system: false }
+    { id: 'df1', name: '标题', type: 'text', system: true, required: true, groupId: 'sys', order: 0 },
+    { id: 'df2', name: '创建时间', type: 'date', system: true, required: true, groupId: 'sys', order: 1 },
+    { id: 'df3', name: '作者', type: 'text', system: false, required: false, groupId: 'g0', order: 0 }
 ];
+
+let kbDocFieldGroups = [
+    { id: 'sys', name: '系统分组', fixed: true, order: 0 },
+    { id: 'g0', name: '未分组', fixed: true, order: 1 }
+];
+
+const KB_DOC_FIELD_STORAGE_PREFIX = window.VAgentKnowledgeStore?.fieldStoragePrefix || 'kb_doc_field_settings_v1_';
+
+function getKnowledgeSettingTagsFromUI() {
+    const container = document.getElementById('kb-setting-tags');
+    if (!container) return [];
+    return Array.from(container.querySelectorAll('.tag-item span'))
+        .map(el => (el.textContent || '').trim())
+        .filter(Boolean);
+}
+
+function getNumberInputValue(id, fallback = null) {
+    const el = document.getElementById(id);
+    if (!el || el.value === '') return fallback;
+    const value = Number(el.value);
+    return Number.isFinite(value) ? value : fallback;
+}
+
+function syncKbSettingsToSharedStore(nextKb) {
+    let nextList = [];
+    if (window.VAgentKnowledgeStore) {
+        nextList = window.VAgentKnowledgeStore.upsertKnowledgeBase(nextKb);
+    }
+
+    try {
+        if (typeof knowledgeData !== 'undefined' && Array.isArray(knowledgeData)) {
+            const normalized = window.VAgentKnowledgeStore
+                ? window.VAgentKnowledgeStore.normalizeKnowledgeBase(nextKb)
+                : nextKb;
+            const index = knowledgeData.findIndex(kb => kb.id === normalized.id);
+            if (index >= 0) knowledgeData[index] = { ...knowledgeData[index], ...normalized };
+            else knowledgeData.unshift(normalized);
+            window.knowledgeData = knowledgeData;
+        } else if (nextList.length) {
+            window.knowledgeData = nextList;
+        }
+    } catch (e) {
+        if (nextList.length) window.knowledgeData = nextList;
+    }
+
+    return nextList;
+}
+
+function normalizeDocFieldState() {
+    // Ensure groups
+    if (!Array.isArray(kbDocFieldGroups) || kbDocFieldGroups.length === 0) {
+        kbDocFieldGroups = [
+            { id: 'sys', name: '系统分组', fixed: true, order: 0 },
+            { id: 'g0', name: '未分组', fixed: true, order: 1 }
+        ];
+    }
+    // Ensure default groups exist (migration)
+    if (!kbDocFieldGroups.some(g => g.id === 'sys')) kbDocFieldGroups.unshift({ id: 'sys', name: '系统分组', fixed: true, order: -1 });
+    if (!kbDocFieldGroups.some(g => g.id === 'g0')) kbDocFieldGroups.push({ id: 'g0', name: '未分组', fixed: true, order: 9999 });
+    kbDocFieldGroups.forEach((g, idx) => {
+        if (!g.id) g.id = `g-${idx}`;
+        if (typeof g.order !== 'number') g.order = idx;
+        if (!g.name) g.name = `分组${idx + 1}`;
+    });
+    kbDocFieldGroups.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+
+    const validGroupIds = new Set(kbDocFieldGroups.map(g => g.id));
+
+    // Ensure fields
+    if (!Array.isArray(kbDocFields)) kbDocFields = [];
+    kbDocFields.forEach((f, idx) => {
+        if (!f.id) f.id = `df-${Date.now()}-${idx}`;
+        if (!f.name) f.name = '未命名字段';
+        if (!f.type) f.type = 'text';
+        if (typeof f.system !== 'boolean') f.system = false;
+        if (typeof f.required !== 'boolean') f.required = !!f.system;
+        // 系统字段强制归类到系统分组；其他字段归类到未分组（或已有分组）
+        if (f.system) f.groupId = 'sys';
+        else if (!f.groupId || !validGroupIds.has(f.groupId) || f.groupId === 'sys') f.groupId = 'g0';
+        if (typeof f.order !== 'number') f.order = idx;
+    });
+    normalizeDocFieldOrders();
+}
+
+function normalizeDocFieldOrders() {
+    // Normalize per group
+    kbDocFieldGroups.forEach(g => {
+        const items = kbDocFields
+            .filter(f => f.groupId === g.id)
+            .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+        items.forEach((f, idx) => { f.order = idx; });
+    });
+}
+
+function persistDocFieldSettings() {
+    if (!currentSettingsKbId) return;
+    try {
+        const payload = {
+            groups: kbDocFieldGroups,
+            fields: kbDocFields
+        };
+        if (window.VAgentKnowledgeStore) {
+            const normalized = window.VAgentKnowledgeStore.saveDocFieldSettings(currentSettingsKbId, payload);
+            kbDocFieldGroups = normalized.groups;
+            kbDocFields = normalized.fields;
+        } else {
+            localStorage.setItem(`${KB_DOC_FIELD_STORAGE_PREFIX}${currentSettingsKbId}`, JSON.stringify(payload));
+        }
+    } catch (e) {
+        // ignore
+    }
+}
+
+function loadDocFieldSettings(kbId) {
+    try {
+        if (window.VAgentKnowledgeStore) {
+            const stored = window.VAgentKnowledgeStore.loadDocFieldSettings(kbId);
+            kbDocFieldGroups = stored.groups;
+            kbDocFields = stored.fields;
+        } else {
+            const raw = localStorage.getItem(`${KB_DOC_FIELD_STORAGE_PREFIX}${kbId}`);
+            if (raw) {
+            const parsed = JSON.parse(raw);
+            if (parsed && typeof parsed === 'object') {
+                if (Array.isArray(parsed.groups)) kbDocFieldGroups = parsed.groups;
+                if (Array.isArray(parsed.fields)) kbDocFields = parsed.fields;
+            }
+            }
+        }
+    } catch (e) {
+        // ignore
+    }
+    normalizeDocFieldState();
+}
 
 window.initKbSettingsPage = function(params) {
     console.log('Initializing KB Settings...', params);
+    
+    // Initialize Retrieval Config UI
+    if (window.renderCreateKbRetrievalConfig) {
+        window.renderCreateKbRetrievalConfig();
+    }
+    
     if (params && params.id) {
         currentSettingsKbId = params.id;
         loadKbSettings(params.id);
@@ -36,6 +298,40 @@ window.initKbSettingsPage = function(params) {
         alert('未指定知识库ID');
         window.history.back();
     }
+    
+    // Load Version Toggle Setting
+    loadKbVersionSetting();
+}
+
+function bindKbParserSelectConfirmIfNeeded() {
+    const parserSelect = document.getElementById('kb-setting-parser');
+    if (!parserSelect) return;
+    if (parserSelect.dataset && parserSelect.dataset.confirmBound === '1') return;
+    if (parserSelect.dataset) parserSelect.dataset.confirmBound = '1';
+
+    kbParserSelectPrevValue = parserSelect.value;
+
+    // 用 focus 记录“切换前值”，避免某些浏览器 change 前无法准确捕获旧值
+    parserSelect.addEventListener('focus', () => {
+        kbParserSelectPrevValue = parserSelect.value;
+    });
+
+    parserSelect.addEventListener('change', () => {
+        const next = parserSelect.value;
+        const prev = kbParserSelectPrevValue;
+        if (!next || next === prev) {
+            kbParserSelectPrevValue = next;
+            return;
+        }
+
+        const ok = window.confirm(`确认切换为 *${next}模型吗？此操作将导致当前知识库重建索引，过程可能需要一些时间，请耐心等待。`);
+        if (!ok) {
+            parserSelect.value = prev;
+            return;
+        }
+
+        kbParserSelectPrevValue = next;
+    });
 }
 
 function loadKbSettings(id) {
@@ -44,9 +340,17 @@ function loadKbSettings(id) {
     
     // Try to find in global data if available, else mock
     let kb = null;
-    if (window.knowledgeData) {
+    if (window.VAgentKnowledgeStore) {
+        kb = window.VAgentKnowledgeStore.loadKnowledgeBases().find(k => k.id === id);
+    }
+    if (!kb && window.knowledgeData) {
         kb = window.knowledgeData.find(k => k.id === id);
     }
+    try {
+        if (!kb && typeof knowledgeData !== 'undefined' && Array.isArray(knowledgeData)) {
+            kb = knowledgeData.find(k => k.id === id);
+        }
+    } catch (e) {}
     
     if (!kb) {
         kb = {
@@ -62,14 +366,58 @@ function loadKbSettings(id) {
     document.getElementById('setting-kb-name-display').textContent = kb.name;
     document.getElementById('kb-setting-name').value = kb.name;
     document.getElementById('kb-setting-desc').value = kb.description || '';
-    document.getElementById('kb-auto-parse').checked = kb.autoParse !== false;
     
-    // Parser Select
-    const parserSelect = document.getElementById('kb-parser-select');
+    // Parser Select (Embedding Model)
+    const parserSelect = document.getElementById('kb-setting-parser');
     if (parserSelect) {
-        parserSelect.value = kb.parser || 'default';
+        parserSelect.value = kb.parser || 'embedding-2';
+    }
+    // 仅编辑页：切换 embedding 模型需要二次确认
+    bindKbParserSelectConfirmIfNeeded();
+
+    // Retrieval Settings
+    const rerankModel = document.getElementById('create-kb-rerank-model');
+    if (rerankModel) rerankModel.value = kb.retrievalRerankModel || 'bge-reranker-large';
+    
+    const hybridWeight = document.getElementById('create-kb-hybrid-weight');
+    const hybridWeightSlider = document.getElementById('create-kb-hybrid-weight-slider');
+    if (hybridWeight && hybridWeightSlider) {
+        const val = kb.retrievalHybridWeight !== undefined ? kb.retrievalHybridWeight : 0.5;
+        hybridWeight.value = val;
+        hybridWeightSlider.value = val;
+        const weightDisplay = document.getElementById('create-kb-weight-display');
+        if (weightDisplay) weightDisplay.textContent = parseFloat(val).toFixed(1);
+    }
+    
+    const initialTok = document.getElementById('create-kb-initial-tok');
+    const initialTokSlider = document.getElementById('create-kb-initial-tok-slider');
+    if (initialTok && initialTokSlider) {
+        const val = kb.retrievalInitialTok || 25;
+        initialTok.value = val;
+        initialTokSlider.value = val;
+        const initialTokDisplay = document.getElementById('create-kb-initial-tok-display');
+        if (initialTokDisplay) initialTokDisplay.textContent = val;
     }
 
+    const similarityThreshold = document.getElementById('create-kb-similarity-threshold');
+    const similarityThresholdSlider = document.getElementById('create-kb-similarity-threshold-slider');
+    if (similarityThreshold && similarityThresholdSlider) {
+        const val = kb.retrievalScoreThreshold !== undefined ? kb.retrievalScoreThreshold : 0.7;
+        similarityThreshold.value = val;
+        similarityThresholdSlider.value = val;
+        const thresholdDisplay = document.getElementById('create-kb-similarity-threshold-display');
+        if (thresholdDisplay) thresholdDisplay.textContent = parseFloat(val).toFixed(2);
+    }
+
+    const finalTok = document.getElementById('create-kb-final-tok');
+    const finalTokSlider = document.getElementById('create-kb-final-tok-slider');
+    if (finalTok && finalTokSlider) {
+        const val = kb.retrievalFinalTok || 10;
+        finalTok.value = val;
+        finalTokSlider.value = val;
+        const finalTokDisplay = document.getElementById('create-kb-final-tok-display');
+        if (finalTokDisplay) finalTokDisplay.textContent = val;
+    }
 
     // Prompt Settings
     const promptEnable = document.getElementById('kb-custom-prompt-enable');
@@ -86,8 +434,9 @@ function loadKbSettings(id) {
         }
     }
     
-    renderTags(kb.tags || []);
+    renderTags(kb.tags || (kb.tag ? [kb.tag] : []));
     renderCustomFields();
+    loadDocFieldSettings(id);
     renderDocFields();
 }
 
@@ -153,8 +502,41 @@ function renderCustomFields() {
 window.openAddFieldModal = function() {
     document.getElementById('add-field-modal').classList.remove('hidden');
     document.getElementById('new-field-name').value = '';
-    document.getElementById('new-field-type').value = 'text';
-}
+    const typeSelect = document.getElementById('new-field-type');
+    typeSelect.value = 'text';
+    
+    // 初始化配置开关显示状态
+    handleFieldTypeChange('text', 'add');
+    
+    const newConfigArea = document.getElementById('new-enum-config-area');
+    if (newConfigArea) newConfigArea.classList.add('hidden');
+    const newOptionsList = document.getElementById('new-enum-options-list');
+    if (newOptionsList) newOptionsList.innerHTML = '';
+
+    const newNumberArea = document.getElementById('new-number-config-area');
+    if (newNumberArea) newNumberArea.classList.add('hidden');
+    setNumberConfigToUI({ format: 'number', decimals: 0, thousands: false }, 'add');
+};
+
+// 兼容保留：旧按钮已移除，这里不再切换（防止旧调用报错）
+window.toggleNewEnumConfig = function() {};
+
+window.addNewEnumOption = function() {
+    const list = document.getElementById('new-enum-options-list');
+    if (!list) return;
+    
+    const id = 'opt-' + Date.now();
+    const div = document.createElement('div');
+    div.className = 'flex items-center gap-2';
+    div.id = id;
+    div.innerHTML = `
+        <input type="text" class="flex-1 px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500" placeholder="选项内容">
+        <button onclick="document.getElementById('${id}').remove()" class="p-1.5 text-gray-400 hover:text-red-500 transition-colors">
+            <i class="fa-solid fa-trash-can"></i>
+        </button>
+    `;
+    list.appendChild(div);
+};
 
 window.closeAddFieldModal = function() {
     document.getElementById('add-field-modal').classList.add('hidden');
@@ -169,10 +551,29 @@ window.confirmAddField = function() {
         return;
     }
     
+    const isEnumType = type === 'single_select' || type === 'multi_select';
+    const isNumberType = type === 'number';
+    let enumConfig = null;
+    if (isEnumType) {
+        const options = Array.from(document.querySelectorAll('#new-enum-options-list input'))
+            .map(el => (el.value || '').trim())
+            .filter(Boolean)
+            .map(v => ({ label: v, value: v }));
+        if (options.length === 0) {
+            alert('请至少添加一个选项');
+            return;
+        }
+        enumConfig = { mode: type === 'multi_select' ? 'multiple' : 'single', searchable: false, options };
+    }
+
+    const numberConfig = isNumberType ? getNumberConfigFromUI('add') : null;
+
     kbCustomFields.push({
         id: `f-${Date.now()}`,
         name: name,
-        type: type
+        type: type,
+        ...(enumConfig ? { enumConfig } : {}),
+        ...(numberConfig ? { numberConfig } : {})
     });
     
     renderCustomFields();
@@ -191,38 +592,520 @@ function renderDocFields() {
     const tbody = document.getElementById('kb-doc-fields-body');
     if (!tbody) return;
     
+    normalizeDocFieldState();
     tbody.innerHTML = '';
-    kbDocFields.forEach((field, index) => {
-        const tr = document.createElement('tr');
-        tr.className = 'hover:bg-gray-50 group';
-        tr.innerHTML = `
-            <td class="px-4 py-2 font-medium text-gray-700">
-                ${field.name}
-                ${field.system ? '<span class="text-xs bg-blue-100 text-blue-600 px-2 py-0.5 rounded ml-2">系统</span>' : ''}
-            </td>
-            <td class="px-4 py-2 text-gray-500 text-xs uppercase">${getTypeName(field.type)}</td>
-            <td class="px-4 py-2 text-right">
-                ${!field.system ? `
-                    <button onclick="openEditDocFieldModal(${index})" class="text-gray-400 hover:text-blue-600 mr-2">
-                        <i class="fa-solid fa-edit"></i>
+
+    // Render by group
+    kbDocFieldGroups
+        .slice()
+        .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+        .forEach(group => {
+            const groupFields = kbDocFields
+                .filter(f => f.groupId === group.id)
+                .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+
+            const groupTr = document.createElement('tr');
+            groupTr.className = 'bg-gray-100/60 text-gray-600';
+            groupTr.dataset.groupHeader = 'true';
+            groupTr.dataset.groupId = group.id;
+            groupTr.innerHTML = `
+                <td class="px-4 py-2 font-semibold" colspan="4">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                            <i class="fa-solid fa-folder-open text-gray-400" aria-hidden="true"></i>
+                            <span>${escapeHtml(group.name || '未分组')}</span>
+                            <span class="text-xs text-gray-400">(${groupFields.length})</span>
+                        </div>
+                        <div class="text-xs text-gray-400">${group.id === 'sys' ? '系统字段固定不可移动' : '可拖拽字段到此分组'}</div>
+                    </div>
+                </td>
+            `;
+            tbody.appendChild(groupTr);
+
+            if (groupFields.length === 0) {
+                const emptyTr = document.createElement('tr');
+                emptyTr.className = 'bg-white';
+                emptyTr.dataset.groupEmpty = 'true';
+                emptyTr.dataset.groupId = group.id;
+                emptyTr.innerHTML = `<td class="px-4 py-3 text-sm text-gray-400" colspan="4">暂无字段</td>`;
+                tbody.appendChild(emptyTr);
+                return;
+            }
+
+            groupFields.forEach(field => {
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-gray-50 group';
+                tr.draggable = !field.system;
+                tr.dataset.fieldId = field.id;
+                tr.dataset.groupId = group.id;
+
+                const requiredBtn = `
+                    <button type="button"
+                        ${field.system ? 'disabled' : `onclick="toggleDocFieldRequired('${field.id}')"`}
+                        class="${field.required ? 'bg-blue-600' : 'bg-gray-200'} relative inline-flex h-6 w-11 flex-shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${field.system ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}"
+                        role="switch"
+                        aria-label="是否必填"
+                        aria-checked="${field.required ? 'true' : 'false'}">
+                        <span class="sr-only">是否必填</span>
+                        <span class="${field.required ? 'translate-x-5' : 'translate-x-0'} pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"></span>
                     </button>
-                    <button onclick="deleteDocField(${index})" class="text-gray-400 hover:text-red-600">
-                        <i class="fa-solid fa-trash"></i>
-                    </button>
-                ` : '<span class="text-xs text-gray-400 italic">不可编辑</span>'}
-            </td>
+                `;
+
+                tr.innerHTML = `
+                    <td class="px-4 py-2 font-medium text-gray-700">
+                        <span class="inline-flex items-center gap-2">
+                            <i class="fa-solid fa-grip-vertical text-gray-300 group-hover:text-gray-400" aria-hidden="true"></i>
+                            <span>${escapeHtml(field.name)}</span>
+                            ${field.system ? '<span class="text-xs bg-blue-100 text-blue-600 px-2 py-0.5 rounded ml-1">系统</span>' : ''}
+                        </span>
+                    </td>
+                    <td class="px-4 py-2 text-gray-500 text-xs uppercase">${escapeHtml(getTypeName(field.type))}</td>
+                    <td class="px-4 py-2">${requiredBtn}</td>
+                    <td class="px-4 py-2 text-right">
+                        ${!field.system ? `
+                            <button type="button" onclick="openEditDocFieldModalById('${field.id}')" class="text-gray-400 hover:text-blue-600 mr-2" aria-label="编辑字段">
+                                <i class="fa-solid fa-edit" aria-hidden="true"></i>
+                            </button>
+                            <button type="button" onclick="deleteDocFieldById('${field.id}')" class="text-gray-400 hover:text-red-600" aria-label="删除字段">
+                                <i class="fa-solid fa-trash" aria-hidden="true"></i>
+                            </button>
+                        ` : '<span class="text-xs text-gray-400 italic">不可编辑</span>'}
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        });
+
+    initDocFieldDnD();
+}
+
+function escapeHtml(str) {
+    return String(str)
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#39;');
+}
+
+let draggingDocFieldId = null;
+let docFieldDnDInitialized = false;
+
+function initDocFieldDnD() {
+    const tbody = document.getElementById('kb-doc-fields-body');
+    if (!tbody) return;
+    if (docFieldDnDInitialized) return;
+    docFieldDnDInitialized = true;
+
+    tbody.addEventListener('dragstart', onDocFieldDragStart);
+    tbody.addEventListener('dragover', onDocFieldDragOver);
+    tbody.addEventListener('drop', onDocFieldDrop);
+    tbody.addEventListener('dragend', onDocFieldDragEnd);
+}
+
+function onDocFieldDragStart(e) {
+    const row = e.target.closest('tr[data-field-id]');
+    if (!row) return;
+    const field = kbDocFields.find(f => f.id === row.dataset.fieldId);
+    if (field?.system) return;
+    draggingDocFieldId = row.dataset.fieldId;
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', draggingDocFieldId);
+    row.classList.add('opacity-50');
+}
+
+function onDocFieldDragOver(e) {
+    const targetRow = e.target.closest('tr');
+    if (!targetRow) return;
+    if (!draggingDocFieldId) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    targetRow.classList.add('bg-blue-50/50');
+}
+
+function onDocFieldDrop(e) {
+    const targetRow = e.target.closest('tr');
+    if (!targetRow) return;
+    const fieldId = draggingDocFieldId || e.dataTransfer.getData('text/plain');
+    if (!fieldId) return;
+    e.preventDefault();
+
+    // Drop onto group header / empty row => move to group end
+    if (targetRow.dataset.groupHeader === 'true' || targetRow.dataset.groupEmpty === 'true') {
+        moveDocFieldToGroupEnd(fieldId, targetRow.dataset.groupId);
+        renderDocFields();
+        return;
+    }
+
+    // Drop onto another field row => insert before/after
+    const targetFieldId = targetRow.dataset.fieldId;
+    if (!targetFieldId || targetFieldId === fieldId) return;
+
+    const rect = targetRow.getBoundingClientRect();
+    const placeAfter = (e.clientY - rect.top) > rect.height / 2;
+    moveDocFieldRelative(fieldId, targetFieldId, placeAfter);
+    renderDocFields();
+}
+
+function onDocFieldDragEnd(e) {
+    const rows = document.querySelectorAll('#kb-doc-fields-body tr');
+    rows.forEach(r => r.classList.remove('bg-blue-50/50', 'opacity-50'));
+    draggingDocFieldId = null;
+}
+
+function moveDocFieldToGroupEnd(fieldId, groupId) {
+    if (!groupId) return;
+    const field = kbDocFields.find(f => f.id === fieldId);
+    if (!field) return;
+    if (field.system) return;
+    if (groupId === 'sys') return;
+    field.groupId = groupId;
+    field.order = 999999;
+    normalizeDocFieldOrders();
+    persistDocFieldSettings();
+}
+
+function moveDocFieldRelative(fieldId, targetFieldId, placeAfter) {
+    const field = kbDocFields.find(f => f.id === fieldId);
+    const target = kbDocFields.find(f => f.id === targetFieldId);
+    if (!field || !target) return;
+    if (field.system) return;
+
+    const toGroupId = target.groupId;
+    if (toGroupId === 'sys') return;
+    const fromGroupId = field.groupId;
+
+    const fromList = kbDocFields.filter(f => f.groupId === fromGroupId && f.id !== fieldId).sort((a, b) => a.order - b.order);
+    const toList = kbDocFields.filter(f => f.groupId === toGroupId && f.id !== fieldId).sort((a, b) => a.order - b.order);
+
+    const insertIndex = Math.max(0, toList.findIndex(f => f.id === targetFieldId) + (placeAfter ? 1 : 0));
+    field.groupId = toGroupId;
+    toList.splice(insertIndex, 0, field);
+
+    // Write back orders
+    fromList.forEach((f, i) => { f.order = i; });
+    toList.forEach((f, i) => { f.order = i; });
+
+    persistDocFieldSettings();
+}
+
+window.toggleDocFieldRequired = function(fieldId) {
+    const field = kbDocFields.find(f => f.id === fieldId);
+    if (!field) return;
+    if (field.system) return;
+    field.required = !field.required;
+    persistDocFieldSettings();
+    renderDocFields();
+}
+
+window.openEditDocFieldModalById = function(fieldId) {
+    const idx = kbDocFields.findIndex(f => f.id === fieldId);
+    if (idx < 0) return;
+    window.openEditDocFieldModal(idx);
+}
+
+window.deleteDocFieldById = function(fieldId) {
+    const idx = kbDocFields.findIndex(f => f.id === fieldId);
+    if (idx < 0) return;
+    window.deleteDocField(idx);
+}
+
+// --- Document Field Grouping Modal ---
+window.openDocFieldGroupModal = function() {
+    const modal = document.getElementById('doc-field-group-modal');
+    if (!modal) return;
+    normalizeDocFieldState();
+    renderDocFieldGroupModal();
+    modal.classList.remove('hidden');
+}
+
+window.closeDocFieldGroupModal = function() {
+    const modal = document.getElementById('doc-field-group-modal');
+    if (!modal) return;
+    modal.classList.add('hidden');
+    persistDocFieldSettings();
+    renderDocFields();
+}
+
+window.addDocFieldGroup = function() {
+    const input = document.getElementById('kb-field-group-new-name');
+    const name = (input?.value || '').trim();
+    if (!name) return;
+    const id = `g-${Date.now()}`;
+    kbDocFieldGroups.push({ id, name, fixed: false, order: kbDocFieldGroups.length });
+    if (input) input.value = '';
+    normalizeDocFieldState();
+    persistDocFieldSettings();
+    renderDocFieldGroupModal();
+    renderDocFields();
+}
+
+window.renameDocFieldGroup = function(groupId, value) {
+    const g = kbDocFieldGroups.find(x => x.id === groupId);
+    if (!g || g.fixed) return;
+    g.name = (value || '').trim() || g.name;
+    persistDocFieldSettings();
+    renderDocFieldGroupModal();
+    renderDocFields();
+}
+
+window.deleteDocFieldGroup = function(groupId) {
+    const g = kbDocFieldGroups.find(x => x.id === groupId);
+    if (!g || g.fixed) return;
+    window.openDeleteDocFieldGroupModal(groupId);
+}
+
+// 删除分组：单弹窗三按钮（取消 / 全删除 / 仅删除分组保留字段）
+window.openDeleteDocFieldGroupModal = function(groupId) {
+    const modal = document.getElementById('doc-field-group-delete-modal');
+    if (!modal) return;
+    const g = kbDocFieldGroups.find(x => x.id === groupId);
+    if (!g || g.fixed) return;
+    modal.dataset.groupId = groupId;
+    modal.classList.remove('hidden');
+};
+
+window.closeDeleteDocFieldGroupModal = function() {
+    const modal = document.getElementById('doc-field-group-delete-modal');
+    if (!modal) return;
+    modal.classList.add('hidden');
+    delete modal.dataset.groupId;
+};
+
+window.confirmDeleteDocFieldGroupAction = function(action) {
+    const modal = document.getElementById('doc-field-group-delete-modal');
+    if (!modal) return;
+    const groupId = modal.dataset.groupId;
+    if (!groupId) return window.closeDeleteDocFieldGroupModal();
+
+    const g = kbDocFieldGroups.find(x => x.id === groupId);
+    if (!g || g.fixed) return window.closeDeleteDocFieldGroupModal();
+
+    if (action === 'all') {
+        // 全删除：分组 + 分组下字段
+        kbDocFields = kbDocFields.filter(f => f.groupId !== groupId);
+    } else if (action === 'move') {
+        // 仅删分组：字段移至未分组
+        kbDocFields.forEach(f => {
+            if (f.groupId === groupId) {
+                f.groupId = 'g0';
+                f.order = 999999;
+            }
+        });
+    } else {
+        return window.closeDeleteDocFieldGroupModal();
+    }
+
+    kbDocFieldGroups = kbDocFieldGroups.filter(x => x.id !== groupId);
+    normalizeDocFieldState();
+    persistDocFieldSettings();
+    if (typeof renderDocFieldGroupModal === 'function') renderDocFieldGroupModal();
+    if (typeof renderDocFields === 'function') renderDocFields();
+
+    window.closeDeleteDocFieldGroupModal();
+};
+
+window.assignDocFieldGroup = function(fieldId, groupId) {
+    const field = kbDocFields.find(f => f.id === fieldId);
+    if (!field) return;
+    if (field.system) return;
+    if (groupId === 'sys') return;
+    field.groupId = groupId;
+    field.order = 999999;
+    normalizeDocFieldOrders();
+    persistDocFieldSettings();
+    renderDocFields();
+}
+
+function renderDocFieldGroupModal() {
+    const list = document.getElementById('kb-field-group-list');
+    if (!list) return;
+
+    list.innerHTML = '';
+
+    const groups = kbDocFieldGroups.slice().sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+
+    groups.forEach(g => {
+        const row = document.createElement('div');
+        row.className = 'flex items-center gap-2';
+        row.innerHTML = `
+            <input ${g.fixed ? 'disabled' : ''} value="${escapeHtml(g.name || '')}" class="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm ${g.fixed ? 'bg-gray-50 text-gray-500' : ''}" oninput="renameDocFieldGroup('${g.id}', this.value)" aria-label="分组名称">
+            <button type="button" ${g.fixed ? 'disabled' : ''} onclick="deleteDocFieldGroup('${g.id}')" class="px-2 py-2 text-gray-400 hover:text-red-600 disabled:opacity-40 disabled:cursor-not-allowed" aria-label="删除分组">
+                <i class="fa-solid fa-trash" aria-hidden="true"></i>
+            </button>
         `;
-        tbody.appendChild(tr);
+        list.appendChild(row);
     });
 }
 
 let currentDocFieldIndex = -1;
+let enumOptions = [];
+
+window.toggleEnumConfig = function(forceState = null) {
+    const btn = document.getElementById('enum-switch');
+    const knob = document.getElementById('enum-switch-knob');
+    const area = document.getElementById('enum-config-area');
+    
+    let isChecked = forceState !== null ? forceState : btn.getAttribute('aria-checked') === 'true';
+    
+    if (forceState === null) {
+        isChecked = !isChecked;
+    }
+    
+    btn.setAttribute('aria-checked', isChecked.toString());
+    if (isChecked) {
+        btn.classList.remove('bg-gray-200');
+        btn.classList.add('bg-blue-600');
+        knob.classList.remove('translate-x-0');
+        knob.classList.add('translate-x-5');
+        area.classList.remove('hidden');
+        
+        // Auto-change type to select if switch is ON
+        document.getElementById('doc-field-type').value = 'select';
+        
+        if (enumOptions.length === 0) {
+            enumOptions = [{ label: '选项1', value: '选项1' }];
+        }
+        renderEnumValues();
+    } else {
+        btn.classList.add('bg-gray-200');
+        btn.classList.remove('bg-blue-600');
+        knob.classList.add('translate-x-0');
+        knob.classList.remove('translate-x-5');
+        area.classList.add('hidden');
+    }
+}
+
+let draggedItemIndex = null;
+
+window.handleDragStart = function(e) {
+    draggedItemIndex = parseInt(this.dataset.index);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', this.dataset.index);
+    setTimeout(() => this.classList.add('opacity-50'), 0);
+};
+
+window.handleDragOver = function(e) {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    return false;
+};
+
+window.handleDragEnter = function(e) {
+    e.preventDefault();
+    this.classList.add('border-blue-500', 'bg-blue-50');
+};
+
+window.handleDragLeave = function(e) {
+    this.classList.remove('border-blue-500', 'bg-blue-50');
+};
+
+window.handleDrop = function(e) {
+    e.stopPropagation();
+    this.classList.remove('border-blue-500', 'bg-blue-50');
+    
+    const dropIndex = parseInt(this.dataset.index);
+    if (draggedItemIndex !== null && draggedItemIndex !== dropIndex) {
+        const draggedItem = enumOptions.splice(draggedItemIndex, 1)[0];
+        enumOptions.splice(dropIndex, 0, draggedItem);
+        renderEnumValues();
+    }
+    return false;
+};
+
+window.handleDragEnd = function(e) {
+    this.classList.remove('opacity-50');
+    const items = document.querySelectorAll('#enum-values-list > div');
+    items.forEach(item => item.classList.remove('border-blue-500', 'bg-blue-50'));
+};
+
+window.renderEnumValues = function() {
+    const list = document.getElementById('enum-values-list');
+    list.innerHTML = '';
+    
+    enumOptions.forEach((opt, idx) => {
+        const row = document.createElement('div');
+        row.className = 'flex gap-2 items-center bg-white p-1 rounded border border-transparent hover:border-gray-200 cursor-move transition-colors';
+        row.draggable = true;
+        row.dataset.index = idx;
+        
+        row.addEventListener('dragstart', handleDragStart);
+        row.addEventListener('dragover', handleDragOver);
+        row.addEventListener('drop', handleDrop);
+        row.addEventListener('dragenter', handleDragEnter);
+        row.addEventListener('dragleave', handleDragLeave);
+        row.addEventListener('dragend', handleDragEnd);
+
+        row.innerHTML = `
+            <i class="fa-solid fa-grip-vertical text-gray-400 cursor-move px-1"></i>
+            <input type="text" value="${(opt.label || '').replace(/"/g, '&quot;')}" oninput="updateEnum(${idx}, this.value)" placeholder="请输入选项内容" class="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none w-full">
+            <button type="button" onclick="removeEnumValue(${idx})" class="text-gray-400 hover:text-red-500 p-2 transition-colors">
+                <i class="fa-solid fa-trash-can"></i>
+            </button>
+        `;
+        list.appendChild(row);
+    });
+}
+
+window.updateEnum = function(idx, val) {
+    enumOptions[idx].label = val;
+    enumOptions[idx].value = val;
+}
+
+window.addEnumValueRow = function() {
+    enumOptions.push({ label: '', value: '' });
+    renderEnumValues();
+}
+
+window.removeEnumValue = function(idx) {
+    enumOptions.splice(idx, 1);
+    renderEnumValues();
+}
+
+window.openEnumBatchImport = function() {
+    document.getElementById('enum-batch-text').value = '';
+    document.getElementById('enum-batch-modal').classList.remove('hidden');
+}
+
+window.closeEnumBatchImport = function() {
+    document.getElementById('enum-batch-modal').classList.add('hidden');
+}
+
+window.confirmEnumBatchImport = function() {
+    const text = document.getElementById('enum-batch-text').value.trim();
+    if (!text) {
+        closeEnumBatchImport();
+        return;
+    }
+    
+    const lines = text.split('\n');
+    lines.forEach(line => {
+        const val = line.trim();
+        if (val) {
+            enumOptions.push({ label: val, value: val });
+        }
+    });
+    
+    renderEnumValues();
+    closeEnumBatchImport();
+}
 
 window.openAddDocFieldModal = function() {
     currentDocFieldIndex = -1;
     document.getElementById('doc-field-modal-title').textContent = '新增文档字段';
     document.getElementById('doc-field-name').value = '';
     document.getElementById('doc-field-type').value = 'text';
+    
+    // Reset enum configs
+    enumOptions = [];
+    const area = document.getElementById('enum-config-area');
+    if (area) area.classList.add('hidden');
+    const numArea = document.getElementById('number-config-area');
+    if (numArea) numArea.classList.add('hidden');
+    const errorEl = document.getElementById('enum-error-msg');
+    if (errorEl) errorEl.classList.add('hidden');
+    if (typeof handleFieldTypeChange === 'function') handleFieldTypeChange('text', 'edit');
+    
     document.getElementById('add-doc-field-modal').classList.remove('hidden');
 }
 
@@ -231,7 +1114,22 @@ window.openEditDocFieldModal = function(index) {
     const field = kbDocFields[index];
     document.getElementById('doc-field-modal-title').textContent = '编辑文档字段';
     document.getElementById('doc-field-name').value = field.name;
-    document.getElementById('doc-field-type').value = field.type;
+    let editType = field.type;
+    // 兼容旧数据：若历史字段带 enumConfig，但 type 不是单选/多选，则按 enumConfig.mode 推断
+    if (field.enumConfig && editType !== 'single_select' && editType !== 'multi_select') {
+        editType = field.enumConfig.mode === 'multiple' ? 'multi_select' : 'single_select';
+    }
+    document.getElementById('doc-field-type').value = editType;
+    if (field.enumConfig && Array.isArray(field.enumConfig.options)) {
+        enumOptions = JSON.parse(JSON.stringify(field.enumConfig.options));
+    } else {
+        enumOptions = [];
+    }
+    if (editType === 'number') {
+        setNumberConfigToUI(field.numberConfig || { format: 'number', decimals: 0, thousands: false }, 'edit');
+    }
+    handleFieldTypeChange(editType, 'edit');
+    
     document.getElementById('add-doc-field-modal').classList.remove('hidden');
 }
 
@@ -242,11 +1140,41 @@ window.closeAddDocFieldModal = function() {
 window.confirmSaveDocField = function() {
     const name = document.getElementById('doc-field-name').value.trim();
     const type = document.getElementById('doc-field-type').value;
+    const errorMsg = document.getElementById('enum-error-msg');
     
     if (!name) {
         alert('请填写字段名称');
         return;
     }
+    
+    const isEnumType = type === 'single_select' || type === 'multi_select';
+    const isNumberType = type === 'number';
+    let enumConfig = null;
+    if (isEnumType) {
+        // Validation
+        const validOptions = enumOptions.filter(o => (o.label || '').trim() && (o.value || '').trim());
+        if (validOptions.length === 0) {
+            errorMsg.textContent = '请至少提供一个有效的枚举值（文本和对应值均不可为空）';
+            errorMsg.classList.remove('hidden');
+            return;
+        }
+        const values = validOptions.map(o => o.value.trim());
+        if (new Set(values).size !== values.length) {
+            errorMsg.textContent = '枚举值存在重复，请检查';
+            errorMsg.classList.remove('hidden');
+            return;
+        }
+        errorMsg.classList.add('hidden');
+        enumConfig = {
+            mode: type === 'multi_select' ? 'multiple' : 'single',
+            searchable: !!(document.getElementById('enum-searchable') && document.getElementById('enum-searchable').checked),
+            options: validOptions
+        };
+    } else {
+        if (errorMsg) errorMsg.classList.add('hidden');
+    }
+
+    const numberConfig = isNumberType ? getNumberConfigFromUI('edit') : null;
     
     if (currentDocFieldIndex === -1) {
         // Add
@@ -254,14 +1182,31 @@ window.confirmSaveDocField = function() {
             id: `df-${Date.now()}`,
             name: name,
             type: type,
-            system: false
+            system: false,
+            required: false,
+            groupId: 'g0',
+            order: 999999,
+            ...(enumConfig && { enumConfig }),
+            ...(numberConfig && { numberConfig })
         });
     } else {
         // Edit
         kbDocFields[currentDocFieldIndex].name = name;
         kbDocFields[currentDocFieldIndex].type = type;
+        if (enumConfig) {
+            kbDocFields[currentDocFieldIndex].enumConfig = enumConfig;
+        } else {
+            delete kbDocFields[currentDocFieldIndex].enumConfig;
+        }
+        if (numberConfig) {
+            kbDocFields[currentDocFieldIndex].numberConfig = numberConfig;
+        } else {
+            delete kbDocFields[currentDocFieldIndex].numberConfig;
+        }
     }
     
+    normalizeDocFieldState();
+    persistDocFieldSettings();
     renderDocFields();
     closeAddDocFieldModal();
 }
@@ -274,6 +1219,8 @@ window.deleteDocField = function(index) {
     
     if (confirm(`确定要删除字段 "${kbDocFields[index].name}" 吗？`)) {
         kbDocFields.splice(index, 1);
+        normalizeDocFieldState();
+        persistDocFieldSettings();
         renderDocFields();
     }
 }
@@ -283,30 +1230,69 @@ window.deleteDocField = function(index) {
 // --- Global Actions ---
 window.saveKbSettings = function() {
     // Collect Data
-    const name = document.getElementById('kb-setting-name').value;
+    const name = document.getElementById('kb-setting-name').value.trim();
     if (!name) {
         alert('知识库名称不能为空');
         return;
     }
+
+    const tags = getKnowledgeSettingTagsFromUI();
+    const desc = document.getElementById('kb-setting-desc')?.value || '';
+    const parser = document.getElementById('kb-setting-parser')?.value || 'embedding-2';
+    const currentKb = window.VAgentKnowledgeStore
+        ? window.VAgentKnowledgeStore.loadKnowledgeBases().find(kb => kb.id === currentSettingsKbId)
+        : null;
+    const nextKb = {
+        ...(currentKb || {}),
+        id: currentSettingsKbId,
+        name,
+        description: desc,
+        tags,
+        tag: tags[0] || currentKb?.tag || '未分类',
+        parser,
+        updatedAt: new Date().toLocaleString(),
+        creator: currentKb?.creator || 'Admin',
+        permission: currentKb?.permission || '私有',
+        docCount: Number(currentKb?.docCount ?? 0),
+        retrievalRerankModel: document.getElementById('create-kb-rerank-model')?.value || null,
+        retrievalHybridWeight: getNumberInputValue('create-kb-hybrid-weight'),
+        retrievalInitialTok: getNumberInputValue('create-kb-initial-tok'),
+        retrievalScoreThreshold: getNumberInputValue('create-kb-similarity-threshold'),
+        retrievalFinalTok: getNumberInputValue('create-kb-final-tok')
+    };
     
     // Update Mock Data if exists
     if (window.knowledgeData) {
         const kb = window.knowledgeData.find(k => k.id === currentSettingsKbId);
         if (kb) {
-            kb.name = name;
-            kb.description = document.getElementById('kb-setting-desc').value;
-            kb.autoParse = document.getElementById('kb-auto-parse').checked;
-            kb.parser = document.getElementById('kb-parser-select').value;
-
+            Object.assign(kb, nextKb);
+            
             // Prompt
-            kb.promptEnabled = document.getElementById('kb-custom-prompt-enable').checked;
-            kb.promptTemplate = document.getElementById('kb-prompt-template').value;
+            const promptEnable = document.getElementById('kb-custom-prompt-enable');
+            const promptTemplate = document.getElementById('kb-prompt-template');
+            if (promptEnable) kb.promptEnabled = promptEnable.checked;
+            if (promptTemplate) kb.promptTemplate = promptTemplate.value;
             
             // Update other fields...
         }
     }
+
+    const promptEnable = document.getElementById('kb-custom-prompt-enable');
+    const promptTemplate = document.getElementById('kb-prompt-template');
+    if (promptEnable) nextKb.promptEnabled = promptEnable.checked;
+    if (promptTemplate) nextKb.promptTemplate = promptTemplate.value;
+
+    persistDocFieldSettings();
+    syncKbSettingsToSharedStore(nextKb);
+
+    const display = document.getElementById('setting-kb-name-display');
+    if (display) display.textContent = name;
     
-    alert('设置已保存！');
+    if (window.showToast) {
+        window.showToast('知识库设置已保存', 'success');
+    } else {
+        alert('设置已保存！');
+    }
 }
 
 window.exportKbSettings = function() {
@@ -345,4 +1331,93 @@ document.addEventListener('view-loaded', (e) => {
     if (e.detail.view === 'knowledge-settings') {
         window.initKbSettingsPage(e.detail.params);
     }
+});
+
+// Add this logic at the end or in an appropriate place for Version Enable
+let isKbVersionEnabled = true;
+
+window.toggleKbVersionEnable = function() {
+    if (isKbVersionEnabled) {
+        // user is turning it OFF, show warning modal
+        const modal = document.getElementById('kb-version-disable-modal');
+        if (modal) {
+            modal.classList.remove('hidden');
+        }
+    } else {
+        // user is turning it ON, just do it
+        isKbVersionEnabled = true;
+        updateKbVersionToggleUI();
+        persistKbVersionSetting();
+        if (typeof renderDocList === 'function') {
+            renderDocList();
+        }
+    }
+}
+
+window.cancelDisableKbVersion = function() {
+    const modal = document.getElementById('kb-version-disable-modal');
+    if (modal) {
+        modal.classList.add('hidden');
+    }
+}
+
+window.confirmDisableKbVersion = function(physicalDelete) {
+    isKbVersionEnabled = false;
+    updateKbVersionToggleUI();
+    persistKbVersionSetting();
+    
+    const modal = document.getElementById('kb-version-disable-modal');
+    if (modal) {
+        modal.classList.add('hidden');
+    }
+    
+    if (physicalDelete) {
+        alert('已物理删除旧版本快照和索引，以节省存储空间。');
+    } else {
+        alert('已关闭版本管理，旧版本数据仍被保留。');
+    }
+    if (typeof renderDocList === 'function') {
+        renderDocList();
+    }
+}
+
+function updateKbVersionToggleUI() {
+    const toggle = document.getElementById('kb-version-enable-toggle');
+    const thumb = document.getElementById('kb-version-enable-thumb');
+    if (!toggle || !thumb) return;
+    
+    if (isKbVersionEnabled) {
+        toggle.classList.remove('bg-gray-200');
+        toggle.classList.add('bg-blue-600');
+        toggle.setAttribute('aria-checked', 'true');
+        thumb.classList.remove('translate-x-0');
+        thumb.classList.add('translate-x-5');
+    } else {
+        toggle.classList.remove('bg-blue-600');
+        toggle.classList.add('bg-gray-200');
+        toggle.setAttribute('aria-checked', 'false');
+        thumb.classList.remove('translate-x-5');
+        thumb.classList.add('translate-x-0');
+    }
+}
+
+function persistKbVersionSetting() {
+    // Save to local storage or state
+    localStorage.setItem('kb_version_enabled', isKbVersionEnabled ? '1' : '0');
+    // Also notify other pages that might care, or we can just read from localStorage in knowledge.html
+}
+
+function loadKbVersionSetting() {
+    const saved = localStorage.getItem('kb_version_enabled');
+    if (saved !== null) {
+        isKbVersionEnabled = saved === '1';
+    } else {
+        isKbVersionEnabled = true; // default enabled
+    }
+    updateKbVersionToggleUI();
+}
+
+// Call loadKbVersionSetting on init
+document.addEventListener('DOMContentLoaded', () => {
+    // If we are in the settings page, init it. Wait, router handles initialization.
 });

@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>Table Header Settings Test</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-gray-100 p-8">
+    <div id="test-container" class="max-w-4xl mx-auto bg-white p-6 rounded-xl shadow">
+        <h1 class="text-2xl font-bold mb-4">Table Header Settings Unit Tests</h1>
+        <div id="test-results" class="space-y-2 mb-8"></div>
+        
+        <!-- Mock DOM for Testing -->
+        <div id="mock-dom" class="border p-4 rounded-lg bg-gray-50">
+            <!-- Parsing Section Header -->
+            <div id="section-parsing">
+                <h3>
+                    <div id="parsing-icon-container"><i id="parsing-icon"></i></div>
+                    <div id="parsing-title"></div>
+                </h3>
+                <div id="parsing-options"></div>
+            </div>
+            
+            <!-- Save Button -->
+            <button onclick="window.saveStrategyConfig()">Save</button>
+        </div>
+    </div>
+
+    <script>
+        // --- Mocks ---
+        window.currentStrategyType = 'table';
+        window.STRATEGY_CONFIG = {
+            table: { parsing: [], chunking: [], enhancement: [] },
+            text: { parsing: [{id:'ocr', label:'OCR'}], chunking: [], enhancement: [] }
+        };
+        window.showToast = (msg, type) => console.log(`Toast: [${type}] ${msg}`);
+        
+        // --- Load Functions under test (Copy-pasted or mocked for isolation) ---
+        // In a real environment, we would import these. Here we define the key logic we just wrote.
+        
+        window.renderStrategyContent = function(type) {
+            const parsingSection = document.getElementById('section-parsing');
+            const parsingOptions = document.getElementById('parsing-options');
+            
+            if (type === 'table') {
+                parsingSection.classList.remove('hidden');
+                parsingOptions.innerHTML = `
+                    <div class="flex flex-col gap-2 w-full max-w-sm">
+                        <label for="header-row-input" class="text-sm font-medium text-gray-700">第几行为表头</label>
+                        <div class="relative">
+                            <input type="number" id="header-row-input" min="1" max="50" value="1" 
+                                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                                placeholder="请输入行号" oninput="validateHeaderRow(this)" aria-describedby="header-row-hint header-row-error">
+                            <div id="header-row-error" class="text-xs text-red-500 mt-1 hidden" role="alert">
+                                <i class="fa-solid fa-circle-exclamation mr-1"></i><span>请输入 1-50 之间的整数</span>
+                            </div>
+                        </div>
+                        <p id="header-row-hint" class="text-xs text-gray-500">请输入作为表头的行号，默认为第 1 行</p>
+                    </div>
+                `;
+            } else {
+                parsingSection.classList.add('hidden'); // Simplified
+            }
+        };
+
+        window.validateHeaderRow = function(input) {
+            const val = Number(input.value);
+            const errorEl = document.getElementById('header-row-error');
+            const confirmBtn = document.querySelector('button[onclick="window.saveStrategyConfig()"]');
+            
+            let isValid = true;
+            if (input.value.trim() === '' || isNaN(val) || !Number.isInteger(val) || val < 1 || val > 50) {
+                isValid = false;
+            }
+
+            if (!isValid) {
+                if (errorEl) errorEl.classList.remove('hidden');
+                input.classList.add('border-red-500');
+                if(confirmBtn) confirmBtn.disabled = true;
+            } else {
+                if (errorEl) errorEl.classList.add('hidden');
+                input.classList.remove('border-red-500');
+                if(confirmBtn) confirmBtn.disabled = false;
+            }
+        };
+
+        window.selectStrategyType = function(type) {
+            window.currentStrategyType = type;
+            renderStrategyContent(type);
+            const parsingTitle = document.getElementById('parsing-title');
+            const parsingIcon = document.getElementById('parsing-icon');
+            if (parsingTitle && parsingIcon) {
+                if (type === 'table') {
+                    parsingTitle.innerText = '表头设置';
+                    parsingIcon.className = 'fa-solid fa-table-columns text-sm';
+                    parsingTitle.setAttribute('aria-label', '表头设置');
+                } else {
+                    parsingTitle.innerText = '解析策略';
+                    parsingIcon.className = 'fa-solid fa-microchip text-sm';
+                    parsingTitle.setAttribute('aria-label', '解析策略');
+                }
+            }
+        };
+
+        // --- Test Runner ---
+        const resultsEl = document.getElementById('test-results');
+        function assert(desc, condition) {
+            const div = document.createElement('div');
+            div.className = condition ? 'text-green-600 bg-green-50 p-2 rounded' : 'text-red-600 bg-red-50 p-2 rounded font-bold';
+            div.innerHTML = `<i class="fa-solid ${condition ? 'fa-check' : 'fa-times'} mr-2"></i> ${desc}`;
+            resultsEl.appendChild(div);
+            if (!condition) console.error(`FAILED: ${desc}`);
+        }
+
+        async function runTests() {
+            // Test 1: Render default state for Table
+            selectStrategyType('table');
+            const input = document.getElementById('header-row-input');
+            const title = document.getElementById('parsing-title');
+            const icon = document.getElementById('parsing-icon');
+            
+            assert('Title should be "表头设置"', title.innerText === '表头设置');
+            assert('Icon should be table icon', icon.className.includes('fa-table-columns'));
+            assert('Input should exist', !!input);
+            assert('Default value should be 1', input.value === '1');
+            assert('Min attribute should be 1', input.getAttribute('min') === '1');
+            assert('Max attribute should be 50', input.getAttribute('max') === '50');
+
+            // Test 2: Valid Input (Boundary)
+            input.value = '50';
+            validateHeaderRow(input);
+            const errorEl = document.getElementById('header-row-error');
+            const btn = document.querySelector('button[onclick="window.saveStrategyConfig()"]');
+            assert('Error should be hidden for value 50', errorEl.classList.contains('hidden'));
+            assert('Button should be enabled', !btn.disabled);
+
+            // Test 3: Invalid Input (Out of range > 50)
+            input.value = '51';
+            validateHeaderRow(input);
+            assert('Error should be visible for value 51', !errorEl.classList.contains('hidden'));
+            assert('Button should be disabled', btn.disabled);
+            assert('Input should have red border', input.classList.contains('border-red-500'));
+
+            // Test 4: Invalid Input (Out of range < 1)
+            input.value = '0';
+            validateHeaderRow(input);
+            assert('Error should be visible for value 0', !errorEl.classList.contains('hidden'));
+
+            // Test 5: Invalid Input (Decimal)
+            input.value = '1.5';
+            validateHeaderRow(input);
+            assert('Error should be visible for decimal value', !errorEl.classList.contains('hidden'));
+
+            // Test 6: Invalid Input (Empty)
+            input.value = '';
+            validateHeaderRow(input);
+            assert('Error should be visible for empty value', !errorEl.classList.contains('hidden'));
+
+            // Test 7: Accessibility
+            assert('Input should have aria-describedby', input.getAttribute('aria-describedby') === 'header-row-hint header-row-error');
+            assert('Error message should have role="alert"', errorEl.getAttribute('role') === 'alert');
+
+            // Test 8: Switch back to valid
+            input.value = '10';
+            validateHeaderRow(input);
+            assert('Error should be hidden for valid value 10', errorEl.classList.contains('hidden'));
+            assert('Button should be re-enabled', !btn.disabled);
+        }
+
+        // Run tests after small delay to ensure DOM is ready
+        setTimeout(runTests, 100);
+    </script>
+</body>
+</html>

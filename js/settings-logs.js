@@ -45,11 +45,11 @@ window.renderSystemLogs = function() {
     addLog(m += 10, '刘伟', '删除智能体', '删除智能体 旧版助手 [AGT-OLD-009], 删除前状态: 停用', 'red');
 
     // 3. Orchestrator
-    addLog(m += 45, '王志强', '新增编排器', '创建编排流程 订单处理流 [ORC-101]', 'green');
-    addLog(m += 10, '王志强', '编辑编排器', '修改 订单处理流 [ORC-101]：节点 "人工审核" 增加超时设置 "30m"；新增分支 "自动退款"', 'blue');
-    addLog(m += 5, '王志强', '发布编排器', '发布 订单处理流 [ORC-101] 版本 v1.0', 'purple');
-    addLog(m += 200, '王志强', '停用编排器', '停用 订单处理流 [ORC-101]', 'yellow');
-    addLog(m += 5, '王志强', '删除编排器', '删除编排器 临时流程 [ORC-TEMP-001]', 'red');
+    addLog(m += 45, '王志强', '新增工作流', '创建编排流程 订单处理流 [ORC-101]', 'green');
+    addLog(m += 10, '王志强', '编辑工作流', '修改 订单处理流 [ORC-101]：节点 "人工审核" 增加超时设置 "30m"；新增分支 "自动退款"', 'blue');
+    addLog(m += 5, '王志强', '发布工作流', '发布 订单处理流 [ORC-101] 版本 v1.0', 'purple');
+    addLog(m += 200, '王志强', '停用工作流', '停用 订单处理流 [ORC-101]', 'yellow');
+    addLog(m += 5, '王志强', '删除工作流', '删除工作流 临时流程 [ORC-TEMP-001]', 'red');
 
     // 4. Parser
     addLog(m += 300, '系统自动', '编辑解析器', '修改 PDF 解析器配置：启用 OCR 增强模式；最大页数 50 → 100', 'blue');
@@ -108,28 +108,32 @@ window.renderSystemLogs = function() {
                     </td>
                 </tr>
             `;
+            if (window.syncDataTable) window.syncDataTable('logs-data-table', { storageKey: 'dt-colwidths-logs' });
             return;
         }
 
+        const esc = window.escapeHtml || function (s) { return String(s == null ? '' : s); };
+
         tbody.innerHTML = logsToRender.map(log => `
             <tr class="hover:bg-gray-50 transition-colors animate-fade-in">
-                <td class="px-6 py-3 text-gray-500 whitespace-nowrap">${log.time}</td>
-                <td class="px-6 py-3 font-medium text-gray-800">${log.user}</td>
-                <td class="px-6 py-3">
+                <td class="px-6 py-3 text-gray-500 whitespace-nowrap">${esc(log.time)}</td>
+                <td class="px-6 py-3 font-medium text-gray-800 min-w-0"><span class="dt-cell-ellipsis" title="${esc(log.user)}">${esc(log.user)}</span></td>
+                <td class="px-6 py-3 whitespace-nowrap">
                     <span class="px-2 py-0.5 rounded text-xs font-medium bg-${log.color}-50 text-${log.color}-600 border border-${log.color}-100">
-                        ${log.type}
+                        ${esc(log.type)}
                     </span>
                 </td>
-                <td class="px-6 py-3 text-gray-600 max-w-md truncate" title="${log.detail}">${log.detail}</td>
-                <td class="px-6 py-3 text-gray-500 font-mono text-xs">${log.ip}</td>
-                <td class="px-6 py-3 whitespace-nowrap">
+                <td class="px-6 py-3 text-gray-600 min-w-0"><span class="dt-cell-ellipsis" title="${esc(log.detail)}">${esc(log.detail)}</span></td>
+                <td class="px-6 py-3 text-gray-500 font-mono text-xs whitespace-nowrap">${esc(log.ip)}</td>
+                <td class="px-6 py-3 whitespace-nowrap min-w-[100px]">
                     <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${log.status === '成功' ? 'bg-green-50 text-green-700 border border-green-100' : 'bg-red-50 text-red-700 border border-red-100'}">
                         <span class="w-1.5 h-1.5 mr-1.5 rounded-full ${log.status === '成功' ? 'bg-green-500' : 'bg-red-500'}"></span>
-                        ${log.status}
+                        ${esc(log.status)}
                     </span>
                 </td>
             </tr>
         `).join('');
+        if (window.syncDataTable) window.syncDataTable('logs-data-table', { storageKey: 'dt-colwidths-logs' });
     }
 
     // Initial Render
