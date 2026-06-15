@@ -4,18 +4,27 @@ const routes = {
     'dashboard': { title: '仪表盘', file: 'views/dashboard.html' },
     'settings': { title: '系统设置', file: 'views/settings.html' },
     'settings-info': { title: '企业信息', file: 'views/settings-info.html' },
+    'settings-sdk': { title: 'SDK配置', file: 'views/settings-sdk.html' },
     'settings-logs': { title: '系统日志', file: 'views/settings-logs.html' },
+    'model-config': { title: '模型服务商', file: 'views/model-config.html' },
+    'model-list': { title: '模型列表', file: 'views/model-list.html' },
     'user-mgmt': { title: '用户管理', file: 'views/user-mgmt.html' },
     'role-mgmt': { title: '角色管理', file: 'views/role-mgmt.html' },
     'agent': { title: '智能体管理', file: 'views/agent.html' },
     'orchestrator': { title: '工作流', file: 'views/orchestrator.html' },
     'orchestrator-editor': { title: '工作流编辑', file: 'views/orchestrator-editor.html', fullscreen: true },
     'knowledge': { title: '知识库', file: 'views/knowledge.html' },
+    'data-source': { title: '数据源管理', file: 'views/data-source.html' },
     'knowledge-graph': { title: '知识图谱', file: 'views/knowledge-graph.html' },
     'knowledge-graph-detail': { title: '图谱详情', file: 'views/knowledge-graph-detail.html' },
     'knowledge-settings': { title: '知识库设置', file: 'views/knowledge-settings.html' },
     'knowledge-testing': { title: '命中测试', file: 'views/knowledge-testing.html' },
+    'knowledge-strategy-config': { title: '策略配置', file: 'views/strategy-config.html' },
     'components': { title: '组件', file: 'views/components.html' },
+    'mcp': { title: 'MCP', file: 'views/mcp.html' },
+    'mcp-detail': { title: 'MCP详情', file: 'views/mcp-detail.html' },
+    'mcp-create': { title: '创建MCP', file: 'views/mcp-create.html' },
+    'monitoring': { title: '应用监控', file: 'views/monitoring.html' },
     'evaluation': { title: '调试与评测', file: 'views/evaluation.html' },
     'agent-editor': { title: '智能体编辑', file: 'views/agent-editor.html', fullscreen: true },
     'login': { title: '登录', file: 'views/login.html', fullscreen: true }
@@ -96,9 +105,15 @@ async function loadView(viewName, params = null) {
             }
         }
 
-        const response = await fetch(route.file);
-        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-        const html = await response.text();
+        // 禁用浏览器缓存，避免开发/预览时看不到最新的 HTML 片段
+        let html = '';
+        if (window.VAGENT_INLINE_VIEWS && window.VAGENT_INLINE_VIEWS[route.file] != null) {
+            html = window.VAGENT_INLINE_VIEWS[route.file];
+        } else {
+            const response = await fetch(route.file, { cache: 'no-store' });
+            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+            html = await response.text();
+        }
         
         // Inject content
         if (contentArea) {
@@ -134,6 +149,11 @@ async function loadView(viewName, params = null) {
         // Call init function if exists
         if (viewName === 'agent-editor' && typeof window.initAgentEditor === 'function') {
              window.initAgentEditor(params);
+             // Handle optional tab switching
+             if (params && params.tab && typeof window.switchEditorTab === 'function') {
+                 // Small timeout to ensure DOM is fully ready
+                 setTimeout(() => window.switchEditorTab(params.tab), 100);
+             }
         }
         
         // Init Knowledge Graph Page
@@ -146,6 +166,33 @@ async function loadView(viewName, params = null) {
             window.initKnowledgeGraphDetail(params);
         }
 
+        // Init Model Config Page
+        if (viewName === 'model-config' && typeof window.initProviderList === 'function') {
+            window.initProviderList();
+        }
+
+        // Init Model List Page
+        if (viewName === 'model-list' && typeof window.initModelList === 'function') {
+            window.initModelList(params);
+        }
+
+        // Init Knowledge Page
+        if (viewName === 'knowledge') {
+            if (typeof window.initKnowledgePage === 'function') {
+                window.initKnowledgePage(params);
+            }
+        }
+        
+        // Init Strategy Config Page
+        if (viewName === 'knowledge-strategy-config' && typeof window.initStrategyConfigPage === 'function') {
+            window.initStrategyConfigPage(params);
+        }
+
+        if (viewName === 'monitoring') {
+            if (typeof window.initMonitoringDateRange === 'function') {
+                window.initMonitoringDateRange();
+            }
+        }
 
     } catch (error) {
         console.error('Error loading view:', error);
@@ -168,7 +215,11 @@ function switchView(viewName, params = null) {
             url += `?${queryString}`;
         }
     }
-    window.location.hash = url;
+    if (window.location.hash === url) {
+        loadView(viewName, params);
+    } else {
+        window.location.hash = url;
+    }
 }
 
 // Handle Hash Change
@@ -230,7 +281,7 @@ function updateNavState(viewName) {
     const settingsSubmenu = document.getElementById('settings-submenu');
     
     if (settingsBtn) {
-        if (viewName === 'settings-info' || viewName === 'settings-logs') {
+        if (viewName === 'settings-info' || viewName === 'settings-logs' || viewName === 'model-config' || viewName === 'model-list') {
             settingsBtn.classList.add('text-blue-600', 'bg-blue-50');
             settingsBtn.classList.remove('text-gray-600', 'hover:text-blue-600', 'hover:bg-gray-50');
             

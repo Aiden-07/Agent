@@ -350,97 +350,86 @@ function renderAgentList(reset = false) {
         visibleAgents.forEach((agent, index) => {
             const tr = document.createElement('tr');
             tr.className = 'hover:bg-gray-50 transition-colors group';
-            
-            // Calculate global index (optional, but requested "序号")
-            // Since visibleAgents starts from 0 for current view, and we might have pagination logic...
-            // If simple infinite scroll, index + 1 is fine if we render all. 
-            // If paginated by slice, it's relative. 
-            // Current logic slices: visibleAgents = allFiltered.slice(0, visibleCount);
-            // So visibleAgents contains elements from 0 to visibleCount.
-            // The index in forEach is the correct global index (within filtered set).
+            const esc = window.escapeHtml || function (s) { return String(s == null ? '' : s); };
+            const kbArr = Array.isArray(agent.knowledgeBase) ? agent.knowledgeBase : [];
+            const kbTitle = esc(kbArr.join('、') || '-');
+            const kbText = kbArr.length ? kbArr.join('、') : '-';
+            const kbHtml = `<span class="dt-cell-ellipsis text-sm text-gray-500" title="${kbTitle}">${esc(kbText)}</span>`;
             
             tr.innerHTML = `
-                <td class="px-6 py-4">
-                    <div class="flex items-center gap-3">
-                        <div class="w-8 h-8 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center text-xs font-bold">
+                <td class="px-6 py-4 min-w-0">
+                    <div class="flex items-center gap-3 min-w-0">
+                        <div class="w-8 h-8 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center text-xs font-bold flex-shrink-0">
                             AI
                         </div>
-                        <button type="button" class="font-medium text-gray-900 text-left cursor-pointer hover:text-blue-600" onclick="window.editAgent && window.editAgent('${agent.id}')">
-                            ${agent.name}
+                        <button type="button" class="font-medium text-gray-900 text-left cursor-pointer hover:text-blue-600 min-w-0 flex-1 dt-cell-ellipsis" title="${esc(agent.name)}" onclick="window.editAgent && window.editAgent('${agent.id}')">
+                            ${esc(agent.name)}
                         </button>
                     </div>
                 </td>
-                <td class="px-6 py-4">
+                <td class="px-6 py-4 whitespace-nowrap">
                     <button onclick="toggleAgentStatus('${agent.id}')" class="relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${agent.status === 'running' ? 'bg-green-500' : 'bg-gray-200'}">
                         <span class="sr-only">Use setting</span>
                         <span aria-hidden="true" class="pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${agent.status === 'running' ? 'translate-x-4' : 'translate-x-0'}"></span>
                     </button>
-                    <span class="ml-2 text-xs ${agent.status === 'running' ? 'text-green-600' : 'text-gray-500'}">
+                    <span class="ml-2 text-xs ${agent.status === 'running' ? 'text-green-600' : 'text-gray-500'} whitespace-nowrap">
                         ${agent.status === 'running' ? '运行中' : '已停止'}
                     </span>
                 </td>
-                <td class="px-6 py-4">
-                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                        ${agent.model || '未设置'}
-                    </span>
+                <td class="px-6 py-4 min-w-0 whitespace-nowrap">
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 dt-cell-ellipsis max-w-full" title="${esc(agent.model || '未设置')}">${esc(agent.model || '未设置')}</span>
                 </td>
-                <td class="px-6 py-4 text-sm text-gray-500">
-                     ${Array.isArray(agent.knowledgeBase) && agent.knowledgeBase.length > 0 ? agent.knowledgeBase.map(kb => `<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-50 text-blue-700 mr-1">${kb}</span>`).join('') : '-'}
-                </td>
-                <td class="px-6 py-4 text-sm text-gray-500">
-                     <div class="flex items-center gap-2">
-                        <div class="w-5 h-5 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center text-xs">
+                <td class="px-6 py-4 min-w-0">${kbHtml}</td>
+                <td class="px-6 py-4 text-sm text-gray-500 min-w-0 whitespace-nowrap">
+                     <div class="flex items-center gap-2 min-w-0">
+                        <div class="w-5 h-5 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center text-xs flex-shrink-0">
                             <i class="fa-solid fa-user"></i>
                         </div>
-                        ${agent.creator || 'Admin'}
+                        <span class="dt-cell-ellipsis" title="${esc(agent.creator || 'Admin')}">${esc(agent.creator || 'Admin')}</span>
                     </div>
                 </td>
-                <td class="px-6 py-4 text-xs text-gray-500">
-                    ${agent.createdAt || '-'}
+                <td class="px-6 py-4 text-xs text-gray-500 whitespace-nowrap">
+                    ${esc(String(agent.createdAt || '-').replace(/\s+/g, ' '))}
                 </td>
-                <td class="px-6 py-4 text-xs text-gray-500">
-                    ${agent.updatedAt || '-'}
+                <td class="px-6 py-4 text-xs text-gray-500 whitespace-nowrap">
+                    ${esc(String(agent.updatedAt || '-').replace(/\s+/g, ' '))}
                 </td>
-                <td class="px-6 py-4 text-right">
-                    <button onclick="window.openAgentActions(event, '${agent.id}')" class="p-1.5 text-gray-400 hover:text-gray-600 transition-colors rounded hover:bg-gray-100">
-                        <i class="fa-solid fa-ellipsis"></i>
-                    </button>
+                <td class="px-6 py-4 text-right min-w-[120px] action-td">
                 </td>
             `;
             tbody.appendChild(tr);
+
+            // Add inline actions
+            const actionsTd = tr.querySelector('.action-td');
+            const agentName = agent.name;
+            const actions = [
+                {
+                    label: '配置权限',
+                    onClick: () => {
+                        if (window.navigateToPermissionConfig) {
+                            window.navigateToPermissionConfig(agent.id, 'agent', agentName);
+                        } else {
+                            console.error('navigateToPermissionConfig is not defined');
+                        }
+                    }
+                },
+                {
+                    label: '删除',
+                    className: 'text-red-600 hover:text-red-800',
+                    onClick: () => openDeleteConfirm(agent.id)
+                }
+            ];
+            
+            if (window.createInlineActions) {
+                const actionContainer = window.createInlineActions(actions);
+                actionsTd.appendChild(actionContainer);
+            }
         });
     }
+    if (window.syncDataTable) window.syncDataTable('agent-data-table', { storageKey: 'dt-colwidths-agent' });
 }
 
-// Action Menu Handler
-window.openAgentActions = function(event, id) {
-    window.showActionMenu(event, [
-        {
-            label: '权限配置',
-            icon: 'fa-solid fa-user-shield',
-            onClick: () => {
-                const agent = agentsData.find(a => a.id === id);
-                if (window.navigateToPermissionConfig) {
-                    window.navigateToPermissionConfig(id, 'agent', agent ? agent.name : 'Unknown Agent');
-                }
-            }
-        },
-        {
-            label: '编辑',
-            icon: 'fa-solid fa-pen',
-            onClick: () => editAgent(id)
-        },
-        {
-            label: '删除',
-            icon: 'fa-solid fa-trash',
-            className: 'text-red-600 hover:bg-red-50',
-            iconClass: 'text-red-500',
-            onClick: () => openDeleteConfirm(id)
-        }
-    ]);
-}
-
-// Edit Agent (Ensure it's exposed)
+// --- Status Toggle Logic ---
 window.editAgent = function(id) {
     if (typeof switchView === 'function') {
         switchView('agent-editor', { id: id });
@@ -600,6 +589,398 @@ let editorResources = {
     plugin: []
 };
 
+const AGENT_EDITOR_CONFIG_STORAGE_KEY = 'vagent_agent_editor_configs_v1';
+const AGENT_RESOURCE_PICKER_META = {
+    knowledge: { title: '选择知识库', itemLabel: '知识库', icon: 'fa-book-open', iconClass: 'text-blue-600 bg-blue-50' },
+    plugin: { title: '选择插件', itemLabel: '插件', icon: 'fa-puzzle-piece', iconClass: 'text-purple-600 bg-purple-50' },
+    orchestrator: { title: '选择工作流组件', itemLabel: '工作流组件', icon: 'fa-diagram-project', iconClass: 'text-orange-600 bg-orange-50' },
+    agent: { title: '选择智能体组件', itemLabel: '智能体组件', icon: 'fa-robot', iconClass: 'text-indigo-600 bg-indigo-50' }
+};
+let editorResourceSnapshots = {
+    knowledge: {},
+    agent: {},
+    orchestrator: {},
+    mcp: {},
+    plugin: {}
+};
+let agentResourcePickerState = {
+    type: null,
+    selectedIds: new Set(),
+    search: ''
+};
+
+function cloneAgentEditorValue(value) {
+    return JSON.parse(JSON.stringify(value));
+}
+
+function loadStoredAgentEditorConfig(agentId = currentEditorAgentId) {
+    if (!agentId) return null;
+    try {
+        const raw = localStorage.getItem(AGENT_EDITOR_CONFIG_STORAGE_KEY);
+        const store = raw ? JSON.parse(raw) : {};
+        return store[agentId] || null;
+    } catch (e) {
+        return null;
+    }
+}
+
+function persistStoredAgentEditorConfig(config, agentId = currentEditorAgentId) {
+    if (!agentId) return;
+    try {
+        const raw = localStorage.getItem(AGENT_EDITOR_CONFIG_STORAGE_KEY);
+        const store = raw ? JSON.parse(raw) : {};
+        store[agentId] = cloneAgentEditorValue(config);
+        localStorage.setItem(AGENT_EDITOR_CONFIG_STORAGE_KEY, JSON.stringify(store));
+    } catch (e) {
+        console.error('Failed to persist agent editor config', e);
+    }
+}
+
+function getAgentResourceData(type) {
+    if (type === 'knowledge') {
+        if (typeof knowledgeData !== 'undefined' && knowledgeData.length === 0 && typeof generateMockKnowledge === 'function') {
+            knowledgeData = generateMockKnowledge(10);
+        }
+        return typeof knowledgeData !== 'undefined' ? knowledgeData : [];
+    }
+
+    if (type === 'mcp') return typeof mcpData !== 'undefined' ? mcpData : [];
+
+    if (typeof window.getComponentsData === 'function') {
+        const components = window.getComponentsData();
+        const matches = components.filter(item => item.type === type);
+        if (matches.length > 0) return matches;
+    }
+
+    if (type === 'plugin') return typeof pluginData !== 'undefined' ? pluginData : [];
+    if (type === 'agent') return agentsData.filter(item => item.id !== currentEditorAgentId);
+    if (type === 'orchestrator' && typeof orchestratorData !== 'undefined') return orchestratorData;
+    return [];
+}
+
+function findAgentResource(type, id) {
+    const liveItem = getAgentResourceData(type).find(item => String(item.id) === String(id));
+    return liveItem || editorResourceSnapshots[type]?.[id] || { id, name: id, description: '' };
+}
+
+function snapshotAgentResource(type, item) {
+    if (!item || !item.id) return;
+    if (!editorResourceSnapshots[type]) editorResourceSnapshots[type] = {};
+    editorResourceSnapshots[type][item.id] = {
+        id: item.id,
+        name: item.name || item.title || item.id,
+        description: item.description || item.desc || '',
+        type: item.type || type
+    };
+}
+
+function getAgentResourceIcon(type) {
+    return AGENT_RESOURCE_PICKER_META[type] || { icon: 'fa-link', iconClass: 'text-gray-500 bg-gray-50' };
+}
+
+window.openAgentResourcePicker = function(type) {
+    if (!AGENT_RESOURCE_PICKER_META[type]) return;
+    agentResourcePickerState = {
+        type,
+        selectedIds: new Set((editorResources[type] || []).map(String)),
+        search: ''
+    };
+    renderAgentResourcePickerModal();
+}
+
+window.closeAgentResourcePicker = function() {
+    const modal = document.getElementById('agent-resource-picker-modal');
+    if (modal) modal.remove();
+    agentResourcePickerState = { type: null, selectedIds: new Set(), search: '' };
+}
+
+window.filterAgentResourcePicker = function(value) {
+    agentResourcePickerState.search = value || '';
+    renderAgentResourcePickerModal();
+}
+
+window.toggleAgentResourcePickerSelection = function(id) {
+    if (agentResourcePickerState.selectedIds.has(id)) {
+        agentResourcePickerState.selectedIds.delete(id);
+    } else {
+        agentResourcePickerState.selectedIds.add(id);
+    }
+    renderAgentResourcePickerModal();
+}
+
+window.confirmAgentResourcePicker = function() {
+    const type = agentResourcePickerState.type;
+    if (!type) return;
+    const available = getAgentResourceData(type);
+    const selectedIds = Array.from(agentResourcePickerState.selectedIds);
+    editorResources[type] = selectedIds;
+    selectedIds.forEach(id => snapshotAgentResource(type, available.find(item => String(item.id) === String(id)) || findAgentResource(type, id)));
+    window.closeAgentResourcePicker();
+    renderResourceList(type);
+    saveAgentConfig(true);
+}
+
+window.createAgentResourceFromPicker = function() {
+    const type = agentResourcePickerState.type;
+    window.closeAgentResourcePicker();
+    if (type === 'knowledge') {
+        switchView('knowledge');
+        return;
+    }
+    try {
+        sessionStorage.setItem('pendingComponentsFilterType', type);
+        sessionStorage.setItem('pendingCreateComponentType', type);
+    } catch (e) {
+        // ignore
+    }
+    switchView('components');
+}
+
+function renderAgentResourcePickerModal() {
+    const existing = document.getElementById('agent-resource-picker-modal');
+    if (existing) existing.remove();
+    const type = agentResourcePickerState.type;
+    const meta = AGENT_RESOURCE_PICKER_META[type];
+    if (!type || !meta) return;
+
+    const keyword = agentResourcePickerState.search.trim().toLowerCase();
+    const items = getAgentResourceData(type).filter(item => {
+        if (!keyword) return true;
+        return `${item.name || ''} ${item.description || ''} ${item.id || ''}`.toLowerCase().includes(keyword);
+    });
+    const modal = document.createElement('div');
+    modal.id = 'agent-resource-picker-modal';
+    modal.className = 'fixed inset-0 z-[120] flex items-center justify-center bg-gray-900/45';
+    modal.innerHTML = `
+        <div class="w-[680px] max-w-[92vw] h-[620px] max-h-[88vh] flex flex-col overflow-hidden rounded-xl border border-gray-200 bg-white shadow-2xl">
+            <div class="h-16 flex items-center justify-between px-6 border-b border-gray-100">
+                <div>
+                    <h3 class="text-base font-semibold text-gray-900">${meta.title}</h3>
+                    <p class="mt-1 text-xs text-gray-400">支持多选，确认后同步更新当前智能体配置</p>
+                </div>
+                <button type="button" onclick="closeAgentResourcePicker()" class="w-8 h-8 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors" aria-label="关闭">
+                    <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+                </button>
+            </div>
+            <div class="px-6 py-4 flex items-center justify-between gap-4">
+                <label class="relative flex-1">
+                    <span class="sr-only">搜索${meta.itemLabel}</span>
+                    <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-400" aria-hidden="true"></i>
+                    <input type="text" value="${escapeAgentResourceHtml(agentResourcePickerState.search)}" oninput="filterAgentResourcePicker(this.value)" placeholder="搜索${meta.itemLabel}名称" class="w-full rounded-lg border border-gray-200 py-2 pl-9 pr-3 text-sm text-gray-700 placeholder:text-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
+                </label>
+                <button type="button" onclick="createAgentResourceFromPicker()" class="flex items-center gap-2 rounded-lg border border-gray-200 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
+                    <i class="fa-solid fa-plus text-blue-500" aria-hidden="true"></i>
+                    <span>创建${meta.itemLabel}</span>
+                </button>
+            </div>
+            <div class="flex-1 overflow-y-auto px-6 pb-4 space-y-3">
+                ${items.length
+                    ? items.map(item => getAgentResourcePickerItemHTML(type, item)).join('')
+                    : '<div class="h-full flex items-center justify-center text-sm text-gray-400">暂无匹配资源</div>'}
+            </div>
+            <div class="h-16 flex items-center justify-between px-6 border-t border-gray-100 bg-gray-50/70">
+                <div class="text-xs text-gray-400">已选择 <span class="font-medium text-blue-600">${agentResourcePickerState.selectedIds.size}</span> 项</div>
+                <div class="flex items-center gap-2">
+                    <button type="button" onclick="closeAgentResourcePicker()" class="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm text-gray-600 hover:bg-gray-50 transition-colors">取消</button>
+                    <button type="button" onclick="confirmAgentResourcePicker()" class="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 transition-colors">确定</button>
+                </div>
+            </div>
+        </div>
+    `;
+    modal.addEventListener('click', event => {
+        if (event.target === modal) window.closeAgentResourcePicker();
+    });
+    document.body.appendChild(modal);
+
+    const searchInput = modal.querySelector('input[type="text"]');
+    if (searchInput && agentResourcePickerState.search) {
+        searchInput.focus();
+        searchInput.setSelectionRange(searchInput.value.length, searchInput.value.length);
+    }
+}
+
+function getAgentResourcePickerItemHTML(type, item) {
+    const meta = getAgentResourceIcon(type);
+    const id = String(item.id);
+    const selected = agentResourcePickerState.selectedIds.has(id);
+    return `
+        <button type="button" data-resource-id="${escapeAgentResourceHtml(id)}" onclick="toggleAgentResourcePickerSelection(this.dataset.resourceId)" class="w-full flex items-center gap-3 rounded-lg border ${selected ? 'border-blue-400 bg-blue-50/50' : 'border-gray-200 bg-white hover:border-blue-200'} px-4 py-4 text-left transition-colors">
+            <span class="w-4 h-4 flex items-center justify-center rounded border ${selected ? 'border-blue-600 bg-blue-600 text-white' : 'border-gray-300 bg-white text-transparent'}">
+                <i class="fa-solid fa-check text-[10px]" aria-hidden="true"></i>
+            </span>
+            <span class="w-10 h-10 rounded-lg flex items-center justify-center ${meta.iconClass}">
+                <i class="fa-solid ${meta.icon}" aria-hidden="true"></i>
+            </span>
+            <span class="min-w-0 flex-1">
+                <span class="block truncate text-sm font-medium text-gray-800">${escapeAgentResourceHtml(item.name || item.id)}</span>
+                <span class="mt-1 block truncate text-xs text-gray-400">${escapeAgentResourceHtml(item.description || item.id || '')}</span>
+            </span>
+            <span class="text-xs ${selected ? 'text-blue-600' : 'text-gray-400'}">${selected ? '已选择' : '可选择'}</span>
+        </button>
+    `;
+}
+
+function escapeAgentResourceHtml(value) {
+    return String(value == null ? '' : value)
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#39;');
+}
+
+function getAgentSourceRefUtils() {
+    if (window.SourceReferenceUtils) return window.SourceReferenceUtils;
+    return {
+        escapeHtml: escapeAgentResourceHtml,
+        getSourceSummary(content, limit = 50) {
+            const text = String(content == null ? '' : content).replace(/\s+/g, ' ').trim();
+            return text.length > limit ? text.slice(0, limit) + '\u2026' : text;
+        },
+        normalizeSourceReference(source) {
+            const input = source && typeof source === 'object' ? source : {};
+            const range = Array.isArray(input.source_range) ? input.source_range : input.sourceRange;
+            return {
+                document_id: String(input.document_id || input.documentId || input.id || ''),
+                document_name: String(input.document_name || input.documentName || input.title || input.name || ''),
+                chunk_id: String(input.chunk_id || input.chunkId || ''),
+                chunk_content: String(input.chunk_content || input.chunkContent || input.content || input.summary || ''),
+                source_range: Array.isArray(range) && range.length >= 2 ? [Number(range[0]), Number(range[1])] : null,
+                kb_id: input.kb_id || input.kbId || ''
+            };
+        },
+        fileIconClass(documentName) {
+            const ext = String(documentName || '').split('.').pop().toLowerCase();
+            if (ext === 'pdf') return 'fa-file-pdf';
+            if (['doc', 'docx'].includes(ext)) return 'fa-file-word';
+            if (['xls', 'xlsx', 'csv'].includes(ext)) return 'fa-file-excel';
+            return 'fa-file-lines';
+        }
+    };
+}
+
+function getAgentPreviewSourceReferences() {
+    const kbId = editorResources.knowledge && editorResources.knowledge[0] ? editorResources.knowledge[0] : '';
+    return [
+        {
+            kb_id: kbId,
+            document_id: 'DOC-EXPENSE-001',
+            document_name: '员工报销制度.pdf',
+            chunk_id: 'chunk-expense-001',
+            chunk_content: '差旅报销需在出差结束后 7 个工作日内提交报销申请，逾期需补充说明并由直属负责人确认后再进入财务审核。',
+            source_range: [1024, 1156]
+        },
+        {
+            kb_id: kbId,
+            document_id: 'DOC-EXPENSE-001',
+            document_name: '员工报销制度.pdf',
+            chunk_id: 'chunk-expense-002',
+            chunk_content: '住宿费、交通费和市内通勤费用需分别上传有效票据，系统会按费用类型进入对应的审批节点。',
+            source_range: [2048, 2160]
+        },
+        {
+            kb_id: kbId,
+            document_id: 'DOC-ATTENDANCE-2026',
+            document_name: '员工考勤与加班管理办法.docx',
+            chunk_id: 'chunk-overtime-003',
+            chunk_content: '工作日加班原则上优先安排调休，确需折算加班费时应以审批通过的加班申请和考勤记录作为依据。',
+            source_range: [512, 638]
+        }
+    ];
+}
+
+function hasAgentKnowledgeResources() {
+    return Array.isArray(editorResources.knowledge) && editorResources.knowledge.length > 0;
+}
+
+function groupAgentSourceRefsByDocument(refs) {
+    const groups = [];
+    const indexByDoc = new Map();
+    (Array.isArray(refs) ? refs : []).forEach(ref => {
+        if (!ref || !ref.document_id) return;
+        const key = ref.document_id;
+        if (!indexByDoc.has(key)) {
+            indexByDoc.set(key, groups.length);
+            groups.push({
+                document_id: ref.document_id,
+                document_name: ref.document_name || ref.document_id,
+                primary: ref,
+                sources: []
+            });
+        }
+        groups[indexByDoc.get(key)].sources.push(ref);
+    });
+    return groups;
+}
+
+function renderAgentPreviewKnowledgeSources() {
+    const sourceEl = document.getElementById('preview-knowledge-source');
+    if (!sourceEl) return;
+
+    const enabled = !!agentReferenceSourceConfig.enabled;
+    if (!enabled || !hasAgentKnowledgeResources()) {
+        sourceEl.classList.add('hidden');
+        sourceEl.innerHTML = '';
+        return;
+    }
+
+    const utils = getAgentSourceRefUtils();
+    const refs = getAgentPreviewSourceReferences()
+        .map(item => ({
+            ...(item && typeof item === 'object' ? item : {}),
+            ...utils.normalizeSourceReference(item)
+        }))
+        .filter(ref => ref.document_id && (ref.chunk_id || ref.source_range || ref.chunk_content));
+    const docGroups = groupAgentSourceRefsByDocument(refs);
+
+    if (!docGroups.length) {
+        sourceEl.classList.add('hidden');
+        sourceEl.innerHTML = '';
+        return;
+    }
+
+    sourceEl.classList.remove('hidden');
+    sourceEl.innerHTML = `
+        <div class="font-medium text-gray-600 mb-2">引用来源(${docGroups.length})</div>
+        <div class="space-y-1.5">
+            ${docGroups.map((group, index) => {
+                const docName = group.document_name || group.document_id;
+                return `
+                    <button type="button" class="agent-preview-source-link w-full flex items-start gap-2 rounded-md border border-blue-100 bg-white px-2 py-1.5 text-left text-blue-600 hover:bg-blue-50 hover:border-blue-200 transition-colors" data-source-index="${index}">
+                        <i class="fa-solid ${utils.fileIconClass(docName)} text-blue-500 mt-0.5"></i>
+                        <span class="min-w-0 flex-1 leading-5">
+                            <span class="font-medium">${index + 1}. 《${utils.escapeHtml(docName)}》</span>
+                        </span>
+                    </button>
+                `;
+            }).join('')}
+        </div>
+    `;
+
+    sourceEl.querySelectorAll('.agent-preview-source-link').forEach(button => {
+        button.addEventListener('click', () => {
+            const index = Number(button.dataset.sourceIndex);
+            const group = docGroups[index];
+            if (!group) return;
+            if (typeof window.openKnowledgeSourcePreview === 'function') {
+                window.openKnowledgeSourcePreview(group.primary, refs);
+            } else if (typeof window.openKnowledgeSource === 'function') {
+                window.openKnowledgeSource(group.primary);
+            }
+        });
+    });
+}
+
+function syncAgentReferenceSourceToggles(enabled) {
+    const next = !!enabled;
+    agentReferenceSourceConfig.enabled = next;
+    const knowledgeToggle = document.getElementById('show-knowledge-source');
+    const referenceToggle = document.getElementById('agent-reference-source-toggle');
+    if (knowledgeToggle) knowledgeToggle.checked = next;
+    if (referenceToggle) referenceToggle.checked = next;
+    renderAgentPreviewKnowledgeSources();
+}
+
 function loadResources() {
     // Check and load Knowledge Data
     if (typeof knowledgeData !== 'undefined' && knowledgeData.length === 0) {
@@ -668,6 +1049,7 @@ function addResource(type) {
     if (!editorResources[type].includes(id)) {
         editorResources[type].push(id);
         renderResourceList(type);
+        saveAgentConfig(true);
     }
     
     // Reset select
@@ -675,8 +1057,9 @@ function addResource(type) {
 }
 
 function removeResource(type, id) {
-    editorResources[type] = editorResources[type].filter(item => item !== id);
+    editorResources[type] = editorResources[type].filter(item => String(item) !== String(id));
     renderResourceList(type);
+    saveAgentConfig(true);
 }
 
 function renderResourceList(type) {
@@ -686,24 +1069,19 @@ function renderResourceList(type) {
     container.innerHTML = '';
     
     editorResources[type].forEach(id => {
-        let name = id;
-        let data = [];
-        
-        if (type === 'knowledge' && typeof knowledgeData !== 'undefined') data = knowledgeData;
-        else if (type === 'agent') data = agentsData;
-        else if (type === 'orchestrator' && typeof orchestratorData !== 'undefined') data = orchestratorData;
-        else if (type === 'mcp' && typeof mcpData !== 'undefined') data = mcpData;
-        else if (type === 'plugin' && typeof pluginData !== 'undefined') data = pluginData;
-        
-        const item = data.find(x => x.id === id);
-        if (item) name = item.name;
+        const item = findAgentResource(type, id);
+        const name = item.name || id;
+        snapshotAgentResource(type, item);
+        const iconMeta = getAgentResourceIcon(type);
         
         const div = document.createElement('div');
         div.className = 'flex items-center justify-between p-2 bg-white rounded-md border border-gray-200 text-xs shadow-sm group hover:border-blue-300 transition-all';
         div.innerHTML = `
             <span class="text-gray-700 truncate mr-2 flex-1 flex items-center gap-2">
-                <i class="fa-solid fa-link text-gray-300 text-[10px]"></i>
-                ${name}
+                <span class="w-6 h-6 rounded flex items-center justify-center ${iconMeta.iconClass}">
+                    <i class="fa-solid ${iconMeta.icon} text-[10px]"></i>
+                </span>
+                <span class="truncate">${escapeAgentResourceHtml(name)}</span>
             </span>
             <button onclick="removeResource('${type}', '${id}')" class="text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity">
                 <i class="fa-solid fa-times"></i>
@@ -711,6 +1089,19 @@ function renderResourceList(type) {
         `;
         container.appendChild(div);
     });
+
+    if (editorResources[type].length === 0 && AGENT_RESOURCE_PICKER_META[type]) {
+        const empty = document.createElement('button');
+        empty.type = 'button';
+        empty.className = 'w-full rounded-lg border border-dashed border-gray-200 px-3 py-4 text-xs text-gray-400 hover:border-blue-300 hover:bg-blue-50 hover:text-blue-600 transition-colors';
+        empty.onclick = () => window.openAgentResourcePicker(type);
+        empty.innerHTML = `<i class="fa-solid fa-plus mr-1"></i>添加${AGENT_RESOURCE_PICKER_META[type].itemLabel}`;
+        container.appendChild(empty);
+    }
+
+    if (type === 'knowledge') {
+        renderAgentPreviewKnowledgeSources();
+    }
 }
 
 function saveAgentConfig(silent = false) {
@@ -720,39 +1111,82 @@ function saveAgentConfig(silent = false) {
     const promptInput = document.getElementById('agent-prompt');
     const contextMemoryInput = document.getElementById('agent-context-memory');
     
+    let existingAgent = currentEditorAgentId ? agentsData.find(a => a.id === currentEditorAgentId) : null;
+    const storedConfig = loadStoredAgentEditorConfig();
+    const nameDisplay = document.getElementById('agent-name-display');
+    const descDisplay = document.getElementById('agent-desc-display');
     const config = {
-        name: nameInput ? nameInput.value : '',
-        model: modelInput ? modelInput.value : '',
-        prompt: promptInput ? promptInput.value : '',
-        contextMemory: contextMemoryInput ? parseInt(contextMemoryInput.value) : 10,
+        name: nameInput ? nameInput.value : (existingAgent?.name || storedConfig?.name || nameDisplay?.textContent || ''),
+        description: nameInput?.dataset?.description || descDisplay?.textContent || existingAgent?.description || storedConfig?.description || '',
+        model: modelInput ? modelInput.value : (existingAgent?.model || storedConfig?.model || 'GPT-4o'),
+        prompt: promptInput ? promptInput.value : (existingAgent?.prompt || storedConfig?.prompt || ''),
+        contextMemory: contextMemoryInput ? parseInt(contextMemoryInput.value) : (storedConfig?.contextMemory || 10),
         knowledge: [...editorResources.knowledge],
         relatedAgents: [...editorResources.agent],
-        orchestrators: [...editorResources.orchestrator]
+        orchestrators: [...editorResources.orchestrator],
+        mcp: [...editorResources.mcp],
+        plugins: [...editorResources.plugin],
+        resourceSnapshots: cloneAgentEditorValue(editorResourceSnapshots),
+        showKnowledgeSource: !!agentReferenceSourceConfig.enabled,
+        referenceSource: cloneAgentEditorValue(agentReferenceSourceConfig),
+        capabilities: {
+            uploadAttachment: !!document.getElementById('agent-upload-attachment-toggle')?.checked,
+            dataInterpretation: !!document.getElementById('agent-data-interpretation-toggle')?.checked,
+            ignoreContext: !!document.getElementById('agent-ignore-context-toggle')?.checked
+        },
+        experience: cloneAgentEditorValue(experienceConfig),
+        theme: cloneAgentEditorValue(themeConfig),
+        i18nCustom: cloneAgentEditorValue(agentI18nCustomConfig)
     };
 
     if (currentEditorAgentId) {
+        if (!existingAgent) {
+            existingAgent = {
+                id: currentEditorAgentId,
+                name: config.name || '未命名智能体',
+                description: config.description || '',
+                model: config.model || 'GPT-4o',
+                status: 'running',
+                creator: 'Admin',
+                createdAt: new Date().toLocaleString(),
+                timestamp: Date.now(),
+                hot: 0
+            };
+            agentsData.unshift(existingAgent);
+        }
+
         // Update existing agent
-        const agent = agentsData.find(a => a.id === currentEditorAgentId);
+        const agent = existingAgent;
         if (agent) {
             agent.name = config.name;
+            agent.description = config.description;
             agent.model = config.model;
             agent.prompt = config.prompt;
             agent.contextMemory = config.contextMemory;
             agent.knowledge = config.knowledge;
             agent.relatedAgents = config.relatedAgents;
             agent.orchestrators = config.orchestrators;
+            agent.mcp = config.mcp;
+            agent.plugins = config.plugins;
+            agent.resourceSnapshots = config.resourceSnapshots;
+            agent.showKnowledgeSource = config.showKnowledgeSource;
+            agent.referenceSource = config.referenceSource;
+            agent.capabilities = config.capabilities;
             agent.updatedAt = new Date().toLocaleString();
             agent.timestamp = Date.now();
             
             // Save experience config
-            agent.experience = JSON.parse(JSON.stringify(experienceConfig));
-            agent.i18nCustom = JSON.parse(JSON.stringify(agentI18nCustomConfig));
+            agent.experience = config.experience;
+            agent.theme = config.theme;
+            agent.i18nCustom = config.i18nCustom;
         }
     } else {
         // Create new (if not already created via modal? Logic is user creates via modal then edits)
         // But if we are here, we might be editing a draft?
         // For now assume agent exists.
     }
+
+    persistStoredAgentEditorConfig(config);
 
     if (!silent) {
         showToast('配置已保存');
@@ -764,6 +1198,7 @@ function initAgentEditor(params) {
     console.log('Initializing Agent Editor', params);
     
     currentEditorAgentId = params && params.id ? params.id : null;
+    const storedConfig = loadStoredAgentEditorConfig(currentEditorAgentId);
     
     // Reset Resources
     editorResources = {
@@ -773,6 +1208,13 @@ function initAgentEditor(params) {
         mcp: [],
         plugin: []
     };
+    editorResourceSnapshots = cloneAgentEditorValue(storedConfig?.resourceSnapshots || {
+        knowledge: {},
+        agent: {},
+        orchestrator: {},
+        mcp: {},
+        plugin: {}
+    });
     
     // Load Data if editing
     if (currentEditorAgentId) {
@@ -840,13 +1282,71 @@ function initAgentEditor(params) {
         initExperienceConfig(null);
         initThemeConfig(null);
     }
-    
+
+    const liveAgentForEditor = currentEditorAgentId ? agentsData.find(a => a.id == currentEditorAgentId) : null;
+    const editorConfig = storedConfig || liveAgentForEditor;
+    if (editorConfig) {
+        const nameInput = document.getElementById('agent-name');
+        const modelInput = document.getElementById('agent-model');
+        const promptInput = document.getElementById('agent-prompt');
+        const contextMemoryInput = document.getElementById('agent-context-memory');
+        const editorTitle = document.getElementById('editor-title');
+        const nameDisplay = document.getElementById('agent-name-display');
+        const descDisplay = document.getElementById('agent-desc-display');
+        const avatarDisplay = document.getElementById('agent-avatar-display') || document.getElementById('editor-agent-avatar');
+        const showKnowledgeSourceInput = document.getElementById('show-knowledge-source');
+        const uploadAttachmentInput = document.getElementById('agent-upload-attachment-toggle');
+        const dataInterpretationInput = document.getElementById('agent-data-interpretation-toggle');
+        const ignoreContextInput = document.getElementById('agent-ignore-context-toggle');
+
+        const displayName = editorConfig.name || '未命名智能体';
+        const displayDesc = editorConfig.description || '暂无描述';
+        if (nameInput) {
+            nameInput.value = displayName;
+            nameInput.dataset.description = displayDesc;
+        }
+        if (modelInput && editorConfig.model) modelInput.value = editorConfig.model;
+        if (promptInput) promptInput.value = editorConfig.prompt || editorConfig.description || '';
+        if (contextMemoryInput) contextMemoryInput.value = editorConfig.contextMemory !== undefined ? editorConfig.contextMemory : 10;
+        if (editorTitle) editorTitle.textContent = `编辑智能体 ${displayName}`;
+        if (nameDisplay) nameDisplay.textContent = displayName;
+        if (descDisplay) descDisplay.textContent = displayDesc;
+        if (avatarDisplay) {
+            avatarDisplay.innerHTML = editorConfig.avatar
+                ? `<img src="${editorConfig.avatar}" class="w-full h-full object-cover rounded-xl">`
+                : '<i class="fa-solid fa-robot"></i>';
+        }
+        if (showKnowledgeSourceInput) showKnowledgeSourceInput.checked = !!editorConfig.showKnowledgeSource;
+        if (uploadAttachmentInput) uploadAttachmentInput.checked = !!editorConfig.capabilities?.uploadAttachment;
+        if (dataInterpretationInput) dataInterpretationInput.checked = !!editorConfig.capabilities?.dataInterpretation;
+        if (ignoreContextInput) ignoreContextInput.checked = !!editorConfig.capabilities?.ignoreContext;
+
+        editorResources.knowledge = [...(editorConfig.knowledge || editorConfig.knowledgeBase || [])];
+        editorResources.agent = [...(editorConfig.relatedAgents || [])];
+        editorResources.orchestrator = [...(editorConfig.orchestrators || [])];
+        editorResources.mcp = [...(editorConfig.mcp || [])];
+        editorResources.plugin = [...(editorConfig.plugins || [])];
+        editorResourceSnapshots = cloneAgentEditorValue(editorConfig.resourceSnapshots || editorResourceSnapshots);
+
+        initExperienceConfig(editorConfig);
+        initThemeConfig(editorConfig);
+        agentI18nCustomConfig = cloneAgentEditorValue(editorConfig.i18nCustom || {});
+    } else if (currentEditorAgentId) {
+        initExperienceConfig(null);
+        initThemeConfig(null);
+        agentI18nCustomConfig = {};
+    }
+
     loadResources();
     renderResourceList('knowledge');
     renderResourceList('agent');
     renderResourceList('orchestrator');
     renderResourceList('mcp');
     renderResourceList('plugin');
+    const referenceSourceEnabled = editorConfig
+        ? !!(editorConfig.referenceSource?.enabled ?? editorConfig.showKnowledgeSource)
+        : false;
+    syncAgentReferenceSourceToggles(referenceSourceEnabled);
     
     // Init Tabs
     // Default to 'config' tab
@@ -859,7 +1359,7 @@ function initAgentEditor(params) {
 }
 
 function switchEditorTab(tabName) {
-    const tabs = ['config', 'publish', 'logs', 'analytics'];
+    const tabs = ['config', 'publish', 'logs', 'analytics', 'statistics'];
     
     tabs.forEach(t => {
         const btn = document.getElementById(`tab-btn-${t}`);
@@ -879,6 +1379,10 @@ function switchEditorTab(tabName) {
                 if (t === 'analytics' && window.renderAnalytics) {
                     // Delay slightly to ensure container is visible for size calculation
                     setTimeout(() => window.renderAnalytics(), 50);
+                }
+                // Special handling for statistics tab
+                if (t === 'statistics' && window.renderStatistics) {
+                    window.renderStatistics();
                 }
             }
         } else {
@@ -1160,6 +1664,8 @@ function renderLogList(reset = false) {
         }
     }
 
+    persistStoredAgentEditorConfig(config);
+
     const tbody = document.getElementById('logs-list-body');
     const emptyState = document.getElementById('logs-list-empty');
     if (!tbody) return;
@@ -1181,6 +1687,9 @@ function renderLogList(reset = false) {
     } else {
         if (emptyState) emptyState.classList.add('hidden');
         
+        const esc = window.escapeHtml || function (s) { return String(s == null ? '' : s); };
+        const idJson = (id) => JSON.stringify(id);
+
         filtered.forEach(log => {
             const tr = document.createElement('tr');
             tr.className = 'hover:bg-gray-50 transition-colors cursor-pointer';
@@ -1189,66 +1698,48 @@ function renderLogList(reset = false) {
                 if (e.target.closest('button')) return;
                 openLogDetailModal(log.id);
             };
-            
-            const statusClass = log.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800';
-            const statusText = log.status === 'active' ? '进行中' : '已结束';
 
             tr.innerHTML = `
                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-blue-600 font-mono">
-                    ${log.id}
+                    ${esc(log.id)}
                 </td>
-                <td class="px-6 py-4 text-sm text-gray-900 max-w-xs truncate" title="${log.topic}">
-                    ${log.topic}
+                <td class="px-6 py-4 text-sm text-gray-900 min-w-0 max-w-xs">
+                    <span class="dt-cell-ellipsis" title="${esc(log.topic)}">${esc(log.topic)}</span>
                 </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    <div class="flex items-center gap-2">
-                        <div class="w-6 h-6 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center text-xs">
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 min-w-0">
+                    <div class="flex items-center gap-2 min-w-0">
+                        <div class="w-6 h-6 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center text-xs flex-shrink-0">
                             <i class="fa-solid fa-user"></i>
                         </div>
-                        ${log.user}
+                        <span class="dt-cell-ellipsis" title="${esc(log.user)}">${esc(log.user)}</span>
                     </div>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 font-mono">
-                    ${log.userId}
+                    ${esc(log.userId)}
                 </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs bg-gray-100 text-gray-700">
-                        ${log.department || '无部门'}
-                    </span>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 min-w-0">
+                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs bg-gray-100 text-gray-700 dt-cell-ellipsis max-w-full" title="${esc(log.department || '无部门')}">${esc(log.department || '无部门')}</span>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     <span class="inline-flex items-center px-2 py-0.5 rounded text-xs ${log.platform === 'WEB' ? 'bg-blue-50 text-blue-700 border border-blue-100' : 'bg-purple-50 text-purple-700 border border-purple-100'}">
-                        ${log.platform || 'WEB'}
+                        ${esc(log.platform || 'WEB')}
                     </span>
                 </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    ${log.createdAt}
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    ${log.updatedAt}
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    ${log.messageCount}
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    ${(log.copyCount || 0).toLocaleString()}
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    ${(log.regenerateCount || 0).toLocaleString()}
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    ${(log.translateCount || 0).toLocaleString()}
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    ${(log.summarizeCount || 0).toLocaleString()}
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <button onclick="openLogDetailModal('${log.id}')" class="text-blue-600 hover:text-blue-900">查看</button>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${esc(String(log.createdAt).replace(/\s+/g, ' '))}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${esc(String(log.updatedAt).replace(/\s+/g, ' '))}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${log.messageCount}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${(log.copyCount || 0).toLocaleString()}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${(log.regenerateCount || 0).toLocaleString()}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${(log.translateCount || 0).toLocaleString()}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${(log.summarizeCount || 0).toLocaleString()}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium min-w-[72px]">
+                    <button onclick="event.stopPropagation();openLogDetailModal(${idJson(log.id)})" class="text-blue-600 hover:text-blue-900">查看</button>
                 </td>
             `;
             tbody.appendChild(tr);
         });
     }
+    if (window.syncDataTable) window.syncDataTable('agent-logs-data-table', { storageKey: 'dt-colwidths-agent-logs' });
 }
 
 function openLogDetailModal(logId) {
@@ -1311,7 +1802,6 @@ function openLogDetailModal(logId) {
 }
 
 // Expose functions
-window.renderLogList = renderLogList;
 window.openLogDetailModal = openLogDetailModal;
 
 // --- Edit Agent Info (Name & Desc & Avatar) ---
@@ -1502,7 +1992,11 @@ function publishAgent() {
         return;
     }
     
-    const agent = agentsData.find(a => a.id === currentEditorAgentId);
+    let agent = agentsData.find(a => a.id === currentEditorAgentId);
+    if (!agent) {
+        saveAgentConfig(true);
+        agent = agentsData.find(a => a.id === currentEditorAgentId);
+    }
     if (!agent) return;
 
     // Capture current config
@@ -1516,7 +2010,20 @@ function publishAgent() {
         prompt: promptInput ? promptInput.value : agent.prompt,
         knowledge: [...editorResources.knowledge],
         relatedAgents: [...editorResources.agent],
-        orchestrators: [...editorResources.orchestrator]
+        orchestrators: [...editorResources.orchestrator],
+        mcp: [...editorResources.mcp],
+        plugins: [...editorResources.plugin],
+        resourceSnapshots: cloneAgentEditorValue(editorResourceSnapshots),
+        showKnowledgeSource: !!agentReferenceSourceConfig.enabled,
+        referenceSource: cloneAgentEditorValue(agentReferenceSourceConfig),
+        capabilities: {
+            uploadAttachment: !!document.getElementById('agent-upload-attachment-toggle')?.checked,
+            dataInterpretation: !!document.getElementById('agent-data-interpretation-toggle')?.checked,
+            ignoreContext: !!document.getElementById('agent-ignore-context-toggle')?.checked
+        },
+        experience: cloneAgentEditorValue(experienceConfig),
+        theme: cloneAgentEditorValue(themeConfig),
+        i18nCustom: cloneAgentEditorValue(agentI18nCustomConfig)
     };
 
     // Update agent current config
@@ -1526,8 +2033,18 @@ function publishAgent() {
     agent.knowledge = config.knowledge;
     agent.relatedAgents = config.relatedAgents;
     agent.orchestrators = config.orchestrators;
+    agent.mcp = config.mcp;
+    agent.plugins = config.plugins;
+    agent.resourceSnapshots = config.resourceSnapshots;
+    agent.showKnowledgeSource = config.showKnowledgeSource;
+    agent.referenceSource = config.referenceSource;
+    agent.capabilities = config.capabilities;
+    agent.experience = config.experience;
+    agent.theme = config.theme;
+    agent.i18nCustom = config.i18nCustom;
     agent.updatedAt = new Date().toLocaleString();
     agent.timestamp = Date.now();
+    persistStoredAgentEditorConfig(config);
 
     // Create version
     if (!agent.versions) agent.versions = [];
@@ -1763,6 +2280,30 @@ function toggleExperienceFeature(type, save = true) {
         
     if (save) saveAgentConfig(true);
 }
+
+// --- Advanced Settings: Reference Source ---
+let agentReferenceSourceConfig = {
+    enabled: false
+};
+window.agentReferenceSourceConfig = agentReferenceSourceConfig;
+
+function toggleKnowledgeSource() {
+    const toggle = document.getElementById('show-knowledge-source');
+    if (!toggle) return;
+
+    syncAgentReferenceSourceToggles(toggle.checked);
+    saveAgentConfig(true);
+}
+window.toggleKnowledgeSource = toggleKnowledgeSource;
+
+function toggleAgentReferenceSource() {
+    const toggle = document.getElementById('agent-reference-source-toggle');
+    if (!toggle) return;
+
+    syncAgentReferenceSourceToggles(toggle.checked);
+    saveAgentConfig(true);
+}
+window.toggleAgentReferenceSource = toggleAgentReferenceSource;
 
 // --- Advanced Settings: Internationalization ---
 

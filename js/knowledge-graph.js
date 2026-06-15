@@ -62,102 +62,93 @@ function renderKgList() {
 
         if (filteredData.length === 0) {
             emptyState.classList.remove('hidden');
+            if (window.syncDataTable) window.syncDataTable('kg-data-table', { storageKey: 'dt-colwidths-kg' });
             return;
         }
+
+        const esc = window.escapeHtml || function (s) { return String(s == null ? '' : s); };
 
         filteredData.forEach((item, index) => {
             const tr = document.createElement('tr');
             tr.className = 'hover:bg-gray-50 transition-colors group';
+            const idJson = JSON.stringify(item.id);
             
             tr.innerHTML = `
-                <td class="px-6 py-4 text-gray-500">${index + 1}</td>
-                <td class="px-6 py-4">
-                    <a href="javascript:void(0)" onclick="viewKgDetail('${item.id}')" class="text-blue-600 hover:text-blue-800 font-medium hover:underline">
-                        ${item.name}
-                    </a>
+                <td class="px-6 py-4 text-gray-500 whitespace-nowrap">${index + 1}</td>
+                <td class="px-6 py-4 min-w-0">
+                    <a href="javascript:void(0)" onclick="viewKgDetail(${idJson})" class="text-blue-600 hover:text-blue-800 font-medium hover:underline dt-cell-ellipsis block" title="${esc(item.name)}">${esc(item.name)}</a>
                 </td>
-                <td class="px-6 py-4">
-                    <div class="text-gray-500 max-w-xs truncate" title="${item.description}">
-                        ${item.description}
-                    </div>
+                <td class="px-6 py-4 min-w-0">
+                    <div class="text-gray-500 dt-cell-ellipsis" title="${esc(item.description)}">${esc(item.description)}</div>
                 </td>
-                <td class="px-6 py-4 text-center">
+                <td class="px-6 py-4 text-center whitespace-nowrap">
                     <span class="bg-blue-50 text-blue-700 py-1 px-2 rounded text-xs font-mono">${formatNumber(item.entityCount)}</span>
                 </td>
-                <td class="px-6 py-4 text-center">
+                <td class="px-6 py-4 text-center whitespace-nowrap">
                     <span class="bg-gray-100 text-gray-700 py-1 px-2 rounded text-xs font-mono">${formatNumber(item.docCount)}</span>
                 </td>
-                <td class="px-6 py-4 text-sm text-gray-600">
-                    <div class="flex items-center gap-2">
-                        <div class="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center text-xs text-gray-600">
-                            ${item.creator.charAt(0)}
+                <td class="px-6 py-4 text-sm text-gray-600 min-w-0 whitespace-nowrap">
+                    <div class="flex items-center gap-2 min-w-0">
+                        <div class="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center text-xs text-gray-600 flex-shrink-0">
+                            ${esc(item.creator.charAt(0))}
                         </div>
-                        ${item.creator}
+                        <span class="dt-cell-ellipsis" title="${esc(item.creator)}">${esc(item.creator)}</span>
                     </div>
                 </td>
-                <td class="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">${item.createdAt}</td>
-                <td class="px-6 py-4 text-right">
-                    <button onclick="window.openKgActions(event, '${item.id}')" class="p-1.5 text-gray-400 hover:text-gray-600 transition-colors rounded hover:bg-gray-100">
-                        <i class="fa-solid fa-ellipsis"></i>
-                    </button>
+                <td class="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">${esc(String(item.createdAt).replace(/\s+/g, ' '))}</td>
+                <td class="px-6 py-4 text-right min-w-[120px] action-td">
                 </td>
             `;
             tbody.appendChild(tr);
-        });
-    }, 300); // Fake delay
-}
 
-window.openKgActions = function(event, id) {
-    window.showActionMenu(event, [
-        {
-            label: '配置权限',
-            icon: 'fa-solid fa-user-shield',
-            onClick: () => {
-                const item = kgData.find(k => k.id === id);
-                if(item) {
-                    if (window.navigateToPermissionConfig) {
-                        window.navigateToPermissionConfig(id, 'knowledge_graph', item.name);
-                    } else {
-                        console.error('navigateToPermissionConfig is not defined');
+            // Add inline actions
+            const actionsTd = tr.querySelector('.action-td');
+            const actions = [
+                {
+                    label: '编辑',
+                    onClick: () => editKg(item.id)
+                },
+                {
+                    label: '配置权限',
+                    onClick: () => {
+                        if (window.navigateToPermissionConfig) {
+                            window.navigateToPermissionConfig(item.id, 'knowledge_graph', item.name);
+                        } else {
+                            console.error('navigateToPermissionConfig is not defined');
+                        }
                     }
+                },
+                {
+                    label: '知识管理',
+                    onClick: () => manageKg(item.id)
+                },
+                {
+                    label: '可视化',
+                    onClick: () => visualizeKg(item.id)
+                },
+                {
+                    label: '重建',
+                    onClick: () => rebuildKg(item.id)
+                },
+                {
+                    label: '清空',
+                    className: 'text-red-600 hover:text-red-800',
+                    onClick: () => clearKg(item.id)
+                },
+                {
+                    label: '删除',
+                    className: 'text-red-600 hover:text-red-800',
+                    onClick: () => deleteKg(item.id)
                 }
+            ];
+            
+            if (window.createInlineActions) {
+                const actionContainer = window.createInlineActions(actions);
+                actionsTd.appendChild(actionContainer);
             }
-        },
-        {
-            label: '知识管理',
-            icon: 'fa-solid fa-database',
-            onClick: () => manageKg(id)
-        },
-        {
-            label: '编辑',
-            icon: 'fa-solid fa-pen',
-            onClick: () => editKg(id)
-        },
-        {
-            label: '可视化',
-            icon: 'fa-solid fa-share-nodes',
-            onClick: () => visualizeKg(id)
-        },
-        {
-            label: '重建',
-            icon: 'fa-solid fa-rotate',
-            onClick: () => rebuildKg(id)
-        },
-        {
-            label: '清空',
-            icon: 'fa-solid fa-eraser',
-            className: 'text-red-600 hover:bg-red-50',
-            iconClass: 'text-red-500',
-            onClick: () => clearKg(id)
-        },
-        {
-            label: '删除',
-            icon: 'fa-solid fa-trash',
-            className: 'text-red-600 hover:bg-red-50',
-            iconClass: 'text-red-500',
-            onClick: () => deleteKg(id)
-        }
-    ]);
+        });
+        if (window.syncDataTable) window.syncDataTable('kg-data-table', { storageKey: 'dt-colwidths-kg' });
+    }, 300); // Fake delay
 }
 
 function formatNumber(num) {

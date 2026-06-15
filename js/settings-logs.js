@@ -108,28 +108,32 @@ window.renderSystemLogs = function() {
                     </td>
                 </tr>
             `;
+            if (window.syncDataTable) window.syncDataTable('logs-data-table', { storageKey: 'dt-colwidths-logs' });
             return;
         }
 
+        const esc = window.escapeHtml || function (s) { return String(s == null ? '' : s); };
+
         tbody.innerHTML = logsToRender.map(log => `
             <tr class="hover:bg-gray-50 transition-colors animate-fade-in">
-                <td class="px-6 py-3 text-gray-500 whitespace-nowrap">${log.time}</td>
-                <td class="px-6 py-3 font-medium text-gray-800">${log.user}</td>
-                <td class="px-6 py-3">
+                <td class="px-6 py-3 text-gray-500 whitespace-nowrap">${esc(log.time)}</td>
+                <td class="px-6 py-3 font-medium text-gray-800 min-w-0"><span class="dt-cell-ellipsis" title="${esc(log.user)}">${esc(log.user)}</span></td>
+                <td class="px-6 py-3 whitespace-nowrap">
                     <span class="px-2 py-0.5 rounded text-xs font-medium bg-${log.color}-50 text-${log.color}-600 border border-${log.color}-100">
-                        ${log.type}
+                        ${esc(log.type)}
                     </span>
                 </td>
-                <td class="px-6 py-3 text-gray-600 max-w-md truncate" title="${log.detail}">${log.detail}</td>
-                <td class="px-6 py-3 text-gray-500 font-mono text-xs">${log.ip}</td>
-                <td class="px-6 py-3 whitespace-nowrap">
+                <td class="px-6 py-3 text-gray-600 min-w-0"><span class="dt-cell-ellipsis" title="${esc(log.detail)}">${esc(log.detail)}</span></td>
+                <td class="px-6 py-3 text-gray-500 font-mono text-xs whitespace-nowrap">${esc(log.ip)}</td>
+                <td class="px-6 py-3 whitespace-nowrap min-w-[100px]">
                     <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${log.status === '成功' ? 'bg-green-50 text-green-700 border border-green-100' : 'bg-red-50 text-red-700 border border-red-100'}">
                         <span class="w-1.5 h-1.5 mr-1.5 rounded-full ${log.status === '成功' ? 'bg-green-500' : 'bg-red-500'}"></span>
-                        ${log.status}
+                        ${esc(log.status)}
                     </span>
                 </td>
             </tr>
         `).join('');
+        if (window.syncDataTable) window.syncDataTable('logs-data-table', { storageKey: 'dt-colwidths-logs' });
     }
 
     // Initial Render

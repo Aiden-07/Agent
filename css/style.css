@@ -7,6 +7,19 @@ body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
 }
 
+/* Global Table Header Bold Override */
+th {
+    font-weight: 700 !important;
+}
+
+/* Hide details marker for summary */
+details > summary::-webkit-details-marker {
+  display: none;
+}
+details > summary {
+  list-style: none;
+}
+
 /* Sidebar Navigation */
 .nav-item {
     position: relative;
@@ -51,6 +64,65 @@ body {
 .submenu-link {
     position: relative;
     z-index: 1;
+}
+
+/* Layout & Sidebar Enhancements */
+.sidebar-collapsed {
+    width: 4.5rem !important; /* 72px / w-18 */
+}
+
+.sidebar-collapsed .nav-text {
+    opacity: 0;
+    width: 0;
+    display: none;
+}
+
+.sidebar-collapsed .nav-group-title {
+    opacity: 0;
+    height: 0;
+    overflow: hidden;
+    padding-top: 0;
+    padding-bottom: 0;
+}
+
+.sidebar-collapsed #sidebar-logo-text {
+    opacity: 0;
+    width: 0;
+    display: none;
+}
+
+.sidebar-collapsed .user-info-text {
+    opacity: 0;
+    width: 0;
+    display: none;
+}
+
+.sidebar-collapsed .user-menu-icon {
+    display: none;
+}
+
+.sidebar-collapsed .sidebar-logo-wrapper {
+    display: none;
+}
+
+.sidebar-collapsed .sidebar-header {
+    justify-content: center;
+    padding-left: 0;
+    padding-right: 0;
+}
+
+.nav-link-content {
+    display: flex;
+    align-items: center;
+    white-space: nowrap;
+    overflow: hidden;
+}
+
+/* Ensure icons have consistent width in both states */
+.nav-icon {
+    width: 1.5rem; /* 24px */
+    text-align: center;
+    flex-shrink: 0;
 }
 
 /* Animations */
@@ -98,428 +170,30 @@ body {
     margin-top: 1rem;
     background: white;
     border: 1px solid #e1e8ed;
-    border-radius: 0.75rem;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
-    overflow: hidden;
-    transition: all 0.3s ease;
-    display: flex;
-    flex-direction: column;
 }
 
-.slice-preview-hint {
-    background-color: #f8fafc;
-    border-bottom: 1px solid #e1e8ed;
-    padding: 0.75rem 1rem;
-    font-size: 11px;
-    color: #4b5563;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    transition: all 0.3s ease;
+/* Statistics Table Alignment Overrides */
+/* Priority: Ensure these override any utility classes */
+#statistics-container th {
+    text-align: center !important;
 }
 
-.slice-preview-hint.hidden {
-    display: none;
+#statistics-container td {
+    text-align: left !important;
 }
 
-.slice-preview-hint::before {
-    content: '\f0eb'; /* fa-lightbulb */
-    font-family: "Font Awesome 6 Free";
-    font-weight: 400;
-    color: #3b82f6;
-    font-size: 12px;
+/* Custom Micro Animations */
+.animate-bounce-slow {
+    animation: bounceSlow 3s infinite;
 }
 
-.slice-preview-content {
-    background: white;
-    min-height: 100px;
-    position: relative;
-}
-
-/* Visualization Styles - Adjusted for Unified Container */
-.slice-preview-content .slice-viz-container {
-    margin-top: 0;
-    padding: 1.5rem;
-    border: none;
-    border-radius: 0;
-    box-shadow: none;
-    background: transparent;
-}
-
-.slice-viz-container {
-    margin-top: 1.5rem;
-    padding: 1.5rem;
-    background-color: #ffffff;
-    border: 1px solid #e1e8ed;
-    border-radius: 0.75rem;
-    display: grid;
-    grid-template-columns: 3fr 2fr;
-    gap: 80px;
-    position: relative;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-    opacity: 0;
-    transform: translateY(20px);
-}
-
-@media (max-width: 768px) {
-    .slice-viz-container {
-        grid-template-columns: 1fr;
-        gap: 40px;
+@keyframes bounceSlow {
+    0%, 100% {
+        transform: translateY(-5%);
+        animation-timing-function: cubic-bezier(0.8, 0, 1, 1);
     }
-}
-
-.slice-viz-arrow {
-    position: absolute;
-    left: 60%;
-    top: 50%;
-    transform: translate(-50%, -50%) rotate(15deg);
-    filter: drop-shadow(0 0.5px 1px rgba(0,0,0,0.1));
-    pointer-events: none;
-    z-index: 5;
-}
-
-.paper-doc {
-    background-color: #f5f7fa;
-    padding: 2rem;
-    border-radius: 0.5rem;
-    border: 1px solid #e1e8ed;
-}
-
-.paper-module {
-    margin-bottom: 20px;
-    padding: 10px;
-    border-radius: 4px;
-    transition: background-color 0.3s ease;
-}
-
-.paper-module:hover {
-    background-color: #f8f9fa;
-}
-
-.paper-title {
-    font-size: 18px;
-    font-weight: bold;
-    color: #2c3e50;
-    margin-bottom: 8px;
-}
-
-.paper-author {
-    font-size: 14px;
-    color: #7f8c8d;
-    margin-bottom: 15px;
-}
-
-.paper-abstract {
-    font-size: 12px;
-    line-height: 1.8;
-    color: #95a5a6;
-    background: linear-gradient(90deg, #f0f2f5 25%, #f8f9fa 50%, #f0f2f5 75%);
-    background-size: 200% 100%;
-    animation: skeleton-loading 1.5s infinite;
-    height: 60px;
-    border-radius: 4px;
-}
-
-.paper-section {
-    font-size: 14px;
-    font-weight: 600;
-    color: #34495e;
-    margin-bottom: 8px;
-    border-bottom: 1px solid #e1e8ed;
-    padding-bottom: 4px;
-}
-
-.paper-content-line {
-    height: 10px;
-    background: #e1e8ed;
-    border-radius: 2px;
-    margin-bottom: 6px;
-    width: 100%;
-}
-
-.paper-content-line.short { width: 60%; }
-
-/* Excel specific styles */
-.viz-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 11px;
-    background: white;
-    border: 1px solid #e1e8ed;
-}
-
-.viz-table th, .viz-table td {
-    border: 1px solid #e1e8ed;
-    padding: 6px 8px;
-    text-align: left;
-}
-
-.viz-table th {
-    background-color: #f8f9fa;
-    font-weight: 600;
-    color: #2c3e50;
-}
-
-/* PPT specific styles */
-.ppt-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 12px;
-}
-
-.ppt-slide {
-    aspect-ratio: 16/9;
-    background: white;
-    border: 1px solid #e1e8ed;
-    border-radius: 4px;
-    padding: 8px;
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-}
-
-.ppt-slide-title {
-    height: 6px;
-    background: #3498db;
-    width: 40%;
-    border-radius: 1px;
-}
-
-.ppt-slide-content {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    justify-content: center;
-}
-
-.ppt-slide-line {
-    height: 3px;
-    background: #e1e8ed;
-    width: 80%;
-    border-radius: 1px;
-}
-
-/* Image/Invoice specific styles */
-.viz-image-mock {
-    width: 100%;
-    height: 100%;
-    background: #fdfdfd;
-    border: 1px solid #e1e8ed;
-    position: relative;
-    padding: 15px;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-}
-
-.viz-image-block {
-    border: 1px dashed #3498db;
-    background: rgba(52, 152, 219, 0.05);
-    padding: 8px;
-    position: relative;
-}
-
-.viz-image-label {
-    position: absolute;
-    top: -8px;
-    left: 4px;
-    background: #3498db;
-    color: white;
-    font-size: 8px;
-    padding: 0 4px;
-    border-radius: 2px;
-}
-
-/* Card highlight */
-.slice-card.highlight {
-    border-color: #3498db;
-    box-shadow: 0 4px 15px rgba(52, 152, 219, 0.15);
-}
-
-.slice-cards {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-}
-
-.slice-card {
-    background: white;
-    border-radius: 8px;
-    box-shadow: 0 2px 12px rgba(0,0,0,0.08);
-    overflow: hidden;
-    border: 1px solid #e1e8ed;
-}
-
-.slice-card-header {
-    height: 32px;
-    background-color: #3498db;
-    color: white;
-    font-size: 12px;
-    font-weight: bold;
-    display: flex;
-    align-items: center;
-    padding: 0 12px;
-}
-
-.slice-card-body {
-    padding: 12px;
-    font-size: 12px;
-    color: #444;
-    line-height: 1.6;
-    display: -webkit-box;
-    -webkit-line-clamp: 5;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-    white-space: pre-wrap;
-}
-
-@keyframes skeleton-loading {
-    0% { background-position: 200% 0; }
-    100% { background-position: -200% 0; }
-}
-
-.animate-viz-in {
-    transition: opacity 0.3s ease-out, transform 0.3s ease-out;
-    opacity: 1 !important;
-    transform: translateY(0) !important;
-}
-/* Step 3 Split Layout */
-.kb-step3-split-layout {
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-    overflow: hidden;
-}
-
-.kb-split-container {
-    display: flex;
-    gap: 1.5rem;
-    flex: 1;
-    overflow: hidden;
-    min-height: 0;
-}
-
-.kb-split-column {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-    min-width: 0;
-}
-
-.kb-column-content {
-    flex: 1;
-    overflow: auto;
-    padding-right: 0.5rem;
-    overscroll-behavior: contain;
-    -webkit-overflow-scrolling: touch;
-}
-
-/* Custom Scrollbar for columns */
-.custom-scrollbar::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
-}
-
-.custom-scrollbar::-webkit-scrollbar-track {
-    background: transparent;
-}
-
-.custom-scrollbar::-webkit-scrollbar-thumb {
-    background-color: #e5e7eb;
-    border-radius: 3px;
-}
-
-.custom-scrollbar::-webkit-scrollbar-thumb:hover {
-    background-color: #d1d5db;
-}
-
-/* Ensure horizontal scroll if content is wide */
-.kb-column-content > * {
-    min-width: fit-content;
-}
-
-.custom-scrollbar {
-    scrollbar-width: thin;
-    scrollbar-color: #e5e7eb transparent;
-}
-
-/* Permission Tree Styles - New Vertical Layout */
-.tree-group {
-    margin-left: 10px;
-    padding-left: 0;
-}
-
-.tree-node {
-    position: relative;
-    padding-left: 24px; /* Space for horizontal line */
-}
-
-/* Vertical Line */
-.tree-node::before {
-    content: '';
-    position: absolute;
-    left: 0;
-    top: 0;
-    bottom: 0;
-    width: 1px;
-    background-color: #e5e7eb;
-}
-
-/* Horizontal Line */
-.tree-node::after {
-    content: '';
-    position: absolute;
-    left: 0;
-    top: 18px; /* Approx center of row height */
-    width: 16px;
-    height: 1px;
-    background-color: #e5e7eb;
-}
-
-/* Fix vertical line for last child: stop at the horizontal line */
-.tree-node:last-child::before {
-    height: 18px;
-}
-
-/* Root level adjustment: no lines for root nodes */
-.tree-root > .tree-node {
-    padding-left: 0;
-}
-.tree-root > .tree-node::before,
-.tree-root > .tree-node::after {
-    display: none;
-}
-
-/* Focus styles for accessibility */
-.tree-content:focus-visible {
-    outline: 2px solid #2563eb;
-    outline-offset: -2px;
-}
-
-.perm-disabled-overlay {
-    position: absolute;
-    inset: 0;
-    background-color: rgba(249, 250, 251, 0.7);
-    z-index: 10;
-    cursor: not-allowed;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.perm-tooltip {
-    background-color: rgba(0, 0, 0, 0.8);
-    color: white;
-    padding: 0.5rem 1rem;
-    border-radius: 0.375rem;
-    font-size: 0.75rem;
-    pointer-events: none;
-    opacity: 0;
-    transition: opacity 0.2s;
-}
-
-.perm-disabled-wrapper:hover .perm-tooltip {
-    opacity: 1;
+    50% {
+        transform: translateY(0);
+        animation-timing-function: cubic-bezier(0, 0, 0.2, 1);
+    }
 }

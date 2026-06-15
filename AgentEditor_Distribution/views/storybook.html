@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Statistics Component Storybook</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .iframe-container {
+            transition: all 0.3s ease;
+        }
+        .iframe-container:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+    </style>
+</head>
+<body class="bg-gray-100 p-8 min-h-screen">
+    <div class="max-w-6xl mx-auto">
+        <header class="mb-12 border-b border-gray-200 pb-6">
+            <h1 class="text-3xl font-bold text-gray-900 mb-2">Statistics Component Storybook</h1>
+            <p class="text-gray-500">Component states and responsive behavior demonstration</p>
+        </header>
+        
+        <div class="space-y-16">
+            <!-- 1. Default State -->
+            <section>
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-xl font-bold text-gray-800 flex items-center gap-2">
+                        <span class="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-sm">1</span>
+                        Default State (Chinese)
+                    </h2>
+                    <span class="px-3 py-1 bg-green-100 text-green-700 text-xs rounded-full font-medium">Production Ready</span>
+                </div>
+                <div class="iframe-container bg-white p-1 rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                    <iframe src="statistics-preview.html" class="w-full h-[500px] border-0 rounded-lg"></iframe>
+                </div>
+            </section>
+
+            <!-- 2. English State -->
+            <section>
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-xl font-bold text-gray-800 flex items-center gap-2">
+                        <span class="w-8 h-8 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center text-sm">2</span>
+                        English State (i18n)
+                    </h2>
+                    <span class="px-3 py-1 bg-blue-100 text-blue-700 text-xs rounded-full font-medium">Configurable</span>
+                </div>
+                <div class="iframe-container bg-white p-1 rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                    <iframe src="statistics-preview.html?lang=en" class="w-full h-[500px] border-0 rounded-lg"></iframe>
+                </div>
+            </section>
+
+            <!-- 3. Mobile State -->
+            <section>
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-xl font-bold text-gray-800 flex items-center gap-2">
+                        <span class="w-8 h-8 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center text-sm">3</span>
+                        Mobile State (375px)
+                    </h2>
+                    <span class="px-3 py-1 bg-yellow-100 text-yellow-700 text-xs rounded-full font-medium">Responsive</span>
+                </div>
+                <div class="flex justify-center bg-gray-200 py-12 px-4 rounded-xl border border-gray-300">
+                    <div class="w-[375px] bg-white rounded-[3rem] border-[12px] border-gray-800 overflow-hidden shadow-2xl h-[812px] relative flex flex-col">
+                        <!-- Notch -->
+                        <div class="absolute top-0 left-1/2 -translate-x-1/2 w-40 h-7 bg-gray-800 rounded-b-3xl z-30"></div>
+                        
+                        <!-- Status Bar Mock -->
+                        <div class="h-10 bg-white flex justify-between items-center px-6 pt-2 select-none">
+                            <span class="text-xs font-bold ml-2">9:41</span>
+                            <div class="flex gap-1.5 mr-2">
+                                <div class="w-4 h-2.5 bg-gray-900 rounded-[1px]"></div>
+                                <div class="w-4 h-2.5 bg-gray-900 rounded-[1px]"></div>
+                                <div class="w-5 h-2.5 border border-gray-900 rounded-[2px] relative">
+                                    <div class="absolute inset-0.5 bg-gray-900"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Content -->
+                        <iframe src="statistics-preview.html" class="flex-1 w-full border-0"></iframe>
+                        
+                        <!-- Home Indicator -->
+                        <div class="h-8 bg-white flex justify-center items-end pb-2">
+                            <div class="w-32 h-1 bg-gray-900 rounded-full"></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </div>
+</body>
+</html>

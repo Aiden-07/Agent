@@ -553,7 +553,7 @@ window.renderParserList = function() {
 window.openParserActions = function(event, id) {
     const actions = [
         {
-            label: '设置',
+            label: '编辑',
             icon: 'fa-solid fa-cog',
             onClick: () => {
                 // 跳转至解析器设置界面 (即带 ID 的详情页)

@@ -1,5 +1,135 @@
 // Orchestrator Management Logic
 
+// --- DSL Export/Import Logic ---
+window.toggleDslMenu = function() {
+    const menu = document.getElementById('dsl-dropdown-menu');
+    if (!menu) return;
+    
+    const isHidden = menu.classList.contains('hidden');
+    if (isHidden) {
+        menu.classList.remove('hidden');
+        // trigger animation frame for transition
+        requestAnimationFrame(() => {
+            menu.classList.remove('opacity-0', 'scale-95');
+            menu.classList.add('opacity-100', 'scale-100');
+        });
+    } else {
+        menu.classList.remove('opacity-100', 'scale-100');
+        menu.classList.add('opacity-0', 'scale-95');
+        setTimeout(() => {
+            menu.classList.add('hidden');
+        }, 150); // match transition duration
+    }
+};
+
+// Close menu when clicking outside
+document.addEventListener('click', (event) => {
+    const button = document.getElementById('dsl-menu-button');
+    const menu = document.getElementById('dsl-dropdown-menu');
+    if (button && menu && !button.contains(event.target) && !menu.contains(event.target)) {
+        menu.classList.remove('opacity-100', 'scale-100');
+        menu.classList.add('opacity-0', 'scale-95');
+        setTimeout(() => {
+            menu.classList.add('hidden');
+        }, 150);
+    }
+});
+
+window.handleDslAction = function(action, event) {
+    event.preventDefault();
+    window.toggleDslMenu(); // close menu
+    
+    if (action === 'export') {
+        // Show loading state toast
+        if (window.showToast) window.showToast('正在生成 DSL 文件...', 'info');
+        
+        setTimeout(() => {
+            try {
+                // Mock DSL data based on current UI state or dummy data
+                const dslData = {
+                    version: "1.0",
+                    orchestrator: {
+                        name: "当前编排流",
+                        nodes: [
+                            { id: "node_1", type: "input", position: { x: 100, y: 100 } },
+                            { id: "node_2", type: "agent", position: { x: 300, y: 100 } }
+                        ],
+                        edges: [
+                            { source: "node_1", target: "node_2" }
+                        ]
+                    }
+                };
+                
+                const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(dslData, null, 2));
+                const downloadAnchorNode = document.createElement('a');
+                downloadAnchorNode.setAttribute("href", dataStr);
+                downloadAnchorNode.setAttribute("download", "orchestrator_dsl.json");
+                document.body.appendChild(downloadAnchorNode); // required for firefox
+                downloadAnchorNode.click();
+                downloadAnchorNode.remove();
+                
+                if (window.showToast) window.showToast('DSL 导出成功', 'success');
+            } catch (error) {
+                console.error("Export failed:", error);
+                if (window.showToast) window.showToast('导出失败: ' + error.message, 'error');
+            }
+        }, 500); // Mock generation delay
+        
+    } else if (action === 'import') {
+        // Trigger file input
+        const fileInput = document.getElementById('dsl-file-input');
+        if (fileInput) {
+            fileInput.click();
+        }
+    }
+};
+
+window.processDslImport = function(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    
+    // Validate file type
+    const validExtensions = ['.json', '.yaml', '.yml'];
+    const fileExt = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
+    
+    if (!validExtensions.includes(fileExt)) {
+        if (window.showToast) window.showToast('只支持导入 .json 或 .yaml 格式的 DSL 文件', 'error');
+        event.target.value = ''; // Reset input
+        return;
+    }
+    
+    if (window.showToast) window.showToast('正在解析并导入 DSL...', 'info');
+    
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            // Simply validate it's parseable (if JSON)
+            if (fileExt === '.json') {
+                JSON.parse(e.target.result);
+            }
+            // Mock processing delay
+            setTimeout(() => {
+                if (window.showToast) window.showToast('DSL 导入成功，画布已更新', 'success');
+                // Here you would typically re-render the canvas based on parsed data
+            }, 800);
+            
+        } catch (error) {
+            console.error("Import parsing failed:", error);
+            if (window.showToast) window.showToast('文件解析失败，请检查 DSL 格式是否正确', 'error');
+        } finally {
+            event.target.value = ''; // Reset input so same file can be selected again
+        }
+    };
+    
+    reader.onerror = function() {
+        if (window.showToast) window.showToast('读取文件发生错误', 'error');
+        event.target.value = '';
+    };
+    
+    reader.readAsText(file);
+};
+// --- End DSL Logic ---
+
 window.orchestratorData = [];
 const ORCH_NAMES = [
     '订单处理流程', '每日日报汇总', '客户投诉自动分类', '新员工入职指引', 
@@ -135,31 +265,37 @@ function renderOrchestratorList() {
             <td class="px-6 py-4 text-sm text-gray-600">${item.creator}</td>
             <td class="px-6 py-4 text-xs text-gray-500">${item.createdAt}</td>
             <td class="px-6 py-4 text-xs text-gray-500">${item.updatedAt}</td>
-            <td class="px-6 py-4 text-right">
-                <button onclick="window.openOrchActions(event, '${item.id}')" class="p-1.5 text-gray-400 hover:text-gray-600 transition-colors rounded hover:bg-gray-100">
-                    <i class="fa-solid fa-ellipsis"></i>
-                </button>
+            <td class="px-6 py-4 text-right action-td">
             </td>
         `;
         tbody.appendChild(tr);
-    });
-}
 
-window.openOrchActions = function(event, id) {
-    window.showActionMenu(event, [
-        {
-            label: '编辑',
-            icon: 'fa-solid fa-pen',
-            onClick: () => editOrchestrator(id)
-        },
-        {
-            label: '删除',
-            icon: 'fa-solid fa-trash',
-            className: 'text-red-600 hover:bg-red-50',
-            iconClass: 'text-red-500',
-            onClick: () => deleteOrchestrator(id)
+        // Add inline actions
+        const actionsTd = tr.querySelector('.action-td');
+        const orchName = item.name;
+        const actions = [
+            {
+                label: '配置权限',
+                onClick: () => {
+                    if (window.navigateToPermissionConfig) {
+                        window.navigateToPermissionConfig(item.id, 'orchestrator', orchName);
+                    } else {
+                        console.error('navigateToPermissionConfig is not defined');
+                    }
+                }
+            },
+            {
+                label: '删除',
+                className: 'text-red-600 hover:text-red-800',
+                onClick: () => deleteOrchestrator(item.id)
+            }
+        ];
+        
+        if (window.createInlineActions) {
+            const actionContainer = window.createInlineActions(actions);
+            actionsTd.appendChild(actionContainer);
         }
-    ]);
+    });
 }
 
 function renderAgentTags(agents) {

@@ -1,0 +1,41 @@
+<div class="space-y-6">
+    <!-- Header & Filter -->
+    <div class="flex items-center justify-between">
+        <div class="flex items-center gap-4">
+            <div class="relative">
+                <i class="fa-solid fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                <input type="text" id="mcp-search-input" placeholder="搜索服务名称..." class="pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-72" oninput="filterMcpList()">
+            </div>
+            <select id="mcp-filter-status" class="px-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-600" onchange="filterMcpList()">
+                <option value="all">全部状态</option>
+                <option value="enabled">已启用</option>
+                <option value="disabled">已停用</option>
+            </select>
+        </div>
+
+        <button onclick="goToCreateMcp()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 shadow-sm">
+            <i class="fa-solid fa-plus"></i>
+            新建MCP服务
+        </button>
+    </div>
+
+    <!-- Table -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 dt-scroll-wrap rounded-inherit">
+        <table id="mcp-data-table" class="w-full text-sm text-left">
+            <thead class="bg-gray-50 text-gray-500 font-medium border-b border-gray-100">
+                <tr>
+                    <th class="px-6 py-4">服务名称</th>
+                    <th class="px-6 py-4">描述</th>
+                    <th class="px-6 py-4">状态</th>
+                    <th class="px-6 py-4">创建时间</th>
+                    <th class="px-6 py-4">最后更新时间</th>
+                    <th class="px-6 py-4 text-right dt-th-sticky-end">操作</th>
+                </tr>
+            </thead>
+            <tbody id="mcp-list-body" class="divide-y divide-gray-100">
+                <!-- Dynamic -->
+            </tbody>
+        </table>
+    </div>
+</div>
+

@@ -1,0 +1,141 @@
+<div class="space-y-6">
+    <!-- Header Controls -->
+    <div class="flex justify-between items-center">
+        <h2 class="text-lg font-medium text-gray-800">服务商列表</h2>
+        <div class="flex gap-3">
+            <div class="relative">
+                <i class="fa-solid fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                <input type="text" placeholder="搜索服务商名称..." class="pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent w-64">
+            </div>
+            <button onclick="openProviderModal()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm font-medium shadow-sm">
+                <i class="fa-solid fa-plus"></i> 新增服务商
+            </button>
+        </div>
+    </div>
+
+    <!-- Data Table Container -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden relative min-h-[400px]">
+        <!-- Skeleton Loading -->
+        <div id="provider-skeleton" class="absolute inset-0 bg-white z-20 p-6">
+            <div class="animate-pulse space-y-4">
+                <div class="h-10 bg-gray-100 rounded w-full"></div>
+                <div class="h-16 bg-gray-50 rounded w-full"></div>
+                <div class="h-16 bg-gray-50 rounded w-full"></div>
+                <div class="h-16 bg-gray-50 rounded w-full"></div>
+                <div class="h-16 bg-gray-50 rounded w-full"></div>
+                <div class="h-16 bg-gray-50 rounded w-full"></div>
+            </div>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+                <thead class="bg-gray-50 border-b border-gray-100">
+                    <tr class="text-gray-500 text-xs uppercase tracking-wider">
+                        <th class="px-6 py-4 font-medium">服务商名称</th>
+                        <th class="px-6 py-4 font-medium">模型数</th>
+                        <th class="px-6 py-4 font-medium">API-KEY</th>
+                        <th class="px-6 py-4 font-medium">API URL</th>
+                        <th class="px-6 py-4 font-medium">服务状态</th>
+                        <th class="px-6 py-4 font-medium text-right w-48">操作</th>
+                    </tr>
+                </thead>
+                <tbody id="provider-table-body" class="divide-y divide-gray-100 text-sm bg-white">
+                    <!-- Rows populated by JS -->
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination -->
+        <div class="px-6 py-4 border-t border-gray-100 flex items-center justify-between bg-gray-50/50">
+            <span class="text-sm text-gray-500" id="provider-pagination-info">显示 1 至 20 项，共 0 项</span>
+            <div class="flex items-center gap-2">
+                <button id="provider-prev-btn" onclick="prevProviderPage()" class="px-3 py-1 border border-gray-200 rounded text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"><i class="fa-solid fa-chevron-left"></i></button>
+                <button id="provider-next-btn" onclick="nextProviderPage()" class="px-3 py-1 border border-gray-200 rounded text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"><i class="fa-solid fa-chevron-right"></i></button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add/Edit Provider Modal -->
+<div id="provider-modal" class="fixed inset-0 bg-gray-900/50 z-50 hidden flex items-center justify-center backdrop-blur-sm transition-opacity" aria-hidden="true">
+    <div class="bg-white rounded-xl shadow-xl w-[500px] animate-fade-in-up" id="provider-modal-content">
+        <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center">
+            <h3 class="text-lg font-semibold text-gray-800" id="provider-modal-title">新增服务商</h3>
+            <button onclick="closeModal('provider-modal')" class="text-gray-400 hover:text-gray-600 transition-colors">
+                <i class="fa-solid fa-times text-lg"></i>
+            </button>
+        </div>
+        <div class="p-6">
+            <form id="provider-form" class="space-y-4" onsubmit="event.preventDefault(); saveProvider();">
+                <input type="hidden" id="provider-id">
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">服务商名称 <span class="text-red-500">*</span></label>
+                    <input type="text" id="provider-name" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all" placeholder="例如: OpenAI">
+                    <p id="provider-name-error" class="text-xs text-red-500 mt-1 hidden"></p>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">服务商类型 <span class="text-red-500">*</span></label>
+                    <div class="flex gap-2">
+                        <select id="provider-type" onchange="handleProviderTypeChange(this)" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
+                            <option value="OpenAI">OpenAI</option>
+                            <option value="Azure">Azure</option>
+                            <option value="百度千帆">百度千帆</option>
+                            <option value="阿里通义">阿里通义</option>
+                            <option value="自定义">自定义</option>
+                        </select>
+                        <input type="text" id="provider-custom-type" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all hidden" placeholder="请输入自定义类型 (不超过200字符)" maxlength="200">
+                    </div>
+                    <p id="provider-type-error" class="text-xs text-red-500 mt-1 hidden"></p>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">API-KEY <span class="text-red-500">*</span></label>
+                    <div class="relative">
+                        <input type="password" id="provider-apikey" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all" placeholder="输入API密钥">
+                        <button type="button" onclick="togglePasswordVisibility('provider-apikey', this)" class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                            <i class="fa-regular fa-eye"></i>
+                        </button>
+                    </div>
+                    <p id="provider-apikey-error" class="text-xs text-red-500 mt-1 hidden"></p>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">API URL <span class="text-red-500">*</span></label>
+                    <input type="text" id="provider-url" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all" placeholder="https://api.example.com/v1">
+                    <p id="provider-url-error" class="text-xs text-red-500 mt-1 hidden"></p>
+                </div>
+
+                <div class="pt-4 flex justify-end gap-3">
+                    <button type="button" onclick="closeModal('provider-modal')" class="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">取消</button>
+                    <button type="submit" id="provider-submit-btn" class="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm flex items-center justify-center min-w-[80px]">确定</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div id="provider-delete-modal" class="fixed inset-0 bg-gray-900/50 z-50 hidden flex items-center justify-center backdrop-blur-sm transition-opacity" aria-hidden="true">
+    <div class="bg-white rounded-xl shadow-xl w-[400px] animate-fade-in-up" id="provider-delete-modal-content">
+        <div class="p-6 text-center">
+            <div class="w-12 h-12 rounded-full bg-red-100 text-red-600 flex items-center justify-center text-xl mx-auto mb-4">
+                <i class="fa-solid fa-exclamation-triangle"></i>
+            </div>
+            <h3 class="text-lg font-semibold text-gray-800 mb-2">确认删除</h3>
+            <p class="text-sm text-gray-500 mb-6" id="provider-delete-message">确定删除服务商？关联的模型配置将同步删除。</p>
+            <div class="flex justify-center gap-3">
+                <button onclick="closeModal('provider-delete-modal')" class="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">取消</button>
+                <button onclick="confirmDeleteProvider()" class="px-4 py-2 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors shadow-sm">确定删除</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Initialize view
+    if (typeof window.initProviderList === 'function') {
+        window.initProviderList();
+    }
+</script>

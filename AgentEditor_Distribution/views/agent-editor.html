@@ -30,6 +30,7 @@
             <button onclick="switchEditorTab('publish')" id="tab-btn-publish" class="py-3 text-sm font-medium text-gray-500 hover:text-gray-700 border-b-2 border-transparent hover:border-gray-200 transition-colors">发布</button>
             <button onclick="switchEditorTab('logs')" id="tab-btn-logs" class="py-3 text-sm font-medium text-gray-500 hover:text-gray-700 border-b-2 border-transparent hover:border-gray-200 transition-colors">日志</button>
             <button onclick="switchEditorTab('analytics')" id="tab-btn-analytics" class="py-3 text-sm font-medium text-gray-500 hover:text-gray-700 border-b-2 border-transparent hover:border-gray-200 transition-colors">分析</button>
+            <button onclick="switchEditorTab('statistics')" id="tab-btn-statistics" class="py-3 text-sm font-medium text-gray-500 hover:text-gray-700 border-b-2 border-transparent hover:border-gray-200 transition-colors">统计</button>
         </div>
     </div>
 
@@ -583,7 +584,7 @@
                                         <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                                     </label>
                                 </div>
-                                <div id="agent-i18n-summary" class="rounded-lg border border-dashed border-gray-200 bg-gray-50 px-3 py-2">
+                                <div id="agent-i18n-summary" class="hidden rounded-lg border border-dashed border-gray-200 bg-gray-50 px-3 py-2">
                                     <div class="flex items-center justify-between mb-1">
                                         <span class="text-xs font-medium text-gray-600">已选语言</span>
                                         <div class="flex items-center gap-2">
@@ -598,6 +599,22 @@
                                     <div id="agent-i18n-summary-list" class="flex flex-wrap gap-1.5 items-center min-h-[1.5rem]">
                                         <span class="text-xs text-gray-400">暂无选中语言</span>
                                     </div>
+                                </div>
+                            </div>
+
+                            <hr class="border-gray-100">
+
+                            <!-- Reference Source -->
+                            <div class="space-y-2">
+                                <div class="flex items-center justify-between">
+                                    <div class="flex flex-col">
+                                        <span class="text-sm font-bold text-gray-700">参考来源</span>
+                                        <span class="text-xs text-gray-400 mt-0.5">开启后会在回答中展示参考的知识库来源</span>
+                                    </div>
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" id="agent-reference-source-toggle" class="sr-only peer" onchange="toggleAgentReferenceSource()">
+                                        <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                    </label>
                                 </div>
                             </div>
                         </div>
@@ -831,6 +848,58 @@
                         <div id="analytics-chart-feedback" class="h-96 w-full"></div>
                     </div>
                 </div>
+            </div>
+        </div>
+
+        <!-- Tab: Statistics -->
+        <div id="tab-content-statistics" class="hidden absolute inset-0 flex flex-col bg-gray-50 overflow-hidden">
+            <!-- Toolbar -->
+            <div class="h-16 flex items-center justify-between px-6 border-b border-gray-200 bg-white flex-shrink-0">
+                <div class="flex items-center gap-4">
+                    <h2 class="text-base font-medium text-gray-900">统计报表</h2>
+                    <!-- Date Range Picker Container -->
+                    <div class="relative flex items-center">
+                        <div class="relative">
+                            <input type="text" id="stats-date-range" 
+                                class="w-64 pl-9 pr-3 py-1.5 text-sm border border-gray-300 rounded hover:border-blue-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-colors cursor-pointer bg-white" 
+                                placeholder="选择日期范围..." readonly>
+                            <i class="fa-regular fa-calendar absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="flex items-center gap-3">
+                    <button onclick="window.StatisticsModule.refresh()" class="px-3 py-1.5 text-sm font-medium text-blue-600 hover:bg-blue-50 border border-blue-200 rounded hover:border-blue-300 transition-colors flex items-center gap-2 h-8">
+                        <i class="fa-solid fa-sync-alt"></i> 刷新
+                    </button>
+                    <button onclick="window.StatisticsModule.exportExcel()" class="px-3 py-1.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded shadow-sm transition-colors flex items-center gap-2 h-8">
+                        <i class="fa-solid fa-file-export"></i> 导出 Excel
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Table Container -->
+            <div id="statistics-container" class="flex-1 overflow-auto p-6 relative">
+                 <div class="border border-[#d9d9d9] bg-white relative">
+                    <!-- Loading Mask -->
+                    <div id="stats-loading-mask" class="hidden absolute inset-0 bg-white/80 z-20 flex flex-col items-center justify-center">
+                        <i class="fa-solid fa-spinner fa-spin text-blue-500 text-3xl mb-3"></i>
+                        <span class="text-sm text-gray-500">正在生成数据...</span>
+                    </div>
+
+                    <table class="w-full text-sm text-left border-collapse">
+                        <thead class="bg-[#f5f5f5] text-[#595959] font-medium sticky top-0 z-10 shadow-[0_1px_0_#d9d9d9]">
+                            <tr>
+                                <th class="px-4 py-3 border-r border-[#d9d9d9] font-medium w-1/3">部门名称</th>
+                                <th class="px-4 py-3 border-r border-[#d9d9d9] font-medium text-right w-1/6">数量</th>
+                                <th class="px-4 py-3 border-r border-[#d9d9d9] font-medium text-right w-1/4">金额</th>
+                                <th class="px-4 py-3 font-medium text-right w-1/4">完成率</th>
+                            </tr>
+                        </thead>
+                        <tbody id="stats-table-body">
+                            <!-- Rows -->
+                        </tbody>
+                    </table>
+                 </div>
             </div>
         </div>
 

@@ -1,0 +1,125 @@
+<div id="kg-list-view" class="space-y-6 animate-fade-in">
+    <!-- Header -->
+    <div class="flex items-center justify-between">
+        <div class="flex items-center gap-4">
+            <div class="relative">
+                <i class="fa-solid fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                <input type="text" id="kg-search-input" oninput="filterKnowledgeGraphs()" placeholder="搜索知识图谱..." class="pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-64">
+            </div>
+        </div>
+        <button onclick="openModal('create-kg-modal')" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 shadow-sm">
+            <i class="fa-solid fa-plus"></i>
+            新建图谱
+        </button>
+    </div>
+
+    <!-- Knowledge Graph List -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        <table class="w-full text-sm text-left">
+            <thead class="bg-gray-50 text-gray-500 font-medium border-b border-gray-100">
+                <tr>
+                    <th class="px-6 py-4 w-16">序号</th>
+                    <th class="px-6 py-4">图谱名称</th>
+                    <th class="px-6 py-4">图谱描述</th>
+                    <th class="px-6 py-4 w-24 text-center">实体数</th>
+                    <th class="px-6 py-4 w-24 text-center">文档数</th>
+                    <th class="px-6 py-4">创建人</th>
+                    <th class="px-6 py-4">创建时间</th>
+                    <th class="px-6 py-4 text-right">操作</th>
+                </tr>
+            </thead>
+            <tbody id="kg-list-body" class="divide-y divide-gray-100">
+                <!-- Dynamic Content -->
+            </tbody>
+        </table>
+        
+        <!-- Loading State -->
+        <div id="kg-loading" class="hidden py-8 text-center text-gray-500">
+             <i class="fa-solid fa-spinner fa-spin mr-2"></i> 加载中...
+        </div>
+
+        <!-- Empty State -->
+        <div id="kg-empty" class="hidden py-12 text-center text-gray-400">
+            <div class="mb-2">
+                <i class="fa-solid fa-project-diagram text-4xl text-gray-300"></i>
+            </div>
+            <p>暂无知识图谱数据</p>
+        </div>
+    </div>
+    
+    <!-- Pagination (Simple) -->
+    <div class="flex items-center justify-between border-t border-gray-200 bg-white px-4 py-3 sm:px-6 rounded-b-xl hidden" id="kg-pagination">
+        <div class="flex flex-1 justify-between sm:hidden">
+            <a href="#" class="relative inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">Previous</a>
+            <a href="#" class="relative ml-3 inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">Next</a>
+        </div>
+        <div class="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
+            <div>
+                <p class="text-sm text-gray-700">
+                    显示第 <span class="font-medium">1</span> 到 <span class="font-medium">10</span> 条，共 <span class="font-medium" id="kg-total-count">0</span> 条
+                </p>
+            </div>
+            <div>
+                <nav class="isolate inline-flex -space-x-px rounded-md shadow-sm" aria-label="Pagination">
+                    <!-- Simplified Pagination for Mock -->
+                    <button class="relative inline-flex items-center rounded-l-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0">
+                        <span class="sr-only">Previous</span>
+                        <i class="fa-solid fa-chevron-left text-xs"></i>
+                    </button>
+                    <button aria-current="page" class="relative z-10 inline-flex items-center bg-blue-600 px-4 py-2 text-sm font-semibold text-white focus:z-20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600">1</button>
+                    <button class="relative inline-flex items-center rounded-r-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0">
+                        <span class="sr-only">Next</span>
+                        <i class="fa-solid fa-chevron-right text-xs"></i>
+                    </button>
+                </nav>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Create KG Modal -->
+<div id="create-kg-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center backdrop-blur-sm transition-all duration-300">
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg mx-4 overflow-hidden animate-fade-in-up transform transition-all">
+         <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+            <h3 class="font-semibold text-gray-800 text-lg" id="create-kg-modal-title">新建知识图谱</h3>
+            <button onclick="closeModal('create-kg-modal')" class="text-gray-400 hover:text-gray-600 transition-colors p-1 rounded-full hover:bg-gray-200">
+                <i class="fa-solid fa-times"></i>
+            </button>
+        </div>
+         <div class="p-6 space-y-5">
+            <input type="hidden" id="edit-kg-id">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">图谱名称 <span class="text-red-500">*</span></label>
+                <input type="text" id="create-kg-name" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-shadow" placeholder="例如：金融领域知识图谱" maxlength="50">
+                <p id="create-kg-name-error" class="text-red-500 text-xs mt-1 hidden"><i class="fa-solid fa-circle-exclamation mr-1"></i> 请输入图谱名称</p>
+                <p class="text-xs text-gray-400 mt-1 text-right">0/50</p>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">图谱描述</label>
+                <textarea id="create-kg-desc" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-shadow resize-none" rows="4" placeholder="简要描述该图谱的用途和范围..." maxlength="200"></textarea>
+                <p class="text-xs text-gray-400 mt-1 text-right">0/200</p>
+            </div>
+        </div>
+         <div class="px-6 py-4 bg-gray-50 flex justify-end gap-3 border-t border-gray-100">
+            <button onclick="closeModal('create-kg-modal')" class="px-5 py-2.5 text-gray-600 hover:bg-gray-200 rounded-lg text-sm font-medium transition-colors">取消</button>
+            <button onclick="submitCreateKg()" class="px-5 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-all shadow-sm hover:shadow-md">确定</button>
+        </div>
+    </div>
+</div>
+
+<!-- Confirm Modal (Reusable) -->
+<div id="kg-confirm-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center backdrop-blur-sm">
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-md mx-4 overflow-hidden animate-fade-in-up">
+        <div class="p-6 text-center">
+            <div class="w-12 h-12 rounded-full bg-red-100 text-red-500 flex items-center justify-center mx-auto mb-4">
+                <i class="fa-solid fa-triangle-exclamation text-xl"></i>
+            </div>
+            <h3 class="text-lg font-bold text-gray-900 mb-2" id="kg-confirm-title">确认操作</h3>
+            <p class="text-gray-500 text-sm mb-6" id="kg-confirm-msg">您确定要执行此操作吗？</p>
+            <div class="flex justify-center gap-3">
+                <button onclick="closeModal('kg-confirm-modal')" class="px-5 py-2.5 text-gray-600 hover:bg-gray-100 rounded-lg text-sm font-medium transition-colors">取消</button>
+                <button id="kg-confirm-btn" class="px-5 py-2.5 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition-colors shadow-sm">确定</button>
+            </div>
+        </div>
+    </div>
+</div>

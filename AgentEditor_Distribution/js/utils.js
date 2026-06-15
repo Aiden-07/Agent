@@ -1,5 +1,58 @@
 // Global Utilities
 
+// Sidebar Toggle Logic
+function toggleSidebar() {
+    const sidebar = document.getElementById('main-sidebar');
+    if (!sidebar) return;
+    
+    sidebar.classList.toggle('sidebar-collapsed');
+    
+    // Save state
+    const isCollapsed = sidebar.classList.contains('sidebar-collapsed');
+    localStorage.setItem('sidebarCollapsed', isCollapsed);
+}
+
+function toggleMobileSidebar() {
+    const sidebar = document.getElementById('main-sidebar');
+    const overlay = document.getElementById('mobile-overlay');
+    if (!sidebar || !overlay) return;
+    
+    const isClosed = sidebar.classList.contains('-translate-x-full');
+    
+    if (isClosed) {
+        // Open
+        sidebar.classList.remove('-translate-x-full');
+        overlay.classList.remove('hidden');
+        // Small delay to allow display block to apply before animating opacity
+        requestAnimationFrame(() => {
+            overlay.classList.remove('opacity-0');
+        });
+    } else {
+        // Close
+        sidebar.classList.add('-translate-x-full');
+        overlay.classList.add('opacity-0');
+        setTimeout(() => {
+            overlay.classList.add('hidden');
+        }, 300); // match transition duration
+    }
+}
+
+// Initialize Sidebar State
+function initSidebarState() {
+    const sidebar = document.getElementById('main-sidebar');
+    if (!sidebar) return;
+    
+    const isCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
+    if (isCollapsed) {
+        sidebar.classList.add('sidebar-collapsed');
+    }
+}
+
+// Call init on DOM content loaded
+document.addEventListener('DOMContentLoaded', () => {
+    initSidebarState();
+});
+
 // Toggle Submenu (if needed for other menus, though currently flat)
 function toggleSubmenu(id) {
     const submenu = document.getElementById(id);
@@ -183,6 +236,152 @@ function closeActionMenu() {
 
 window.closeActionMenu = closeActionMenu;
 
+// --- Inline Action Group Logic ---
+window.createInlineActions = function(actions) {
+    const container = document.createElement('div');
+    container.className = 'flex items-center justify-end gap-3';
+    
+    const visibleActions = actions.slice(0, 2);
+    const hiddenActions = actions.slice(2);
+    
+    visibleActions.forEach(act => {
+        const btn = document.createElement('button');
+        btn.className = 'text-blue-600 hover:text-blue-800 text-sm font-medium transition-colors ' + (act.className || '');
+        btn.textContent = act.label;
+        btn.onclick = (e) => { e.stopPropagation(); act.onClick(); };
+        container.appendChild(btn);
+    });
+    
+    if (hiddenActions.length > 0) {
+        const moreWrapper = document.createElement('div');
+        moreWrapper.className = 'relative inline-block text-left';
+        
+        const moreBtn = document.createElement('button');
+        moreBtn.className = 'text-gray-500 hover:text-gray-700 text-sm flex items-center gap-1 transition-colors';
+        moreBtn.setAttribute('aria-expanded', 'false');
+        moreBtn.innerHTML = `
+            <span class="more-text">更多 (+${hiddenActions.length})</span>
+        `;
+        
+        const expandList = document.createElement('div');
+        // Use absolute positioning by default. We will use fixed positioning dynamically if needed.
+        expandList.className = 'absolute right-0 top-full mt-1 w-32 bg-white rounded-lg shadow-lg border border-gray-100 overflow-hidden transition-all duration-300 z-[9999]';
+        expandList.style.maxHeight = '0px';
+        expandList.style.opacity = '0';
+        expandList.style.pointerEvents = 'none';
+        
+        const listInner = document.createElement('div');
+        listInner.className = 'py-1 flex flex-col';
+        
+        hiddenActions.forEach(act => {
+            const btn = document.createElement('button');
+            btn.className = 'w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors focus:outline-none focus:bg-gray-100 ' + (act.className || '');
+            btn.textContent = act.label;
+            btn.setAttribute('tabindex', '-1');
+            btn.onclick = (e) => { e.stopPropagation(); toggle(); act.onClick(); };
+            listInner.appendChild(btn);
+        });
+        
+        expandList.appendChild(listInner);
+        moreWrapper.appendChild(expandList);
+        
+        let expanded = false;
+        
+        const updatePosition = () => {
+            if (!expanded) return;
+            // On very small screens, to avoid being clipped by overflow-x-auto, we can use fixed positioning
+            if (window.innerWidth <= 640) {
+                expandList.style.position = 'fixed';
+                const rect = moreBtn.getBoundingClientRect();
+                expandList.style.top = rect.bottom + 'px';
+                expandList.style.left = (rect.right - 128) + 'px';
+                expandList.style.right = 'auto';
+            } else {
+                expandList.style.position = 'absolute';
+                expandList.style.top = '100%';
+                expandList.style.left = 'auto';
+                expandList.style.right = '0';
+            }
+        };
+
+        const toggle = () => {
+            expanded = !expanded;
+            moreBtn.setAttribute('aria-expanded', expanded.toString());
+            const textSpan = moreBtn.querySelector('.more-text');
+            
+            if (expanded) {
+                textSpan.textContent = '收起';
+                updatePosition();
+                expandList.style.maxHeight = listInner.scrollHeight + 'px';
+                expandList.style.opacity = '1';
+                expandList.style.pointerEvents = 'auto';
+                
+                const firstBtn = listInner.querySelector('button');
+                if (firstBtn) {
+                    setTimeout(() => firstBtn.focus(), 300); // Wait for animation
+                }
+                Array.from(listInner.querySelectorAll('button')).forEach(b => b.setAttribute('tabindex', '0'));
+                window.addEventListener('resize', updatePosition);
+                window.addEventListener('scroll', updatePosition, true);
+            } else {
+                textSpan.textContent = `更多 (+${hiddenActions.length})`;
+                expandList.style.maxHeight = '0px';
+                expandList.style.opacity = '0';
+                expandList.style.pointerEvents = 'none';
+                
+                Array.from(listInner.querySelectorAll('button')).forEach(b => b.setAttribute('tabindex', '-1'));
+                moreBtn.focus();
+                window.removeEventListener('resize', updatePosition);
+                window.removeEventListener('scroll', updatePosition, true);
+            }
+        };
+        
+        moreBtn.onclick = (e) => {
+            e.stopPropagation();
+            toggle();
+        };
+
+        // Keyboard navigation
+        listInner.addEventListener('keydown', (e) => {
+            const buttons = Array.from(listInner.querySelectorAll('button'));
+            const index = buttons.indexOf(document.activeElement);
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                const next = buttons[index + 1] || buttons[0];
+                next.focus();
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                const prev = buttons[index - 1] || buttons[buttons.length - 1];
+                prev.focus();
+            } else if (e.key === 'Escape') {
+                e.preventDefault();
+                toggle();
+            }
+        });
+        
+        moreWrapper.addEventListener('keydown', (e) => {
+            if (!expanded && (e.key === 'ArrowDown' || e.key === 'Enter' || e.key === ' ')) {
+                if (document.activeElement === moreBtn) {
+                    e.preventDefault();
+                    toggle();
+                }
+            }
+        });
+        
+        document.addEventListener('click', (e) => {
+            if (expanded && !moreWrapper.contains(e.target)) {
+                toggle();
+            }
+        });
+        
+        moreWrapper.appendChild(moreBtn);
+        moreWrapper.appendChild(expandList);
+        container.appendChild(moreWrapper);
+    }
+    
+    return container;
+};
+
 // Formatting Utilities
 function formatSize(bytes) {
     if (bytes === 0) return '0 B';
@@ -207,72 +406,3 @@ function formatDate(date) {
 
 window.formatSize = formatSize;
 window.formatDate = formatDate;
-
-// Debounce Helper
-function debounce(func, wait) {
-    let timeout;
-    return function(...args) {
-        clearTimeout(timeout);
-        timeout = setTimeout(() => func.apply(this, args), wait);
-    };
-}
-window.debounce = debounce;
-
-/**
- * DualColumnManager
- * Highly configurable independent dual-column layout manager
- */
-class DualColumnManager {
-    constructor(containerId, options = {}) {
-        this.container = document.getElementById(containerId);
-        if (!this.container) return;
-
-        this.options = {
-            widthRatio: options.widthRatio || [50, 50],
-            dividerWidth: options.dividerWidth || 1,
-            dividerColor: options.dividerColor || '#e5e7eb',
-            leftBg: options.leftBg || '#f9fafb',
-            rightBg: options.rightBg || '#ffffff',
-            height: options.height || '600px',
-            ...options
-        };
-
-        this.init();
-    }
-
-    init() {
-        this.applyConfig();
-        this.setupEventListeners();
-    }
-
-    applyConfig() {
-        const [left, right] = this.options.widthRatio;
-        this.container.style.setProperty('--left-ratio', left);
-        this.container.style.setProperty('--right-ratio', right);
-        this.container.style.setProperty('--divider-width', `${this.options.dividerWidth}px`);
-        this.container.style.setProperty('--divider-color', this.options.dividerColor);
-        this.container.style.setProperty('--left-bg', this.options.leftBg);
-        this.container.style.setProperty('--right-bg', this.options.rightBg);
-        
-        if (this.options.height) {
-            this.container.style.height = this.options.height;
-        }
-    }
-
-    setRatio(left, right) {
-        this.options.widthRatio = [left, right];
-        this.applyConfig();
-    }
-
-    setupEventListeners() {
-        // Optimized resize listener with debounce
-        const handleResize = debounce(() => {
-            // Optional: Trigger layout adjustments if needed for virtual scrolling
-            // console.log('DualColumnContainer resized');
-        }, 200);
-
-        window.addEventListener('resize', handleResize);
-    }
-}
-
-window.DualColumnManager = DualColumnManager;

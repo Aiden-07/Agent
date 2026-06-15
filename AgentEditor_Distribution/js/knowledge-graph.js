@@ -96,68 +96,58 @@ function renderKgList() {
                     </div>
                 </td>
                 <td class="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">${item.createdAt}</td>
-                <td class="px-6 py-4 text-right">
-                    <button onclick="window.openKgActions(event, '${item.id}')" class="p-1.5 text-gray-400 hover:text-gray-600 transition-colors rounded hover:bg-gray-100">
-                        <i class="fa-solid fa-ellipsis"></i>
-                    </button>
+                <td class="px-6 py-4 text-right action-td">
                 </td>
             `;
             tbody.appendChild(tr);
+
+            // Add inline actions
+            const actionsTd = tr.querySelector('.action-td');
+            const actions = [
+                {
+                    label: '编辑',
+                    onClick: () => editKg(item.id)
+                },
+                {
+                    label: '配置权限',
+                    onClick: () => {
+                        if (window.navigateToPermissionConfig) {
+                            window.navigateToPermissionConfig(item.id, 'knowledge_graph', item.name);
+                        } else {
+                            console.error('navigateToPermissionConfig is not defined');
+                        }
+                    }
+                },
+                {
+                    label: '知识管理',
+                    onClick: () => manageKg(item.id)
+                },
+                {
+                    label: '可视化',
+                    onClick: () => visualizeKg(item.id)
+                },
+                {
+                    label: '重建',
+                    onClick: () => rebuildKg(item.id)
+                },
+                {
+                    label: '清空',
+                    className: 'text-red-600 hover:text-red-800',
+                    onClick: () => clearKg(item.id)
+                },
+                {
+                    label: '删除',
+                    className: 'text-red-600 hover:text-red-800',
+                    onClick: () => deleteKg(item.id)
+                }
+            ];
+            
+            if (window.createInlineActions) {
+                const actionContainer = window.createInlineActions(actions);
+                actionsTd.appendChild(actionContainer);
+            }
         });
     }, 300); // Fake delay
-}
-
-window.openKgActions = function(event, id) {
-    window.showActionMenu(event, [
-        {
-            label: '配置权限',
-            icon: 'fa-solid fa-user-shield',
-            onClick: () => {
-                const item = kgData.find(k => k.id === id);
-                if(item) {
-                    if (window.navigateToPermissionConfig) {
-                        window.navigateToPermissionConfig(id, 'knowledge_graph', item.name);
-                    } else {
-                        console.error('navigateToPermissionConfig is not defined');
-                    }
-                }
-            }
-        },
-        {
-            label: '知识管理',
-            icon: 'fa-solid fa-database',
-            onClick: () => manageKg(id)
-        },
-        {
-            label: '编辑',
-            icon: 'fa-solid fa-pen',
-            onClick: () => editKg(id)
-        },
-        {
-            label: '可视化',
-            icon: 'fa-solid fa-share-nodes',
-            onClick: () => visualizeKg(id)
-        },
-        {
-            label: '重建',
-            icon: 'fa-solid fa-rotate',
-            onClick: () => rebuildKg(id)
-        },
-        {
-            label: '清空',
-            icon: 'fa-solid fa-eraser',
-            className: 'text-red-600 hover:bg-red-50',
-            iconClass: 'text-red-500',
-            onClick: () => clearKg(id)
-        },
-        {
-            label: '删除',
-            icon: 'fa-solid fa-trash',
-            className: 'text-red-600 hover:bg-red-50',
-            iconClass: 'text-red-500',
-            onClick: () => deleteKg(id)
-        }
-    ]);
 }
 
 function formatNumber(num) {

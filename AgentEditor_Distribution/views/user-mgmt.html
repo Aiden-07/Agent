@@ -1,23 +1,90 @@
 <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden animate-fade-in h-full flex flex-col">
-    <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
-        <!-- Search & Filter -->
-        <div class="flex gap-4 flex-1 items-center">
-            <div class="relative max-w-md w-full">
-                <i class="fa-solid fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
-                <input id="user-search-input" type="text" placeholder="搜索姓名、手机号、邮箱..." class="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white shadow-sm">
-            </div>
-            <select id="user-role-filter" class="border border-gray-200 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-600 bg-white shadow-sm">
-                <option value="所有角色">所有角色</option>
-                <option value="管理员">管理员</option>
-                <option value="开发者">开发者</option>
-                <option value="普通用户">普通用户</option>
-            </select>
-        </div>
+    
+    <!-- Collapsible Filter Area -->
+    <div class="px-6 py-4 border-b border-gray-100 bg-white transition-all duration-300 relative" id="user-filter-area">
+        <div class="flex items-start justify-between gap-4">
+            <!-- Filters Container -->
+            <div class="flex-1 flex flex-col gap-4">
+                <!-- Row 1: Always visible -->
+                <div class="flex items-center gap-4 flex-wrap">
+                    <div class="relative w-72 flex-shrink-0">
+                        <i class="fa-solid fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                        <input id="user-search-input" type="text" placeholder="搜索姓名、手机号、邮箱..." class="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm bg-white shadow-sm transition-shadow">
+                    </div>
+                    
+                    <div class="flex items-center gap-2.5 flex-shrink-0">
+                        <span class="text-sm font-medium text-gray-500 whitespace-nowrap">角色</span>
+                        <select id="user-role-filter" class="border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm text-gray-700 bg-white shadow-sm cursor-pointer min-w-[140px]">
+                            <option value="所有角色">所有角色</option>
+                            <option value="管理员">管理员</option>
+                            <option value="开发者">开发者</option>
+                            <option value="普通用户">普通用户</option>
+                        </select>
+                    </div>
 
-        <!-- Action Button -->
-        <button onclick="openAddUserModal()" class="bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white px-4 py-2 rounded-lg text-sm font-medium transition-all shadow-sm flex items-center ml-4">
-            <i class="fa-solid fa-plus mr-2"></i>新增用户
-        </button>
+                    <!-- Status Filter -->
+                    <div class="flex items-center gap-2.5 flex-shrink-0 filter-advanced hidden">
+                        <span class="text-sm font-medium text-gray-500 whitespace-nowrap">状态</span>
+                        <select id="user-status-filter" class="border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm text-gray-700 bg-white shadow-sm cursor-pointer min-w-[140px]">
+                            <option value="所有状态">所有状态</option>
+                            <option value="normal">正常</option>
+                            <option value="locked">锁定</option>
+                            <option value="resigned">离职</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Row 2: Advanced Filters -->
+                <div class="flex items-center gap-4 flex-wrap filter-advanced hidden">
+                    <div class="flex items-center gap-2.5 flex-shrink-0">
+                        <span class="text-sm font-medium text-gray-500 whitespace-nowrap">部门</span>
+                        <select id="user-dept-filter" class="border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm text-gray-700 bg-white shadow-sm cursor-pointer min-w-[140px]">
+                            <option value="所有部门">所有部门</option>
+                            <option value="产品部">产品部</option>
+                            <option value="研发部">研发部</option>
+                            <option value="运营部">运营部</option>
+                            <option value="客服部">客服部</option>
+                            <option value="设计部">设计部</option>
+                            <option value="测试部">测试部</option>
+                            <option value="运维部">运维部</option>
+                        </select>
+                    </div>
+
+                    <div class="flex items-center gap-2.5 flex-shrink-0">
+                        <span class="text-sm font-medium text-gray-500 whitespace-nowrap">加入时间</span>
+                        <div class="relative w-64">
+                            <i class="fa-regular fa-calendar absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 z-10"></i>
+                            <input id="user-date-filter" type="text" placeholder="开始时间 - 结束时间" class="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm bg-white shadow-sm cursor-pointer flatpickr-input" readonly="readonly">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="flex items-start gap-3 flex-shrink-0">
+                <button onclick="executeUserSearch()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors shadow-sm">
+                    查询
+                </button>
+                <button onclick="resetUserSearch()" class="bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 hover:text-gray-800 px-4 py-2 rounded-lg text-sm font-medium transition-colors shadow-sm">
+                    重置
+                </button>
+                <button onclick="toggleUserFilters()" id="toggle-filter-btn" class="text-blue-600 hover:text-blue-700 px-2 py-2 text-sm font-medium transition-colors flex items-center bg-transparent border-none outline-none">
+                    <span>展开筛选</span><i class="fa-solid fa-chevron-down ml-1 text-xs"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Separator / Gutter -->
+    <div class="h-4 bg-gray-100 border-b border-gray-200"></div>
+
+    <!-- Top Action Area -->
+    <div class="px-6 py-4 border-b border-gray-100 flex justify-end items-center bg-white" style="height: 60px;">
+        <div class="flex items-center gap-3">
+            <button onclick="openAddUserModal()" class="bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white px-4 py-2 rounded-lg text-sm font-medium transition-all shadow-sm flex items-center">
+                <i class="fa-solid fa-plus mr-2"></i>新增用户
+            </button>
+        </div>
     </div>
     
     <!-- Filter/Search Bar Removed -->
@@ -33,7 +100,7 @@
                     <th class="px-6 py-3 font-medium">部门</th>
                     <th class="px-6 py-3 font-medium">角色</th>
                     <th class="px-6 py-3 font-medium">状态</th>
-                    <th class="px-6 py-3 font-medium text-right"></th>
+                    <th class="px-6 py-3 font-medium text-right">操作</th>
                 </tr>
             </thead>
             <tbody id="user-table-body" class="divide-y divide-gray-100 text-sm bg-white">

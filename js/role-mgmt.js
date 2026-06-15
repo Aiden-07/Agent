@@ -29,6 +29,7 @@
                 'orchestrator': 'dept',
                 'parser': 'self',
                 'knowledge': 'self',
+                'data_source': 'all',
                 'component': 'all'
             }
         },
@@ -72,57 +73,49 @@
         },
         {
             id: 'orchestrator', label: '工作流应用', children: [
+                { id: 'orchestrator.list', label: '查询工作流' },
+                { id: 'orchestrator.create', label: '新建工作流' }
+            ]
+        },
+        {
+            id: 'knowledge', label: '知识库管理', children: [
+                { id: 'knowledge.list', label: '查询知识库' },
+                { id: 'knowledge.create', label: '新建知识库' },
                 { 
-                    id: 'orchestrator.list', 
-                    label: '查看',
+                    id: 'knowledge.tags', 
+                    label: '设置标签按钮',
                     children: [
-                        { id: 'orchestrator.list.all', label: '工作流列表' },
-                        { id: 'orchestrator.list.config', label: '基础配置' },
-                        { id: 'orchestrator.list.logs', label: '日志' },
-                        { id: 'orchestrator.list.analysis', label: '分析' }
-                    ]
-                },
-                { id: 'orchestrator.create', label: '新建工作流' },
-                { id: 'orchestrator.delete', label: '删除工作流' },
-                { 
-                    id: 'orchestrator.edit', 
-                    label: '编辑工作流',
-                    children: [
-                        { id: 'orchestrator.edit.basic', label: '基础配置' },
-                        { id: 'orchestrator.edit.node', label: '节点配置' },
-                        { id: 'orchestrator.edit.publish', label: '发布' }
+                        { id: 'knowledge.tags.list', label: '查询知识库标签' },
+                        { id: 'knowledge.tags.create', label: '新建知识库标签' },
+                        { id: 'knowledge.tags.edit', label: '编辑知识库标签' },
+                        { id: 'knowledge.tags.delete', label: '删除知识库标签' }
                     ]
                 }
             ]
         },
         {
-            id: 'knowledge', label: '知识库管理', children: [
+            id: 'knowledge_graph', label: '知识图谱', children: [
+                { id: 'knowledge_graph.list', label: '查询知识图谱' },
+                { id: 'knowledge_graph.create', label: '新建知识图谱' },
                 { 
-                    id: 'knowledge.list', 
-                    label: '查看',
+                    id: 'knowledge_graph.edit', 
+                    label: '实体类型设置',
                     children: [
-                        { id: 'knowledge.list.all', label: '知识库列表' },
-                        { id: 'knowledge.list.files', label: '文件列表' },
-                        { id: 'knowledge.list.preview', label: '查看原文' },
-                        { id: 'knowledge.list.result', label: '解析结果' }
+                        { id: 'knowledge_graph.edit.list', label: '查询实体类型' },
+                        { id: 'knowledge_graph.edit.create', label: '新建实体类型' },
+                        { id: 'knowledge_graph.edit.update', label: '编辑实体类型' },
+                        { id: 'knowledge_graph.edit.delete', label: '删除实体类型' }
                     ]
-                },
-                { id: 'knowledge.create', label: '新建知识库' },
-                { id: 'knowledge.delete', label: '删除知识库' },
-                { 
-                    id: 'knowledge.edit', 
-                    label: '编辑知识库',
-                    children: [
-                        { id: 'knowledge.edit.basic', label: '基础信息设置' },
-                        { id: 'knowledge.edit.upload', label: '上传文件' },
-                        { id: 'knowledge.edit.download', label: '下载' },
-                        { id: 'knowledge.edit.delete_file', label: '删除文件' },
-                        { id: 'knowledge.edit.submit_remove_parse', label: '提交解析/移除解析' },
-                        { id: 'knowledge.edit.parse_edit', label: '解析编辑' },
-                        { id: 'knowledge.edit.source_edit', label: '原文编辑' }
-                    ]
-                },
-                { id: 'knowledge.tags', label: '标签设置' }
+                }
+            ]
+        },
+        {
+            id: 'data_source', label: '数据源管理', children: [
+                { id: 'data_source.list', label: '查询数据源' },
+                { id: 'data_source.create', label: '新增数据源' },
+                { id: 'data_source.edit', label: '编辑数据源' },
+                { id: 'data_source.delete', label: '删除数据源' },
+                { id: 'data_source.test', label: '测试连接' }
             ]
         },
         {
@@ -178,12 +171,11 @@
 
     // Data Permission Configuration
     const dataResources = [
-        { id: 'agent', label: '智能体应用' },
         { id: 'orchestrator', label: '工作流应用' },
         { id: 'knowledge', label: '知识库' },
         { id: 'knowledge_graph', label: '知识图谱' },
-        { id: 'component', label: '组件' },
-        { id: 'evaluation', label: '效果测评' }
+        { id: 'data_source', label: '数据源' },
+        { id: 'report_file', label: '报告文件' }
     ];
 
     const dataScopes = [
@@ -193,8 +185,6 @@
 
     let currentEditingRoleId = null;
     let currentPermRoleId = null;
-    let currentStep = 1; // 1: Function, 2: Data
-    let cancelSyncCallback = null;
 
     // Listen for view load
     document.addEventListener('view-loaded', (e) => {
@@ -213,11 +203,6 @@
                 renderRoleTable(e.target.value);
             });
         }
-        
-        // Expose global callback for modal
-        window.cancelSyncCallback = (confirmed) => {
-            if (cancelSyncCallback) cancelSyncCallback(confirmed);
-        };
     }
 
     function renderRoleTable(searchTerm = '') {
@@ -233,8 +218,11 @@
 
         if (filteredRoles.length === 0) {
             tbody.innerHTML = `<tr><td colspan="5" class="px-6 py-8 text-center text-gray-400">暂无角色数据</td></tr>`;
+            if (window.syncDataTable) window.syncDataTable('role-data-table', { storageKey: 'dt-colwidths-roles' });
             return;
         }
+
+        const esc = window.escapeHtml || function (s) { return String(s == null ? '' : s); };
 
         filteredRoles.forEach(role => {
             const tr = document.createElement('tr');
@@ -250,24 +238,53 @@
             }
 
             // Action Button logic
-            let actionBtn = '';
-            if (role.name === '超级管理员') {
-                 actionBtn = '<span class="text-gray-400 text-xs bg-gray-100 px-2 py-1 rounded">系统默认</span>';
-            } else {
-                 actionBtn = `<button onclick="window.openRoleActions(event, ${role.id})" class="p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors">
-                            <i class="fa-solid fa-ellipsis"></i>
-                        </button>`;
-            }
+            let actionTdHtml = '<td class="px-6 py-4 text-right min-w-[160px] action-td"></td>';
 
             tr.innerHTML = `
-                <td class="px-6 py-4 font-medium text-gray-800">${role.name}</td>
-                <td class="px-6 py-4 text-gray-500">${role.description}</td>
-                <td class="px-6 py-4">${role.userCount}</td>
-                <td class="px-6 py-4">${permBadge}</td>
-                <td class="px-6 py-4 text-right">${actionBtn}</td>
+                <td class="px-6 py-4 font-medium text-gray-800 min-w-0"><span class="dt-cell-ellipsis" title="${esc(role.name)}">${esc(role.name)}</span></td>
+                <td class="px-6 py-4 text-gray-500 min-w-0"><span class="dt-cell-ellipsis" title="${esc(role.description)}">${esc(role.description)}</span></td>
+                <td class="px-6 py-4 whitespace-nowrap">${role.userCount}</td>
+                <td class="px-6 py-4 min-w-0 whitespace-nowrap">${permBadge}</td>
+                ${actionTdHtml}
             `;
             tbody.appendChild(tr);
+
+            const actionsTd = tr.querySelector('.action-td');
+            
+            if (role.name === '超级管理员') {
+                 actionsTd.innerHTML = '<span class="text-gray-400 text-xs bg-gray-100 px-2 py-1 rounded">系统默认</span>';
+            } else {
+                const actions = [
+                    {
+                        label: '编辑',
+                        onClick: () => openRoleModal(role.id)
+                    },
+                    {
+                        label: '配置权限',
+                        onClick: () => openPermissionModal(role.id)
+                    },
+                    {
+                        label: '删除',
+                        className: 'text-red-600 hover:text-red-800',
+                        onClick: () => confirmDeleteRole(role.id)
+                    }
+                ];
+
+                const container = document.createElement('div');
+                container.className = 'flex items-center justify-end gap-3';
+                
+                actions.forEach(act => {
+                    const btn = document.createElement('button');
+                    btn.className = 'text-blue-600 hover:text-blue-800 text-sm font-medium transition-colors ' + (act.className || '');
+                    btn.textContent = act.label;
+                    btn.onclick = (e) => { e.stopPropagation(); act.onClick(); };
+                    container.appendChild(btn);
+                });
+                
+                actionsTd.appendChild(container);
+            }
         });
+        if (window.syncDataTable) window.syncDataTable('role-data-table', { storageKey: 'dt-colwidths-roles' });
     }
 
     function countPermissions(perms) {
@@ -275,32 +292,7 @@
     }
 
     // --- Actions Menu ---
-    window.openRoleActions = function(event, roleId) {
-        const role = roles.find(r => r.id === roleId);
-        if (!role) return;
-
-        const actions = [
-            {
-                label: '配置权限',
-                icon: 'fa-solid fa-key',
-                onClick: () => openPermissionModal(roleId)
-            },
-            {
-                label: '编辑角色',
-                icon: 'fa-solid fa-pen',
-                onClick: () => openRoleModal(roleId)
-            },
-            {
-                label: '删除角色',
-                icon: 'fa-solid fa-trash',
-                className: 'text-red-600 hover:bg-red-50',
-                iconClass: 'text-red-500',
-                onClick: () => confirmDeleteRole(roleId)
-            }
-        ];
-
-        window.showActionMenu(event, actions);
-    };
+    // Removed old openRoleActions function as we now use inline actions
 
     // --- Add/Edit Role ---
     window.openRoleModal = function(roleId = null) {
@@ -364,12 +356,7 @@
 
     // --- Permissions Modal Logic ---
 
-    window.switchPermTab = function(tabName, force = false) {
-        // Step 1 locks Data tab
-        if (tabName === 'data' && currentStep === 1 && !force) {
-            return;
-        }
-
+    window.switchPermTab = function(tabName) {
         const funcBtn = document.getElementById('tab-btn-func');
         const dataBtn = document.getElementById('tab-btn-data');
         const funcContent = document.getElementById('perm-content-func');
@@ -405,119 +392,28 @@
 
         document.getElementById('perm-role-name').textContent = role.name;
         
-        // Reset Step
-        currentStep = 1;
-        updateStepUI();
-
         // Render both tabs
         renderPermissionTree(role.permissions);
-        // Data permissions will be rendered/synced when moving to step 2, 
-        // but we can render initial state (disabled) now.
-        // We pass empty object or current permissions, but the UI will be grayed out in Step 1.
         renderDataPermissions(role.dataPermissions || {}); 
+        
+        // Default to func tab
+        switchPermTab('func');
         
         openModal('permission-modal');
     };
 
-    window.handlePermissionNextStep = function() {
-        if (currentStep === 1) {
-            // 1. Validate
-            // Check if any "View List" (*.list) is unchecked but other ops are checked? 
-            // Or simply if anything is checked.
-            // Prompt says: "validate required fields, format, conflict".
-            // Let's assume at least one permission is required.
-            const checked = document.querySelectorAll('#permission-tree input[type="checkbox"]:checked');
-            if (checked.length === 0) {
-                showToast('请至少配置一项功能权限', 'error');
-                return;
-            }
-
-            // 2. Mock API Call
-            const btn = document.getElementById('btn-save-next');
-            const originalText = btn.textContent;
-            btn.textContent = '校验中...';
-            btn.disabled = true;
-
-            setTimeout(() => {
-                btn.textContent = originalText;
-                btn.disabled = false;
-                
-                // Success -> Next Step
-                currentStep = 2;
-                updateStepUI();
-                
-                // Sync Data
-                // We need to re-render data permissions based on current selection
-                const role = roles.find(r => r.id === currentPermRoleId);
-                syncDataPermissions(role ? role.dataPermissions : {});
-                
-            }, 300);
-        } else {
-            // Step 2 -> Save
-            savePermissions();
+    window.handlePermissionSave = function() {
+        // Validate Functional Perms (at least one check?)
+        // Requirement: "Add appropriate error handling"
+        const checked = document.querySelectorAll('#permission-tree input[type="checkbox"]:checked');
+        if (checked.length === 0) {
+            showToast('请至少配置一项功能权限', 'error');
+            return;
         }
+
+        savePermissions();
     };
 
-    window.handlePermissionBackStep = function() {
-        currentStep = 1;
-        updateStepUI();
-    };
-
-    function updateStepUI() {
-        const prevBtn = document.getElementById('btn-prev-step');
-        const nextBtn = document.getElementById('btn-save-next');
-        
-        if (currentStep === 1) {
-            prevBtn.classList.add('hidden');
-            nextBtn.textContent = '保存-下一步';
-            switchPermTab('func', true);
-            
-            // Re-render data perms to show locked state
-            const role = roles.find(r => r.id === currentPermRoleId);
-            if(role) renderDataPermissions(role.dataPermissions || {});
-
-        } else {
-            prevBtn.classList.remove('hidden');
-            nextBtn.textContent = '保存配置';
-            switchPermTab('data', true);
-            
-            // Re-render data perms to show unlocked state
-            const role = roles.find(r => r.id === currentPermRoleId);
-            if(role) syncDataPermissions(role.dataPermissions || {});
-        }
-    }
-    
-    function syncDataPermissions(currentDataPerms = null) {
-        // 1. Get current data perms from UI if not provided
-        if (!currentDataPerms) {
-            currentDataPerms = {};
-            // If table exists, try to read from it
-            dataResources.forEach(res => {
-                const radios = document.getElementsByName(`data_perm_${res.id}`);
-                for (let radio of radios) {
-                    if (radio.checked) {
-                        currentDataPerms[res.id] = radio.value;
-                        break;
-                    }
-                }
-            });
-            // If UI was empty (e.g. first load), maybe fallback to role? 
-            // But usually we pass role perms on init.
-            // If we are adding a permission, we want to keep existing selections.
-        }
-
-        // 2. Get all checked 'list' permissions
-        const checkedListPerms = Array.from(document.querySelectorAll('#permission-tree input[type="checkbox"][value$=".list"]:checked'))
-            .map(cb => cb.value); // e.g., 'agent.list'
-        
-        // 3. Extract modules (e.g., 'agent')
-        const activeModules = checkedListPerms.map(p => p.split('.')[0]);
-        
-        // 4. Filter dataResources
-        const activeResources = dataResources.filter(res => activeModules.includes(res.id));
-        
-        renderDataPermissions(currentDataPerms, activeResources);
-    }
 
     // 1. Functional Permissions Tree
     function renderPermissionTree(currentPerms) {
@@ -535,30 +431,20 @@
     // ... createTreeList ...
 
     // 2. Data Permissions Table
-    function renderDataPermissions(currentDataPerms, activeResources = null) {
+    function renderDataPermissions(currentDataPerms) {
         const tbody = document.getElementById('data-perm-table-body');
         if (!tbody) return;
         tbody.innerHTML = '';
         
-        // If activeResources not provided, show all? Or none?
-        // Requirement: "sync... only when... checked"
-        // If nothing checked, activeResources is empty.
-        // On init, we might want to show based on existing role perms?
-        // But the requirement says "sync".
-        
-        const resourcesToShow = activeResources || dataResources; 
+        const resourcesToShow = dataResources; 
 
         if (resourcesToShow.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="2" class="px-6 py-8 text-center text-gray-400">请先在功能权限中勾选“查看列表”以配置数据权限</td></tr>`;
-            return;
+            tbody.innerHTML = `<tr><td colspan="2" class="px-6 py-8 text-center text-gray-400">暂无数据权限配置项</td></tr>`;
         }
-
-        // Check if disabled (Step 1)
-        const isDisabled = currentStep === 1;
 
         resourcesToShow.forEach(res => {
             const tr = document.createElement('tr');
-            tr.className = 'hover:bg-gray-50 relative'; // Relative for overlay if needed
+            tr.className = 'hover:bg-gray-50 relative'; 
 
             const nameTd = document.createElement('td');
             nameTd.className = 'px-6 py-4 font-medium text-gray-800';
@@ -570,32 +456,81 @@
             const scopeContainer = document.createElement('div');
             scopeContainer.className = 'flex gap-4';
 
-            dataScopes.forEach(scope => {
-                const label = document.createElement('label');
-                label.className = `inline-flex items-center ${isDisabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}`;
-                
-                // Tooltip wrapper if disabled
-                if (isDisabled) {
-                   label.title = "请先完成功能权限配置并点击‘保存-下一步’";
-                   // label.classList.add('perm-tooltip'); // Removed to avoid hiding content due to CSS opacity: 0
-                   label.classList.add('opacity-50'); // Ensure visual disabled state if not covered by other classes
-                }
+            let currentScopes = dataScopes;
+            // Custom scopes for specific resources
+            if (['orchestrator', 'knowledge', 'knowledge_graph', 'data_source'].includes(res.id)) {
+                currentScopes = [
+                    { value: 'all', label: '全部数据', warning: '“全部数据”包括所有操作数据权限，请谨慎选择' },
+                    { value: 'dependent', label: '依赖对象中设置权限' }
+                ];
+            } else if (res.id === 'report_file') {
+                currentScopes = [
+                    { value: 'all', label: '全部数据', warning: '“全部数据”包括所有操作数据权限，请谨慎选择' }
+                ];
+            }
 
+            currentScopes.forEach(scope => {
+                const label = document.createElement('label');
+                label.className = 'inline-flex items-center cursor-pointer';
+                
                 const radio = document.createElement('input');
                 radio.type = 'radio';
                 radio.name = `data_perm_${res.id}`;
                 radio.value = scope.value;
-                radio.className = 'form-radio h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed';
-                radio.disabled = isDisabled;
+                radio.className = 'form-radio h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500';
 
                 const currentVal = currentDataPerms[res.id];
-                if (currentVal === scope.value || (!currentVal && scope.value === 'all')) {
+                if (currentVal === scope.value || (!currentVal && scope.value === 'all' && !['orchestrator', 'knowledge', 'knowledge_graph'].includes(res.id))) {
+                    // Default to 'all' for normal resources if not set
+                    radio.checked = true;
+                } else if (!currentVal && ['orchestrator', 'knowledge', 'knowledge_graph', 'data_source'].includes(res.id) && scope.value === 'dependent') {
+                    // Default to 'dependent' for special resources if not set (safer default)
+                    radio.checked = true;
+                } else if (!currentVal && scope.value === 'all') {
+                     // Fallback default
+                     radio.checked = true;
+                }
+                
+                // Override check if explicit match
+                if (currentVal === scope.value) {
                     radio.checked = true;
                 }
                 
+                // Toggle Logic for Radio Buttons
+                // Initialize state
+                radio.dataset.wasChecked = radio.checked;
+                radio.classList.add('transition-all', 'duration-200');
+
+                const captureState = function() {
+                     this.dataset.wasChecked = this.checked;
+                };
+                radio.addEventListener('mousedown', captureState);
+                radio.addEventListener('keydown', function(e) {
+                     if (e.key === ' ') captureState.call(this);
+                });
+                
+                radio.addEventListener('click', function(e) {
+                     // Standard radio behavior checks it before click event. 
+                     // If it was checked (dataset.wasChecked), we uncheck it.
+                     if (this.dataset.wasChecked === 'true') {
+                         this.checked = false;
+                         this.dataset.wasChecked = 'false';
+                     } else {
+                         this.dataset.wasChecked = 'true';
+                     }
+                });
+
                 const span = document.createElement('span');
-                span.className = 'ml-2 text-sm text-gray-700';
+                span.className = 'ml-2 text-sm text-gray-700 flex items-center gap-1';
                 span.textContent = scope.label;
+
+                // Add warning tooltip if present
+                if (scope.warning) {
+                    const warnIcon = document.createElement('i');
+                    warnIcon.className = 'fa-solid fa-circle-info text-gray-400 text-xs hover:text-orange-500 transition-colors ml-1';
+                    warnIcon.title = scope.warning; // Simple tooltip
+                    span.appendChild(warnIcon);
+                }
 
                 label.appendChild(radio);
                 label.appendChild(span);
@@ -607,20 +542,9 @@
             tr.appendChild(scopeTd);
             tbody.appendChild(tr);
         });
-        
-        // If disabled, we can also add a full overlay if we want to block the whole table visual
-        // But disabling inputs is usually enough. 
-        // Requirement: "整个面板 button 保持灰色禁用状态... 禁用状态通过统一的 disabled 类名控制"
-        // Maybe add a class to the table or tbody?
-        if (isDisabled) {
-             tbody.classList.add('disabled-area'); 
-             // Note: 'disabled-area' might need to be defined in CSS or use Tailwind classes
-        } else {
-             tbody.classList.remove('disabled-area');
-        }
     }
 
-    function createTreeList(nodes, currentPerms, level = 0) {
+    function createTreeList(nodes, currentPerms, level = 0, forceCheck = false) {
         const ul = document.createElement('ul');
         if (level === 0) {
              ul.className = 'tree-root space-y-1';
@@ -630,16 +554,28 @@
              ul.setAttribute('role', 'group');
         }
 
+        const autoSelectExpandIds = [
+            'knowledge', 
+            'knowledge_graph', 
+            'data_source',
+            'orchestrator',
+            'knowledge.tags',
+            'knowledge_graph.edit'
+        ];
+
         nodes.forEach(node => {
             const li = document.createElement('li');
             li.className = 'tree-node relative';
             li.setAttribute('role', 'treeitem');
             
             const hasChildren = node.children && node.children.length > 0;
-            const isChecked = currentPerms.includes('ALL') || currentPerms.includes(node.id);
+            const isAutoTarget = autoSelectExpandIds.includes(node.id);
+            const shouldExpand = hasChildren && isAutoTarget;
+            const effectiveForceCheck = forceCheck || isAutoTarget;
+            const isChecked = currentPerms.includes('ALL') || currentPerms.includes(node.id) || effectiveForceCheck;
             
             if (hasChildren) {
-                li.setAttribute('aria-expanded', 'true');
+                li.setAttribute('aria-expanded', String(shouldExpand));
             }
 
             // Row content
@@ -672,6 +608,12 @@
             if (hasChildren) {
                 // Determine icon based on state (default expanded)
                 expander.innerHTML = '<i class="fa-solid fa-caret-down"></i>';
+                if (!shouldExpand) {
+                     // Initial state: collapsed (-90deg)
+                     const icon = expander.querySelector('i');
+                     if(icon) icon.style.transform = 'rotate(-90deg)';
+                }
+
                 expander.onclick = (e) => {
                     e.stopPropagation();
                     toggleTreeNode(li);
@@ -694,13 +636,24 @@
 
             // Label
             const label = document.createElement('span');
-            label.className = 'text-gray-700 text-sm font-medium truncate flex-1';
+            label.className = 'text-gray-700 text-sm font-medium truncate';
+            if (!node.id.endsWith('.full_auth')) {
+                label.classList.add('flex-1');
+            }
             label.textContent = node.label;
             label.title = node.label; // Tooltip for truncation
             
             row.appendChild(expander);
             row.appendChild(checkbox);
             row.appendChild(label);
+
+            // Warning for full_auth
+            if (node.id.endsWith('.full_auth')) {
+                const warning = document.createElement('span');
+                warning.className = 'text-xs text-orange-500 ml-2 flex-1 truncate';
+                warning.innerHTML = '<i class="fa-solid fa-circle-exclamation mr-1"></i>该选项拥有所有操作和数据权限，请谨慎选择';
+                row.appendChild(warning);
+            }
             
             // Row click toggles checkbox
             row.onclick = (e) => {
@@ -714,11 +667,19 @@
 
             // Children
             if (hasChildren) {
-                const childrenContainer = createTreeList(node.children, currentPerms, level + 1);
+                const childrenContainer = createTreeList(node.children, currentPerms, level + 1, effectiveForceCheck);
                 // Animation wrapper
                 const wrapper = document.createElement('div');
                 wrapper.className = 'tree-children-wrapper overflow-hidden transition-all duration-300 ease-in-out';
-                wrapper.style.maxHeight = '1000px'; // Initial max height, or calculated
+                
+                if (shouldExpand) {
+                    wrapper.style.maxHeight = '1000px'; 
+                    wrapper.classList.remove('opacity-0');
+                } else {
+                    wrapper.style.maxHeight = '0px'; 
+                    wrapper.classList.add('opacity-0');
+                }
+
                 wrapper.appendChild(childrenContainer);
                 li.appendChild(wrapper);
                 
@@ -779,45 +740,56 @@
     // Expose for testing
     window.roleMgmtTestHelpers = {
         createTreeList: createTreeList,
-        handlePermissionChange: handlePermissionChange
+        handlePermissionChange: handlePermissionChange,
+        testRadioToggle: function() {
+            // Find a radio button (e.g., first one in data perms)
+            const radio = document.querySelector('#data-perm-table-body input[type="radio"]');
+            if (!radio) {
+                console.warn('No radio button found for testing.');
+                return;
+            }
+
+            console.group('Radio Toggle Test');
+            console.log('Target Radio:', radio.name, radio.value);
+
+            // Helper to simulate interaction
+            const simulateClick = (el) => {
+                el.dispatchEvent(new MouseEvent('mousedown'));
+                el.click(); // This triggers click event
+            };
+
+            // 1. Initial State
+            const initialState = radio.checked;
+            console.log('Initial State:', initialState);
+
+            // 2. First Click (Toggle)
+            simulateClick(radio);
+            const stateAfterClick1 = radio.checked;
+            console.log('State after Click 1:', stateAfterClick1);
+
+            if (initialState) {
+                if (stateAfterClick1 === false) console.log('✅ PASS: Checked -> Unchecked');
+                else console.error('❌ FAIL: Should be unchecked');
+            } else {
+                if (stateAfterClick1 === true) console.log('✅ PASS: Unchecked -> Checked');
+                else console.error('❌ FAIL: Should be checked');
+            }
+
+            // 3. Second Click (Toggle Back)
+            simulateClick(radio);
+            const stateAfterClick2 = radio.checked;
+            console.log('State after Click 2:', stateAfterClick2);
+            
+            if (stateAfterClick2 === initialState) console.log('✅ PASS: Toggled back to initial state');
+            else console.error('❌ FAIL: State mismatch');
+
+            console.groupEnd();
+        }
     };
 
     function handlePermissionChange(checkbox) {
         const isChecked = checkbox.checked;
         const li = checkbox.closest('li');
-        const permId = checkbox.value;
-
-        // 2. Sync Logic for "View List" (*.list)
-        if (permId.endsWith('.list')) {
-            if (isChecked) {
-                // Add
-                syncDataPermissions();
-            } else {
-                // Remove - Confirmation
-                // Revert first to wait for confirmation
-                checkbox.checked = true; 
-                
-                // Show Modal
-                cancelSyncCallback = (confirmed) => {
-                    if (confirmed) {
-                        checkbox.checked = false;
-                        // Cascade logic for functional perms
-                        const childrenContainer = li.querySelector('ul');
-                        if (childrenContainer) {
-                            const childCheckboxes = childrenContainer.querySelectorAll('input[type="checkbox"]');
-                            childCheckboxes.forEach(cb => cb.checked = false);
-                        }
-                        updateAncestors(li);
-                        
-                        // Sync Data (Remove)
-                        syncDataPermissions();
-                    }
-                    // If not confirmed, do nothing (it remains checked)
-                };
-                openModal('sync-confirm-modal');
-                return; // Stop further propagation until confirmed
-            }
-        }
         
         // Cascade Down
         const childrenContainer = li.querySelector('ul');
@@ -831,10 +803,6 @@
 
         // Cascade Up
         updateAncestors(li);
-        
-        // If it's a list permission change (add), we already synced. 
-        // If it's other permissions, we might not need to sync unless they affect visibility?
-        // Requirement says "Only when 'View List' is checked".
     }
 
     function updateAncestors(liElement) {

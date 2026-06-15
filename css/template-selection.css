@@ -1,0 +1,23 @@
+:root {
+    --color-selected-bg: #eff6ff; /* blue-50 */
+    --color-selected-border: #2563eb; /* blue-600 */
+}
+
+.template-card {
+    transition: all 200ms ease-out;
+    /* Base styles handled by Tailwind classes in HTML */
+}
+
+.template-card[aria-selected="true"] .flex {
+    /* These override or complement inline styles if needed */
+    background-color: var(--color-selected-bg);
+    border-color: var(--color-selected-border);
+}
+
+/* Dark mode support (basic structure, actual implementation depends on Tailwind config) */
+@media (prefers-color-scheme: dark) {
+    :root {
+        --color-selected-bg: #1e3a8a; /* blue-900 */
+        --color-selected-border: #3b82f6; /* blue-500 */
+    }
+}

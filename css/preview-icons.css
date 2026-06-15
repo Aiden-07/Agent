@@ -1,0 +1,38 @@
+.fa-solid,
+.fa-regular {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1em;
+  min-width: 1em;
+  height: 1em;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.fa-robot::before { content: "AI"; font-size: 0.68em; }
+.fa-user-tie::before { content: "人"; font-size: 0.82em; }
+.fa-language::before { content: "译"; font-size: 0.82em; }
+.fa-book-open::before,
+.fa-book::before { content: "▣"; }
+.fa-file-pdf::before,
+.fa-file-word::before,
+.fa-file-excel::before,
+.fa-file-lines::before,
+.fa-regular.fa-file::before { content: "▤"; }
+.fa-copy::before { content: "⧉"; }
+.fa-rotate-right::before,
+.fa-rotate::before { content: "↻"; }
+.fa-thumbs-up::before { content: "👍"; font-size: 0.78em; }
+.fa-thumbs-down::before { content: "↓"; }
+.fa-chevron-up::before { content: "↑"; }
+.fa-chevron-down::before { content: "↓"; }
+.fa-xmark::before,
+.fa-times::before { content: "×"; }
+.fa-expand-alt::before { content: "□"; }
+.fa-arrow-up-right-from-square::before { content: "↗"; }
+.fa-location-dot::before { content: "●"; }
+.fa-circle-notch::before { content: "◌"; }
+.fa-circle-check::before { content: "✓"; }
+.fa-circle-xmark::before { content: "×"; }

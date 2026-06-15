@@ -3,7 +3,19 @@
 // Global State
 window.componentsData = [];
 window.currentFilter = { type: 'all', search: '' };
-let createCompConfig = { type: 'agent', method: 'new' };
+let createCompConfig = { type: 'orchestrator', method: 'new' };
+let createCompDraft = null;
+
+// Provide a unified getter so other pages (e.g. orchestrator editor) can reuse component data
+window.getComponentsData = function() {
+    if (!Array.isArray(window.componentsData)) window.componentsData = [];
+    if (window.componentsData.length === 0) {
+        window.componentsData = generateMockComponents(8);
+    }
+    ensurePluginMockComponents(2);
+    ensureSkillMockComponents(2);
+    return window.componentsData;
+}
 
 const COMP_NAMES = [
     '客服接待标准模板', '代码审计流程模板', '销售话术库', 'RAG 知识检索模板', 
@@ -13,10 +25,113 @@ const COMP_NAMES = [
 // Initialize Page
 window.initComponentsPage = function() {
     console.log('Initializing Components Page...');
-    if (window.componentsData.length === 0) {
-        window.componentsData = generateMockComponents(8);
-    }
+    window.getComponentsData();
+    applyComponentsListIntent();
     renderComponentsList();
+    maybeOpenCreateComponentFromIntent();
+}
+
+function applyComponentsListIntent() {
+    let type = null;
+    try {
+        type = sessionStorage.getItem('pendingComponentsFilterType');
+        if (type) sessionStorage.removeItem('pendingComponentsFilterType');
+    } catch (e) {
+        // ignore
+    }
+    if (!type) return;
+
+    const typeSelect = document.getElementById('comp-filter-type');
+    if (typeSelect) typeSelect.value = type;
+    window.currentFilter.type = type;
+}
+
+function maybeOpenCreateComponentFromIntent() {
+    let type = null;
+    try {
+        type = sessionStorage.getItem('pendingCreateComponentType');
+        if (type) sessionStorage.removeItem('pendingCreateComponentType');
+    } catch (e) {
+        // ignore
+    }
+    if (!type) return;
+
+    // Open create modal and preselect type
+    if (typeof window.openCreateComponentModal === 'function') {
+        window.openCreateComponentModal();
+    }
+    if (typeof window.selectCompType === 'function') {
+        window.selectCompType(type);
+    }
+}
+
+function ensurePluginMockComponents(minCount = 2) {
+    const existing = window.componentsData.filter(c => c.type === 'plugin').length;
+    const need = Math.max(0, minCount - existing);
+    if (need === 0) return;
+
+    const base = [
+        {
+            id: 'PLG-001',
+            name: '天气插件',
+            type: 'plugin',
+            refCount: 2,
+            description: '提供实时天气查询能力，可作为工具/插件集成使用。',
+            updatedAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toLocaleString(),
+            version: 'v1.0.0',
+            creator: 'Admin',
+            status: 'active'
+        },
+        {
+            id: 'PLG-002',
+            name: '翻译插件',
+            type: 'plugin',
+            refCount: 0,
+            description: '多语言互译插件，支持常见语种自动识别与翻译。',
+            updatedAt: new Date(Date.now() - 26 * 60 * 60 * 1000).toLocaleString(),
+            version: 'v1.1.0',
+            creator: 'Admin',
+            status: 'active'
+        }
+    ];
+
+    // 只补齐缺少的数量，避免重复插入
+    const toAdd = base.filter(x => !window.componentsData.some(c => c.id === x.id)).slice(0, need);
+    window.componentsData = [...toAdd, ...window.componentsData];
+}
+
+function ensureSkillMockComponents(minCount = 2) {
+    const existing = window.componentsData.filter(c => c.type === 'skill').length;
+    const need = Math.max(0, minCount - existing);
+    if (need === 0) return;
+
+    const base = [
+        {
+            id: 'SKL-001',
+            name: '文档生成 Skill',
+            type: 'skill',
+            refCount: 1,
+            description: '将输入内容整理为结构化文档（段落/标题/要点）。',
+            updatedAt: new Date(Date.now() - 3 * 60 * 60 * 1000).toLocaleString(),
+            version: 'v1.0.0',
+            creator: 'Admin',
+            status: 'active'
+        },
+        {
+            id: 'SKL-002',
+            name: 'PPT 生成 Skill',
+            type: 'skill',
+            refCount: 0,
+            description: '根据大纲生成 PPT 结构与每页要点。',
+            updatedAt: new Date(Date.now() - 30 * 60 * 60 * 1000).toLocaleString(),
+            version: 'v1.0.0',
+            creator: 'Admin',
+            status: 'active'
+        }
+    ];
+
+    const toAdd = base.filter(x => !window.componentsData.some(c => c.id === x.id)).slice(0, need);
+    window.componentsData = [...toAdd, ...window.componentsData];
 }
 
 function generateMockComponents(count) {
@@ -72,6 +187,9 @@ window.renderComponentsList = function() {
                 </td>
             </tr>
         `;
+        if (window.syncDataTable) {
+            window.syncDataTable('components-data-table', { storageKey: 'dt-colwidths-components', stickyLast: false });
+        }
         return;
     }
 
@@ -82,58 +200,77 @@ window.renderComponentsList = function() {
         const statusClass = item.status === 'active' ? 'bg-green-50 text-green-600' : 'bg-gray-100 text-gray-500';
         const statusText = item.status === 'active' ? '已启用' : '已禁用';
         
-        const typeIcon = item.type === 'agent' ? 'fa-robot text-purple-600 bg-purple-100' : 'fa-layer-group text-blue-600 bg-blue-100';
-        const typeText = item.type === 'agent' ? '智能体模板' : '工作流模板';
+        const typeMeta = (() => {
+            if (item.type === 'agent') {
+                return { iconClass: 'text-purple-600 bg-purple-100', icon: 'fa-robot', text: '智能体模板' };
+            }
+            if (item.type === 'orchestrator') {
+                return { iconClass: 'text-blue-600 bg-blue-100', icon: 'fa-layer-group', text: '工作流模板' };
+            }
+            if (item.type === 'skill') {
+                return { iconClass: 'text-emerald-600 bg-emerald-100', icon: 'fa-wand-magic-sparkles', text: 'Skill' };
+            }
+            return { iconClass: 'text-green-600 bg-green-100', icon: 'fa-plug', text: '插件' };
+        })();
+
+        const esc = window.escapeHtml || function (s) { return String(s == null ? '' : s); };
+        const nameT = esc(item.name);
+        const descT = esc(item.description);
+        const typeT = esc(typeMeta.text);
+        const timeT = esc(String(item.updatedAt).replace(/\s+/g, ' '));
+        const verT = esc(item.version);
 
         tr.innerHTML = `
-            <td class="px-6 py-4">
-                <div class="flex items-center gap-3">
-                    <div class="w-8 h-8 rounded-lg ${typeIcon} flex items-center justify-center">
-                        <i class="fa-solid ${item.type === 'agent' ? 'fa-robot' : 'fa-layer-group'}"></i>
+            <td class="px-6 py-4 min-w-0">
+                <div class="flex items-center gap-3 min-w-0">
+                    <div class="w-8 h-8 rounded-lg ${typeMeta.iconClass} flex items-center justify-center flex-shrink-0">
+                        <i class="fa-solid ${typeMeta.icon}"></i>
                     </div>
-                    <div>
-                        <div class="font-medium text-gray-900">${item.name}</div>
+                    <div class="min-w-0 flex-1">
+                        <div class="font-medium text-gray-900 dt-cell-ellipsis" title="${nameT}">${nameT}</div>
                     </div>
                 </div>
             </td>
-            <td class="px-6 py-4 text-sm text-gray-600">${typeText}</td>
-            <td class="px-6 py-4">
-                <span class="px-2 py-1 bg-gray-100 text-gray-600 rounded text-xs font-medium">${item.refCount} 引用</span>
-            </td>
-            <td class="px-6 py-4 text-sm text-gray-500 max-w-xs truncate" title="${item.description}">
-                ${item.description}
-            </td>
-            <td class="px-6 py-4 text-xs text-gray-500">${item.updatedAt}</td>
-            <td class="px-6 py-4 text-sm text-gray-600 font-mono">${item.version}</td>
-            <td class="px-6 py-4">
-                <span class="px-2 py-1 rounded-full text-xs font-medium ${statusClass}">${statusText}</span>
-            </td>
-            <td class="px-6 py-4 text-right">
-                <button onclick="window.openCompActions(event, '${item.id}')" class="p-1.5 text-gray-400 hover:text-gray-600 transition-colors rounded hover:bg-gray-100">
-                    <i class="fa-solid fa-ellipsis"></i>
-                </button>
+            <td class="px-6 py-4 text-sm text-gray-600 whitespace-nowrap"><span class="dt-cell-ellipsis" title="${typeT}">${typeT}</span></td>
+            <td class="px-6 py-4 min-w-0 whitespace-nowrap"><span class="px-2 py-1 bg-gray-100 text-gray-600 rounded text-xs font-medium dt-cell-ellipsis inline-block max-w-full" title="${item.refCount} 引用">${item.refCount} 引用</span></td>
+            <td class="px-6 py-4 min-w-0 text-sm text-gray-500"><span class="dt-cell-ellipsis" title="${descT}">${descT}</span></td>
+            <td class="px-6 py-4 text-xs text-gray-500 whitespace-nowrap">${timeT}</td>
+            <td class="px-6 py-4 text-sm text-gray-600 font-mono whitespace-nowrap"><span class="dt-cell-ellipsis" title="${verT}">${verT}</span></td>
+            <td class="px-6 py-4 whitespace-nowrap"><span class="px-2 py-1 rounded-full text-xs font-medium ${statusClass}">${statusText}</span></td>
+            <td class="px-6 py-4 text-right min-w-[120px] action-td">
             </td>
         `;
         tbody.appendChild(tr);
-    });
-}
 
-window.openCompActions = function(event, id) {
-    const actions = [
-        {
-            label: '编辑',
-            icon: 'fa-solid fa-pen',
-            onClick: () => alert('编辑组件: ' + id)
-        },
-        {
-            label: '删除',
-            icon: 'fa-solid fa-trash',
-            className: 'text-red-600 hover:bg-red-50',
-            iconClass: 'text-red-500',
-            onClick: () => window.deleteComponent(id)
+        // Add inline actions
+        const actionsTd = tr.querySelector('.action-td');
+        const actions = [
+            {
+                label: '编辑',
+                onClick: () => alert('编辑组件: ' + item.id)
+            },
+            {
+                label: '删除',
+                className: 'text-red-600 hover:text-red-800',
+                onClick: () => {
+                    if(window.deleteComponent) {
+                        window.deleteComponent(item.id);
+                    } else {
+                        alert('删除组件: ' + item.id);
+                    }
+                }
+            }
+        ];
+        
+        if (window.createInlineActions) {
+            const actionContainer = window.createInlineActions(actions);
+            actionsTd.appendChild(actionContainer);
         }
-    ];
-    window.showActionMenu(event, actions);
+    });
+
+    if (window.syncDataTable) {
+        window.syncDataTable('components-data-table', { storageKey: 'dt-colwidths-components', stickyLast: false });
+    }
 }
 
 window.filterComponents = function() {
@@ -159,15 +296,13 @@ window.sortComponents = function(field) {
 window.openCreateComponentModal = function() {
     const modal = document.getElementById('create-comp-modal');
     if (modal) modal.classList.remove('hidden');
-    createCompConfig = { type: 'agent' };
-    
-    // Reset radio button state
-    const agentRadio = document.querySelector('input[name="comp-type"][value="agent"]');
-    if (agentRadio) {
-        agentRadio.click(); // Trigger click to set state and UI
-    } else {
-        updateResourceDropdown();
-    }
+    createCompConfig = { type: 'orchestrator' };
+    resetCreateComponentWizard();
+
+    const nameInput = document.getElementById('comp-name');
+    if (nameInput) nameInput.value = '';
+    window.updateComponentNameCount();
+    window.selectCompType('orchestrator');
 }
 
 window.closeCreateComponentModal = function() {
@@ -176,14 +311,78 @@ window.closeCreateComponentModal = function() {
 }
 
 window.selectCompType = function(type) {
-    createCompConfig.type = type;
+    const nextType = type === 'orchestrator' ? 'orchestrator' : 'agent';
+    createCompConfig.type = nextType;
+    // Keep radio state in sync (inputs are hidden)
+    const radio = document.querySelector(`input[name="comp-type"][value="${nextType}"]`);
+    if (radio) radio.checked = true;
+
+    updateComponentTypeCards();
+    updateCreateComponentModalVisibility();
     updateResourceDropdown();
 }
 
 window.createNewComponentTab = function() {
-    // Open corresponding list page in new tab
-    const url = createCompConfig.type === 'agent' ? 'index.html#/agent' : 'index.html#/orchestrator';
+    const entry = /app-preview\.html$/i.test(window.location.pathname) ? 'app-preview.html' : 'index.html';
+    const url = createCompConfig.type === 'agent' ? `${entry}#/agent` : `${entry}#/orchestrator`;
     window.open(url, '_blank');
+}
+
+function updateComponentTypeCards() {
+    document.querySelectorAll('[data-comp-type-card]').forEach(card => {
+        const cardType = card.getAttribute('data-comp-type-card');
+        card.setAttribute('data-selected', cardType === createCompConfig.type ? 'true' : 'false');
+    });
+}
+
+window.updateComponentNameCount = function() {
+    const input = document.getElementById('comp-name');
+    const count = document.getElementById('comp-name-count');
+    if (!input || !count) return;
+    count.textContent = String(input.value.length);
+}
+
+window.updateComponentConfigCounts = function() {
+    const nameInput = document.getElementById('component-config-name');
+    const nameCount = document.getElementById('component-config-name-count');
+    const descInput = document.getElementById('component-config-desc');
+    const descCount = document.getElementById('component-config-desc-count');
+    if (nameInput && nameCount) nameCount.textContent = String(nameInput.value.length);
+    if (descInput && descCount) descCount.textContent = String(descInput.value.length);
+}
+
+function getResourceById(type, id) {
+    return getExistingResources(type).find(resource => String(resource.id) === String(id)) || null;
+}
+
+window.openComponentConfigModal = function(draft) {
+    createCompDraft = draft || createCompDraft || {};
+    const modal = document.getElementById('component-config-modal');
+    if (!modal) return;
+    if (modal.parentElement !== document.body) {
+        document.body.appendChild(modal);
+    }
+
+    const nameInput = document.getElementById('component-config-name');
+    const descInput = document.getElementById('component-config-desc');
+    const aliasInput = document.getElementById('component-config-query-alias');
+    const descParamInput = document.getElementById('component-config-query-desc');
+    const defaultInput = document.getElementById('component-config-query-default');
+
+    if (nameInput) nameInput.value = createCompDraft.name || '';
+    if (descInput) descInput.value = '';
+    if (aliasInput) aliasInput.value = 'query';
+    if (descParamInput) descParamInput.value = '';
+    if (defaultInput) defaultInput.value = '';
+
+    window.updateComponentConfigCounts();
+    modal.classList.remove('hidden');
+    setTimeout(() => descInput && descInput.focus(), 0);
+}
+
+window.closeComponentConfigModal = function() {
+    const modal = document.getElementById('component-config-modal');
+    if (modal) modal.classList.add('hidden');
 }
 
 function getExistingResources(type) {
@@ -209,9 +408,16 @@ function getExistingResources(type) {
 function updateResourceDropdown() {
     const select = document.getElementById('comp-create-method');
     if (!select) return;
-    
+
     const resources = getExistingResources(createCompConfig.type);
     select.innerHTML = '';
+
+    const placeholder = document.createElement('option');
+    placeholder.value = '';
+    placeholder.textContent = '请选择资源';
+    placeholder.disabled = true;
+    placeholder.selected = true;
+    select.appendChild(placeholder);
     
     if (resources.length === 0) {
         const option = document.createElement('option');
@@ -230,18 +436,155 @@ function updateResourceDropdown() {
 }
 
 window.submitCreateComponent = function() {
-    window.closeCreateComponentModal();
-    
     const select = document.getElementById('comp-create-method');
     const selectedId = select ? select.value : null;
+    const compName = document.getElementById('comp-name')?.value?.trim();
     
     if (!selectedId) {
         alert('请选择一个资源');
         return;
     }
+    if (!compName) {
+        alert('请输入组件名称');
+        return;
+    }
 
-    // Mock creation logic
-    alert(`正在从资源 ${selectedId} 创建组件... (功能开发中)`);
+    const resource = getResourceById(createCompConfig.type, selectedId);
+    createCompDraft = {
+        type: createCompConfig.type,
+        resourceId: selectedId,
+        resourceName: resource ? resource.name : selectedId,
+        name: compName
+    };
+
+    window.closeCreateComponentModal();
+    window.openComponentConfigModal(createCompDraft);
+}
+
+window.publishComponentConfig = function() {
+    const name = document.getElementById('component-config-name')?.value?.trim();
+    const description = document.getElementById('component-config-desc')?.value?.trim();
+    const alias = document.getElementById('component-config-query-alias')?.value?.trim();
+
+    if (!name) {
+        alert('请输入组件名称');
+        return;
+    }
+    if (!description) {
+        alert('请输入组件描述');
+        return;
+    }
+    if (!alias) {
+        alert('请输入 query 参数别名');
+        return;
+    }
+
+    const id = (window.generateId && typeof window.generateId === 'function')
+        ? window.generateId('CMP')
+        : `CMP-${Math.random().toString(36).slice(2, 10).toUpperCase()}`;
+
+    window.componentsData = [{
+        id,
+        name,
+        type: createCompDraft?.type || 'orchestrator',
+        refCount: 0,
+        description,
+        updatedAt: new Date().toLocaleString(),
+        version: 'v1.0.0',
+        creator: 'Admin',
+        status: 'active',
+        sourceResourceId: createCompDraft?.resourceId || '',
+        sourceResourceName: createCompDraft?.resourceName || ''
+    }, ...window.componentsData];
+
+    window.closeComponentConfigModal();
+    renderComponentsList();
+    alert('组件已发布');
+}
+
+function resetCreateComponentWizard() {
+    showCreateCompStep('step1');
+    updateCreateComponentModalVisibility();
+}
+
+function showCreateCompStep(step) {
+    const title = document.getElementById('create-comp-title');
+    const step1 = document.getElementById('create-comp-step-1');
+    const stepPlugin = document.getElementById('create-comp-step-plugin');
+    const actions1 = document.getElementById('create-comp-actions-step-1');
+    const actionsPlugin = document.getElementById('create-comp-actions-step-plugin');
+
+    const isPluginStep = step === 'plugin';
+    if (step1) step1.classList.toggle('hidden', isPluginStep);
+    if (stepPlugin) stepPlugin.classList.toggle('hidden', !isPluginStep);
+    if (actions1) actions1.classList.toggle('hidden', isPluginStep);
+    if (actionsPlugin) actionsPlugin.classList.toggle('hidden', !isPluginStep);
+    if (title) title.textContent = isPluginStep ? '插件信息' : '创建新组件';
+}
+
+function updateCreateComponentModalVisibility() {
+    const hideResource = createCompConfig.type === 'plugin' || createCompConfig.type === 'skill';
+    const resourceSection = document.getElementById('comp-resource-section');
+    const basicInfoSection = document.getElementById('comp-basic-info-section');
+
+    if (resourceSection) resourceSection.classList.toggle('hidden', hideResource);
+    // 插件类型仍需填写组件名称/描述，因此不隐藏基础信息区
+    if (basicInfoSection) basicInfoSection.classList.remove('hidden');
+}
+
+window.backToCreateComponentStep1 = function() {
+    showCreateCompStep('step1');
+    updateCreateComponentModalVisibility();
+}
+
+function initPluginForm() {
+    // Ensure at least one header row exists
+    const headers = document.getElementById('plugin-headers');
+    if (headers) {
+        headers.innerHTML = '';
+        addPluginHeaderRow();
+    }
+}
+
+window.addPluginHeaderRow = function(key = '', value = '') {
+    const headers = document.getElementById('plugin-headers');
+    if (!headers) return;
+
+    const row = document.createElement('div');
+    row.className = 'grid grid-cols-[1fr,1fr,32px] gap-2 items-center';
+    row.innerHTML = `
+        <input type="text" class="w-full px-2 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="输入参数名" value="${escapeHtml(key)}">
+        <input type="text" class="w-full px-2 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="输入Value" value="${escapeHtml(value)}">
+        <button type="button" class="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-red-500" title="删除" onclick="this.parentElement.remove()">
+            <i class="fa-solid fa-trash"></i>
+        </button>
+    `;
+    headers.appendChild(row);
+}
+
+window.submitPluginInfo = function() {
+    const compName = document.getElementById('comp-name')?.value?.trim();
+    const compDesc = document.getElementById('comp-desc')?.value?.trim();
+    const url = document.getElementById('plugin-url')?.value?.trim();
+    const authKey = document.getElementById('plugin-auth-key')?.value?.trim();
+    const authValue = document.getElementById('plugin-auth-value')?.value?.trim();
+
+    if (!compName || !compDesc || !url || !authKey || !authValue) {
+        alert('请完善插件信息（带 * 的为必填项）');
+        return;
+    }
+
+    window.closeCreateComponentModal();
+    alert(`插件信息已填写：${compName}（演示页面，保存逻辑待开发）`);
+}
+
+function escapeHtml(str) {
+    return String(str)
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#39;');
 }
 
 // Delete Logic

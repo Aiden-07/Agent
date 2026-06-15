@@ -365,7 +365,9 @@ function renderAgentList(reset = false) {
                         <div class="w-8 h-8 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center text-xs font-bold">
                             AI
                         </div>
-                        <div class="font-medium text-gray-900">${agent.name}</div>
+                        <button type="button" class="font-medium text-gray-900 text-left cursor-pointer hover:text-blue-600" onclick="window.editAgent && window.editAgent('${agent.id}')">
+                            ${agent.name}
+                        </button>
                     </div>
                 </td>
                 <td class="px-6 py-4">
@@ -399,46 +401,41 @@ function renderAgentList(reset = false) {
                 <td class="px-6 py-4 text-xs text-gray-500">
                     ${agent.updatedAt || '-'}
                 </td>
-                <td class="px-6 py-4 text-right">
-                    <button onclick="window.openAgentActions(event, '${agent.id}')" class="p-1.5 text-gray-400 hover:text-gray-600 transition-colors rounded hover:bg-gray-100">
-                        <i class="fa-solid fa-ellipsis"></i>
-                    </button>
+                <td class="px-6 py-4 text-right action-td">
                 </td>
             `;
             tbody.appendChild(tr);
+
+            // Add inline actions
+            const actionsTd = tr.querySelector('.action-td');
+            const agentName = agent.name;
+            const actions = [
+                {
+                    label: '配置权限',
+                    onClick: () => {
+                        if (window.navigateToPermissionConfig) {
+                            window.navigateToPermissionConfig(agent.id, 'agent', agentName);
+                        } else {
+                            console.error('navigateToPermissionConfig is not defined');
+                        }
+                    }
+                },
+                {
+                    label: '删除',
+                    className: 'text-red-600 hover:text-red-800',
+                    onClick: () => openDeleteConfirm(agent.id)
+                }
+            ];
+            
+            if (window.createInlineActions) {
+                const actionContainer = window.createInlineActions(actions);
+                actionsTd.appendChild(actionContainer);
+            }
         });
     }
 }
 
-// Action Menu Handler
-window.openAgentActions = function(event, id) {
-    window.showActionMenu(event, [
-        {
-            label: '权限配置',
-            icon: 'fa-solid fa-user-shield',
-            onClick: () => {
-                const agent = agentsData.find(a => a.id === id);
-                if (window.navigateToPermissionConfig) {
-                    window.navigateToPermissionConfig(id, 'agent', agent ? agent.name : 'Unknown Agent');
-                }
-            }
-        },
-        {
-            label: '编辑',
-            icon: 'fa-solid fa-pen',
-            onClick: () => editAgent(id)
-        },
-        {
-            label: '删除',
-            icon: 'fa-solid fa-trash',
-            className: 'text-red-600 hover:bg-red-50',
-            iconClass: 'text-red-500',
-            onClick: () => openDeleteConfirm(id)
-        }
-    ]);
-}
-
-// Edit Agent (Ensure it's exposed)
+// --- Status Toggle Logic ---
 window.editAgent = function(id) {
     if (typeof switchView === 'function') {
         switchView('agent-editor', { id: id });
@@ -857,7 +854,7 @@ function initAgentEditor(params) {
 }
 
 function switchEditorTab(tabName) {
-    const tabs = ['config', 'publish', 'logs', 'analytics'];
+    const tabs = ['config', 'publish', 'logs', 'analytics', 'statistics'];
     
     tabs.forEach(t => {
         const btn = document.getElementById(`tab-btn-${t}`);
@@ -877,6 +874,10 @@ function switchEditorTab(tabName) {
                 if (t === 'analytics' && window.renderAnalytics) {
                     // Delay slightly to ensure container is visible for size calculation
                     setTimeout(() => window.renderAnalytics(), 50);
+                }
+                // Special handling for statistics tab
+                if (t === 'statistics' && window.renderStatistics) {
+                    window.renderStatistics();
                 }
             }
         } else {
@@ -1762,6 +1763,32 @@ function toggleExperienceFeature(type, save = true) {
     if (save) saveAgentConfig(true);
 }
 
+// --- Advanced Settings: Reference Source ---
+let agentReferenceSourceConfig = {
+    enabled: false
+};
+window.agentReferenceSourceConfig = agentReferenceSourceConfig;
+
+function toggleAgentReferenceSource() {
+    const toggle = document.getElementById('agent-reference-source-toggle');
+    const sourceEl = document.getElementById('preview-knowledge-source');
+    if (!toggle) return;
+
+    const enabled = toggle.checked;
+    agentReferenceSourceConfig.enabled = enabled;
+    
+    if (sourceEl) {
+        if (enabled) {
+            sourceEl.classList.remove('hidden');
+        } else {
+            sourceEl.classList.add('hidden');
+        }
+    }
+    
+    saveAgentConfig(true);
+}
+window.toggleAgentReferenceSource = toggleAgentReferenceSource;
+
 // --- Advanced Settings: Internationalization ---
 
 let agentI18nConfig = {
@@ -1794,7 +1821,40 @@ function toggleAgentI18n(fromToggle = true) {
         agentI18nConfig.enabled = false;
         agentI18nConfig.languages = [];
         saveAgentConfig(true);
+        renderAgentI18nSummary();
     }
+}
+
+function renderAgentI18nSummary() {
+    const container = document.getElementById('agent-i18n-summary');
+    const listEl = document.getElementById('agent-i18n-summary-list');
+    if (!container || !listEl) return;
+
+    if (!agentI18nConfig.enabled) {
+        container.classList.add('hidden');
+        listEl.innerHTML = '';
+        return;
+    }
+
+    container.classList.remove('hidden');
+    listEl.innerHTML = '';
+
+    if (!agentI18nConfig.languages || agentI18nConfig.languages.length === 0) {
+        const span = document.createElement('span');
+        span.className = 'text-xs text-gray-400';
+        span.textContent = '暂无选中语言';
+        listEl.appendChild(span);
+        return;
+    }
+
+    const nameMap = new Map(AGENT_I18N_LANGUAGES.map(l => [l.code, l.name]));
+    agentI18nConfig.languages.forEach(code => {
+        const name = nameMap.get(code) || code;
+        const pill = document.createElement('span');
+        pill.className = 'inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-blue-50 text-blue-700 border border-blue-100';
+        pill.textContent = name;
+        listEl.appendChild(pill);
+    });
 }
 
 function syncAgentI18nCustomColumnHeights() {
@@ -2015,7 +2075,8 @@ function openAgentI18nCustomModal() {
             }
 
             if (showWelcomeQuestionsRow) {
-                const inputsHtml = Array.from({ length: 4 }).map((_, idx) => `
+                const count = welcomeQuestions.length;
+                const inputsHtml = Array.from({ length: count }).map((_, idx) => `
                     <input
                         id="agent-i18n-custom-${lang.code}-welcome-questions-${idx}"
                         data-lang="${lang.code}"
@@ -2049,7 +2110,8 @@ function openAgentI18nCustomModal() {
             }
 
             if (showFeedbackRow) {
-                const inputsHtml = Array.from({ length: 4 }).map((_, idx) => `
+                const count = feedbackOptions.length;
+                const inputsHtml = Array.from({ length: count }).map((_, idx) => `
                     <input
                         id="agent-i18n-custom-${lang.code}-feedback-${idx}"
                         data-lang="${lang.code}"
@@ -2278,10 +2340,12 @@ function confirmAgentI18nSelection() {
     agentI18nConfig.languages = selected;
     toggle.checked = true;
     saveAgentConfig(true);
+    renderAgentI18nSummary();
     closeAgentI18nModal(false);
 }
 
 window.toggleAgentI18n = toggleAgentI18n;
+window.openAgentI18nModal = openAgentI18nModal;
 window.filterAgentI18nLanguages = filterAgentI18nLanguages;
 window.toggleAgentI18nSelectAll = toggleAgentI18nSelectAll;
 window.confirmAgentI18nSelection = confirmAgentI18nSelection;

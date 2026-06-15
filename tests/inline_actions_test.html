@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Inline Actions Tests</title>
+    <!-- Include Tailwind for visual debugging if needed -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Include the utils script to test -->
+    <script src="../js/utils.js"></script>
+    <style>
+        #test-output { margin-top: 20px; font-family: monospace; }
+        .pass { color: green; }
+        .fail { color: red; font-weight: bold; }
+    </style>
+</head>
+<body class="p-8">
+    <h1 class="text-2xl font-bold mb-4">Inline Actions Unit Tests</h1>
+    <div id="test-container" class="mb-8 p-4 border rounded"></div>
+    <div id="test-output"></div>
+
+    <script>
+        function assert(condition, message) {
+            const output = document.getElementById('test-output');
+            const div = document.createElement('div');
+            if (condition) {
+                div.className = 'pass';
+                div.textContent = '✅ PASS: ' + message;
+            } else {
+                div.className = 'fail';
+                div.textContent = '❌ FAIL: ' + message;
+                console.error('Assertion failed:', message);
+            }
+            output.appendChild(div);
+        }
+
+        async function runTests() {
+            document.getElementById('test-output').innerHTML = '';
+            const container = document.getElementById('test-container');
+            container.innerHTML = '';
+
+            try {
+                // Mock actions
+                const actions = [
+                    { label: 'Action 1', onClick: () => {} },
+                    { label: 'Action 2', onClick: () => {} },
+                    { label: 'Action 3', onClick: () => {} },
+                    { label: 'Action 4', onClick: () => {} },
+                    { label: 'Action 5', onClick: () => {} }
+                ];
+
+                const inlineActions = window.createInlineActions(actions);
+                container.appendChild(inlineActions);
+
+                // Wait a tick for DOM to update
+                await new Promise(r => setTimeout(r, 0));
+
+                // 1. Verify initial render shows exactly 2 direct buttons and 1 "More" button
+                const directButtons = Array.from(inlineActions.children).filter(el => el.tagName === 'BUTTON');
+                assert(directButtons.length === 2, '初始渲染仅显示两项直接操作按钮');
+                assert(directButtons[0].textContent === 'Action 1', '第一个按钮应为 Action 1');
+                assert(directButtons[1].textContent === 'Action 2', '第二个按钮应为 Action 2');
+
+                const moreWrapper = inlineActions.querySelector('.relative.inline-block');
+                assert(moreWrapper !== null, '应包含更多折叠区');
+
+                const moreBtn = moreWrapper.querySelector('button');
+                assert(moreBtn !== null, '应包含“更多”按钮');
+                
+                const moreText = moreBtn.querySelector('.more-text');
+                assert(moreText.textContent.includes('+3'), '“更多”按钮需显示剩余操作数量（+3）');
+                assert(moreBtn.getAttribute('aria-expanded') === 'false', '初始 aria-expanded 属性应为 false');
+
+                const expandList = moreWrapper.querySelector('div.absolute, div.fixed');
+                assert(expandList !== null, '应包含展开列表');
+                assert(expandList.style.maxHeight === '0px', '初始状态展开列表高度应为 0px');
+                assert(expandList.style.opacity === '0', '初始状态展开列表透明度应为 0');
+
+                // 2. Click "More" to expand
+                moreBtn.click();
+                await new Promise(r => setTimeout(r, 350)); // Wait for animation
+
+                assert(moreBtn.getAttribute('aria-expanded') === 'true', '点击后 aria-expanded 属性应为 true');
+                assert(moreText.textContent === '收起', '点击展开后按钮文案变为“收起”');
+                assert(expandList.style.maxHeight !== '0px', '点击展开后列表高度不为 0px');
+                assert(expandList.style.opacity === '1', '点击展开后列表可见');
+
+                // Check list items
+                const hiddenButtons = expandList.querySelectorAll('button');
+                assert(hiddenButtons.length === 3, '展开列表应包含 3 个隐藏项');
+                assert(hiddenButtons[0].textContent === 'Action 3', '隐藏列表第一项为 Action 3');
+
+                // Verify focus management (first item focused)
+                assert(document.activeElement === hiddenButtons[0], '展开后焦点应自动移动到列表第一项');
+                
+                // 3. Test Keyboard Navigation
+                // Simulate ArrowDown
+                const eventDown = new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true });
+                expandList.querySelector('.py-1').dispatchEvent(eventDown);
+                assert(document.activeElement === hiddenButtons[1], '按下方向下键焦点应移至第二项');
+
+                // Simulate ArrowUp
+                const eventUp = new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true });
+                expandList.querySelector('.py-1').dispatchEvent(eventUp);
+                assert(document.activeElement === hiddenButtons[0], '按下方向上键焦点应移回第一项');
+
+                // Simulate Escape
+                const eventEsc = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true });
+                expandList.querySelector('.py-1').dispatchEvent(eventEsc);
+                await new Promise(r => setTimeout(r, 100));
+                
+                assert(moreBtn.getAttribute('aria-expanded') === 'false', '按下 Escape 键后应收起菜单');
+                assert(document.activeElement === moreBtn, '按下 Escape 键收起后，焦点应回到“更多”按钮');
+
+                // 4. Click to collapse
+                moreBtn.click(); // Expand again
+                await new Promise(r => setTimeout(r, 350));
+                
+                moreBtn.click(); // Click to collapse
+                await new Promise(r => setTimeout(r, 100));
+
+                assert(moreBtn.getAttribute('aria-expanded') === 'false', '再次点击后 aria-expanded 属性应为 false');
+                assert(moreText.textContent.includes('+3'), '再次点击收起后文案恢复为 更多 (+3)');
+                assert(expandList.style.maxHeight === '0px', '再次点击收起后列表高度恢复 0px');
+
+            } catch (e) {
+                assert(false, 'Test execution threw an error: ' + e.message);
+                console.error(e);
+            }
+        }
+
+        window.onload = runTests;
+    </script>
+</body>
+</html>

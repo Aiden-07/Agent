@@ -1,0 +1,1285 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 助手 - 全屏预览</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.2/marked.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #e2e8f0;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #cbd5e1;
+        }
+        .message-bubble {
+            max-width: 90%;
+            width: fit-content;
+            word-wrap: break-word;
+        }
+        @media (min-width: 768px) {
+            .message-bubble {
+                max-width: 80%;
+            }
+        }
+        .typing-dot {
+            animation: typing 1.4s infinite ease-in-out both;
+        }
+        .typing-dot:nth-child(1) { animation-delay: -0.32s; }
+        .typing-dot:nth-child(2) { animation-delay: -0.16s; }
+        
+        @keyframes typing {
+            0%, 80%, 100% { transform: scale(0); }
+            40% { transform: scale(1); }
+        }
+
+        /* Nested Menu Styles */
+        .submenu-wrapper {
+            transition: max-height 0.3s ease-in-out, opacity 0.3s ease-in-out;
+            overflow: hidden;
+        }
+        .submenu-hidden {
+            max-height: 0;
+            opacity: 0;
+        }
+        .submenu-visible {
+            max-height: 1000px;
+            opacity: 1;
+        }
+        .rotate-90 {
+            transform: rotate(90deg);
+        }
+
+        /* Markdown Content Styles */
+        .markdown-content { font-size: 0.95rem; line-height: 1.75; }
+        .markdown-content h1, .markdown-content h2, .markdown-content h3 { font-weight: 600; margin-top: 1.2em; margin-bottom: 0.6em; color: #1a202c; }
+        .markdown-content h1 { font-size: 1.5em; border-bottom: 1px solid #e2e8f0; padding-bottom: 0.3em; }
+        .markdown-content h2 { font-size: 1.25em; }
+        .markdown-content h3 { font-size: 1.1em; }
+        .markdown-content p { margin-bottom: 1em; }
+        .markdown-content ul, .markdown-content ol { padding-left: 1.5em; margin-bottom: 0.8em; }
+        .markdown-content ul { list-style-type: disc; }
+        .markdown-content ol { list-style-type: decimal; }
+        .markdown-content li { margin-bottom: 0.3em; }
+        .markdown-content code { background-color: #f1f5f9; padding: 0.2em 0.4em; border-radius: 4px; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; font-size: 0.9em; color: #0f172a; }
+        .markdown-content pre { background-color: #1e293b; color: #f8fafc; padding: 1em; border-radius: 8px; overflow-x: auto; margin-bottom: 1em; }
+        .markdown-content pre code { background-color: transparent; padding: 0; color: inherit; font-size: 0.85em; }
+        .markdown-content blockquote { border-left: 4px solid #e2e8f0; padding-left: 1em; color: #64748b; font-style: italic; margin-bottom: 1em; }
+        .markdown-content a { color: #2563eb; text-decoration: none; }
+        .markdown-content a:hover { text-decoration: underline; }
+        .markdown-content table { width: 100%; border-collapse: collapse; margin-bottom: 1em; font-size: 0.9em; }
+        .markdown-content th, .markdown-content td { border: 1px solid #e2e8f0; padding: 0.5em; text-align: left; }
+        .markdown-content th { background-color: #f8fafc; font-weight: 600; }
+        .markdown-content strong { font-weight: 600; color: #0f172a; }
+
+        /* Animation for Like/Dislike */
+        @keyframes scale-bounce {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+            100% { transform: scale(1); }
+        }
+        .animate-scale {
+            animation: scale-bounce 0.3s ease-in-out;
+        }
+    </style>
+</head>
+<body class="bg-white h-screen flex overflow-hidden text-gray-800 font-sans">
+
+    <!-- Sidebar (300px) -->
+    <aside class="w-[300px] bg-gray-50 border-r border-gray-200 flex flex-col flex-shrink-0 z-20 absolute md:relative transform -translate-x-full md:translate-x-0 transition-transform duration-300 shadow-xl md:shadow-none" id="sidebar">
+        <!-- Sidebar Header -->
+        <div class="p-4 border-b border-gray-100">
+            <button onclick="createNewSession()" class="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-lg transition-all shadow-sm group active:scale-95">
+                <i class="fa-solid fa-plus transition-transform group-hover:rotate-90"></i>
+                <span class="font-medium">新建会话</span>
+            </button>
+        </div>
+
+        <!-- Search -->
+        <div class="px-4 py-2">
+            <div class="relative">
+                <i class="fa-solid fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+                <input type="text" id="search-input" placeholder="搜索历史会话..." class="w-full bg-white border border-gray-200 pl-9 pr-3 py-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
+            </div>
+        </div>
+
+        <!-- Session List -->
+        <div class="flex-1 overflow-y-auto px-2 py-2 space-y-1" id="session-list">
+            <!-- Dynamic Sessions -->
+        </div>
+
+        <!-- Sidebar Footer -->
+        <div class="p-4 border-t border-gray-200 bg-gray-50/50">
+            <div class="flex items-center gap-3 cursor-pointer hover:bg-gray-100 p-2 rounded-lg transition-colors">
+                <div class="w-9 h-9 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm">
+                    U
+                </div>
+                <div class="flex-1 min-w-0">
+                    <p class="text-sm font-medium text-gray-900 truncate">User</p>
+                    <p class="text-xs text-gray-500 truncate">Pro Plan</p>
+                </div>
+                <button class="text-gray-400 hover:text-gray-600">
+                    <i class="fa-solid fa-gear"></i>
+                </button>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Mobile Overlay -->
+    <div id="mobile-overlay" class="fixed inset-0 bg-black/50 z-10 hidden md:hidden transition-opacity" onclick="toggleSidebar()"></div>
+
+    <!-- Main Content -->
+    <main class="flex-1 flex flex-col min-w-0 bg-white relative h-full">
+        <!-- Header -->
+        <header class="h-16 border-b border-gray-100 flex items-center justify-between px-4 sm:px-6 bg-white/90 backdrop-blur-sm sticky top-0 z-10">
+            <div class="flex items-center gap-3">
+                <button class="md:hidden text-gray-500 hover:text-gray-700 p-2 -ml-2 rounded-lg hover:bg-gray-100" onclick="toggleSidebar()">
+                    <i class="fa-solid fa-bars"></i>
+                </button>
+                <div class="flex flex-col">
+                    <h1 class="text-base font-bold text-gray-900 flex items-center gap-2 max-w-[200px] sm:max-w-md truncate" id="current-chat-title">
+                        智能助手
+                    </h1>
+                </div>
+            </div>
+        </header>
+
+        <!-- Messages Area -->
+        <div class="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6 scroll-smooth" id="messages-container">
+            <!-- Messages will be injected here -->
+        </div>
+
+        <!-- Input Area -->
+        <div class="p-4 sm:p-6 bg-white border-t border-gray-100">
+            <div class="max-w-5xl mx-auto relative bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-md focus-within:ring-1 focus-within:ring-blue-500 focus-within:border-blue-500 transition-all">
+                <!-- File Upload Button -->
+                <button onclick="document.getElementById('file-upload').click()" class="absolute left-3 bottom-3 text-gray-400 hover:text-gray-600 p-2 rounded-lg transition-colors" title="上传附件">
+                    <i class="fa-solid fa-paperclip text-lg"></i>
+                </button>
+                <input type="file" id="file-upload" class="hidden" onchange="handleFileUpload(this)">
+                
+                <textarea id="message-input" rows="1" class="w-full bg-transparent border-0 rounded-xl pl-12 pr-12 py-3 text-gray-900 placeholder-gray-400 focus:ring-0 focus:outline-none resize-none max-h-48" placeholder="输入消息... (Enter 发送，Ctrl + Enter 换行)" style="min-height: 52px;"></textarea>
+                
+                <div class="absolute right-2 bottom-2">
+                    <button onclick="handleSendClick()" class="bg-blue-600 hover:bg-blue-700 text-white w-8 h-8 rounded-lg flex items-center justify-center transition-all disabled:opacity-50 transform active:scale-95" id="send-btn">
+                        <i class="fa-solid fa-arrow-up text-sm"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Dislike Reason Modal -->
+    <div id="dislike-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center opacity-0 transition-opacity duration-300">
+        <div class="bg-white rounded-xl shadow-xl w-full max-w-md mx-4 transform scale-95 transition-transform duration-300" id="dislike-modal-content">
+            <div class="p-6">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">请选择不满意的原因</h3>
+                <div class="space-y-3" id="dislike-reasons-list">
+                    <!-- Reasons injected by JS -->
+                </div>
+                
+                <div id="dislike-other-container" class="mt-3 hidden">
+                    <textarea id="dislike-other-input" class="w-full border border-gray-300 rounded-lg p-3 text-sm focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none resize-none" rows="3" placeholder="请输入具体原因（200字以内）" maxlength="200"></textarea>
+                </div>
+
+                <div class="mt-6 flex gap-3 justify-end">
+                    <button onclick="closeDislikeModal()" class="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg text-sm font-medium transition-colors">取消</button>
+                    <button onclick="submitDislike()" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-medium transition-colors">提交反馈</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- Data & State ---
+        const DEFAULT_AGENTS = [
+            {
+                id: 'agent-1',
+                name: '智能助手',
+                avatar: 'fa-robot',
+                color: 'bg-blue-100 text-blue-600',
+                sessions: [
+                    { 
+                        id: 1, 
+                        title: '关于 AI Agent 的讨论', 
+                        lastActive: '10:30', 
+                        messages: [
+                            { role: 'assistant', content: '你好！我是你的智能助手。我可以帮你解答问题、编写代码或提供建议。请问有什么可以帮你的吗？' },
+                            { role: 'user', content: '介绍一下 AI Agent' },
+                            { role: 'assistant', content: 'AI Agent（人工智能代理）是一个能够感知环境、进行推理并采取行动以实现特定目标的智能系统。它通常基于大型语言模型（LLM），并具备记忆、规划和工具使用等核心能力。' }
+                        ]
+                    },
+                    { 
+                        id: 2, 
+                        title: 'Python 代码优化', 
+                        lastActive: '昨天', 
+                        messages: [
+                            { role: 'assistant', content: '你好！请提供你需要优化的 Python 代码片段。' },
+                            { role: 'user', content: 'def fib(n): return n if n < 2 else fib(n-1) + fib(n-2)' },
+                            { role: 'assistant', content: '这段斐波那契数列代码使用了递归，当 n 较大时效率极低。建议使用记忆化或迭代法优化：\n\n```python\ndef fib_optimized(n):\n    if n < 2: return n\n    a, b = 0, 1\n    for _ in range(n-1):\n        a, b = b, a + b\n    return b\n```' }
+                        ]
+                    }
+                ]
+            },
+            {
+                id: 'agent-2',
+                name: '代码审计专家',
+                avatar: 'fa-shield-halved',
+                color: 'bg-purple-100 text-purple-600',
+                sessions: [
+                    { 
+                        id: 3, 
+                        title: 'Login.vue 安全检查', 
+                        lastActive: '周一', 
+                        messages: [
+                            { role: 'assistant', content: '请上传 Vue 组件代码，我将检查 XSS 和逻辑漏洞。' }
+                        ]
+                    }
+                ]
+            },
+            {
+                id: 'agent-3',
+                name: '文案润色',
+                avatar: 'fa-pen-nib',
+                color: 'bg-green-100 text-green-600',
+                sessions: []
+            }
+        ];
+
+        let agents = [];
+        let expandedAgents = new Set();
+        let currentAgentId = null;
+        let currentSessionId = null;
+        let isTyping = false;
+        let editingSessionId = null;
+
+        // --- Initialization ---
+        document.addEventListener('DOMContentLoaded', () => {
+            loadData();
+            
+            // Auto-resize textarea
+            const textarea = document.getElementById('message-input');
+            textarea.addEventListener('input', function() {
+                this.style.height = 'auto';
+                this.style.height = (this.scrollHeight) + 'px';
+                if(this.value === '') this.style.height = '52px';
+            });
+
+            // Shortcuts
+            textarea.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && !e.ctrlKey && !e.shiftKey && !e.isComposing) {
+                    e.preventDefault();
+                    sendMessage();
+                }
+            });
+            
+            // Search Filter
+            document.getElementById('search-input').addEventListener('input', (e) => {
+                renderSessionList(e.target.value);
+            });
+        });
+
+        // --- Core Functions ---
+        
+        const AVATAR_OPTIONS = ['fa-robot', 'fa-brain', 'fa-wand-magic-sparkles', 'fa-bolt', 'fa-comment-dots', 'fa-lightbulb', 'fa-code', 'fa-pen-nib', 'fa-plane', 'fa-scale-balanced', 'fa-chart-line', 'fa-file-code', 'fa-language', 'fa-shield-halved', 'fa-file-lines', 'fa-database'];
+        const COLOR_OPTIONS = [
+            'bg-blue-100 text-blue-600', 'bg-green-100 text-green-600', 
+            'bg-purple-100 text-purple-600', 'bg-orange-100 text-orange-600', 
+            'bg-teal-100 text-teal-600', 'bg-pink-100 text-pink-600',
+            'bg-indigo-100 text-indigo-600', 'bg-cyan-100 text-cyan-600',
+            'bg-red-100 text-red-600', 'bg-yellow-100 text-yellow-600'
+        ];
+
+        function assignVisuals(agent, index) {
+            // Only assign if missing or if it's the generic default 'fa-robot' (to enforce variety)
+            // But we respect if user explicitly set it to 'fa-robot' via editor? 
+            // Since we can't distinguish, we assume 'fa-robot' + 'blue' is the unconfigured state we want to diversify.
+            // Or better: only if !agent.avatar.
+            
+            if (!agent.avatar || agent.avatar === 'fa-robot') {
+                const seed = (agent.id || '').split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) + index;
+                agent.avatar = AVATAR_OPTIONS[seed % AVATAR_OPTIONS.length];
+            }
+            
+            if (!agent.color || agent.color === 'bg-blue-100 text-blue-600') {
+                 const seed = (agent.id || '').split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) + index;
+                 agent.color = COLOR_OPTIONS[seed % COLOR_OPTIONS.length];
+            }
+        }
+
+        function loadData() {
+            // Load from localStorage or use defaults
+            const editorData = localStorage.getItem('agentsData');
+            const savedData = localStorage.getItem('vagent_chat_data');
+            
+            if (editorData) {
+                agents = JSON.parse(editorData);
+                // Try to merge sessions from saved chat data to persist history
+                if (savedData) {
+                    try {
+                        const savedAgents = JSON.parse(savedData);
+                        agents.forEach(agent => {
+                            const saved = savedAgents.find(a => a.id === agent.id);
+                            if (saved && saved.sessions) {
+                                agent.sessions = saved.sessions;
+                            }
+                        });
+                    } catch (e) {
+                        console.error('Error merging saved sessions:', e);
+                    }
+                }
+            } else if (savedData) {
+                agents = JSON.parse(savedData);
+            } else {
+                agents = JSON.parse(JSON.stringify(DEFAULT_AGENTS));
+            }
+
+            // Fix: Ensure sessions array exists for all agents to prevent crash
+            agents.forEach((agent, index) => {
+                if (!agent.sessions || !Array.isArray(agent.sessions)) agent.sessions = [];
+                // Fix: Ensure messages array exists for all sessions
+                agent.sessions.forEach(session => {
+                    if (!session.messages || !Array.isArray(session.messages)) session.messages = [];
+                });
+                
+                // Dynamic Visual Assignment for variety
+                assignVisuals(agent, index);
+            });
+            
+            // Load last state
+            const lastState = JSON.parse(localStorage.getItem('vagent_chat_state') || '{}');
+            currentAgentId = lastState.agentId || (agents[0] ? agents[0].id : null);
+            currentSessionId = lastState.sessionId;
+            
+            // Apply Background if agent has it
+            if (currentAgentId) {
+                const agent = getAgent(currentAgentId);
+                applyAgentBackground(agent);
+            }
+            
+            // Expand current agent
+            if (currentAgentId) expandedAgents.add(currentAgentId);
+
+            // If we have a session ID, try to find and load it
+            let sessionFound = false;
+            if (currentAgentId && currentSessionId) {
+                const agent = agents.find(a => a.id === currentAgentId);
+                if (agent) {
+                    const session = agent.sessions.find(s => s.id === currentSessionId);
+                    if (session) {
+                        loadSession(currentSessionId, currentAgentId);
+                        sessionFound = true;
+                    }
+                }
+            }
+
+            if (!sessionFound && currentAgentId) {
+                 // Load first session of first agent or create new
+                 const agent = agents.find(a => a.id === currentAgentId) || agents[0];
+                 if(agent) {
+                     currentAgentId = agent.id;
+                     if (agent.sessions.length > 0) {
+                         loadSession(agent.sessions[0].id, agent.id);
+                     } else {
+                         createNewSession();
+                     }
+                 }
+            }
+            
+            renderSessionList();
+        }
+
+        function saveData() {
+            localStorage.setItem('vagent_chat_data', JSON.stringify(agents));
+            localStorage.setItem('vagent_chat_state', JSON.stringify({
+                agentId: currentAgentId,
+                sessionId: currentSessionId
+            }));
+        }
+
+        function getAgent(id) {
+            return agents.find(a => a.id === id);
+        }
+
+        function getSession(agentId, sessionId) {
+            const agent = getAgent(agentId);
+            if (!agent) return null;
+            return agent.sessions.find(s => s.id === sessionId);
+        }
+
+        function toggleAgent(agentId) {
+            if (expandedAgents.has(agentId)) {
+                expandedAgents.delete(agentId);
+            } else {
+                expandedAgents.add(agentId);
+            }
+            renderSessionList(document.getElementById('search-input').value);
+        }
+
+        function switchAgent(agentId) {
+            if (currentAgentId === agentId) {
+                toggleAgent(agentId);
+                return;
+            }
+            
+            currentAgentId = agentId;
+            expandedAgents.add(agentId);
+            
+            const agent = getAgent(agentId);
+            applyAgentBackground(agent);
+            
+            // Load most recent session or create new
+            if (agent.sessions.length > 0) {
+                loadSession(agent.sessions[0].id, agentId);
+            } else {
+                createNewSession();
+            }
+            
+            renderSessionList();
+        }
+
+        function applyAgentBackground(agent) {
+            const container = document.getElementById('messages-container');
+            const mainContent = document.querySelector('main');
+            
+            // Reset first
+            if (container) {
+                container.style.backgroundImage = 'none';
+                container.style.backgroundColor = '';
+            }
+            if (mainContent) {
+                mainContent.style.backgroundImage = 'none';
+            }
+
+            if (!agent || !agent.experience || !agent.experience.background || !agent.experience.background.enabled || !agent.experience.background.image) {
+                return;
+            }
+
+            const { image, scope, opacity } = agent.experience.background;
+            const styleString = `url('${image}')`;
+            const opacityVal = opacity / 100;
+            const overlayAlpha = 1 - opacityVal;
+            const overlayColor = `rgba(255, 255, 255, ${overlayAlpha})`;
+            const bgStyle = `linear-gradient(${overlayColor}, ${overlayColor}), ${styleString}`;
+
+            if (scope === 'global') {
+                if (mainContent) {
+                    mainContent.style.backgroundImage = bgStyle;
+                    mainContent.style.backgroundSize = 'cover';
+                    mainContent.style.backgroundPosition = 'center';
+                    mainContent.style.backgroundAttachment = 'fixed';
+                }
+            } else {
+                if (container) {
+                    container.style.backgroundImage = bgStyle;
+                    container.style.backgroundSize = 'cover';
+                    container.style.backgroundPosition = 'center';
+                    container.style.backgroundAttachment = 'local';
+                }
+            }
+        }
+
+        function createNewSession() {
+            const agent = getAgent(currentAgentId);
+            if (!agent) return;
+
+            const newId = Date.now();
+            const newSession = {
+                id: newId,
+                title: '新会话',
+                lastActive: '刚刚',
+                messages: [
+                    { 
+                        role: 'assistant', 
+                        content: `您好！我是AI助手，很高兴为您服务。请问有什么可以帮您？`,
+                        recommendations: ['分析本季度的销售数据趋势', '帮我写一段Python爬虫代码', '生成一份产品经理的面试大纲', '解释一下Transformer模型的原理']
+                    }
+                ]
+            };
+            
+            agent.sessions.unshift(newSession);
+            saveData();
+            
+            // Ensure agent is expanded
+            expandedAgents.add(currentAgentId);
+            
+            loadSession(newId, currentAgentId);
+            
+            // Close sidebar on mobile
+            if (window.innerWidth < 768) {
+                toggleSidebar();
+            }
+        }
+
+        function deleteSession(sessionId, agentId, event) {
+            event.stopPropagation();
+            if (!confirm('确定要删除这个会话吗？')) return;
+
+            const agent = getAgent(agentId);
+            if (!agent) return;
+
+            agent.sessions = agent.sessions.filter(s => s.id !== sessionId);
+            saveData();
+            
+            if (currentSessionId === sessionId) {
+                if (agent.sessions.length > 0) {
+                    loadSession(agent.sessions[0].id, agentId);
+                } else {
+                    createNewSession();
+                }
+            } else {
+                renderSessionList();
+            }
+        }
+
+        function loadSession(sessionId, agentId) {
+            currentSessionId = sessionId;
+            currentAgentId = agentId;
+            
+            const session = getSession(agentId, sessionId);
+            const agent = getAgent(agentId);
+            
+            if (!session || !agent) return;
+            
+            saveData();
+
+            // Update Header
+            const titleEl = document.getElementById('current-chat-title');
+            if (titleEl) {
+                titleEl.innerHTML = `
+                    <span class="truncate">${session.title}</span>
+                `;
+            }
+            
+            // Render Messages
+            renderMessages(session.messages);
+            
+            // Update List UI
+            renderSessionList(document.getElementById('search-input').value);
+            
+            // Focus Input
+            const input = document.getElementById('message-input');
+            if (input) input.focus();
+        }
+
+        function renderSessionList(filter = '') {
+            const listContainer = document.getElementById('session-list');
+            if (!listContainer) return;
+            listContainer.innerHTML = '';
+
+            agents.forEach(agent => {
+                // Filter sessions logic
+                const filteredSessions = agent.sessions.filter(s => 
+                    s.title.toLowerCase().includes(filter.toLowerCase())
+                );
+                
+                // If filtering, expand agent if matches found
+                const hasMatches = filteredSessions.length > 0;
+                if (filter && hasMatches) {
+                    expandedAgents.add(agent.id);
+                }
+                
+                // Determine if expanded
+                const isExpanded = expandedAgents.has(agent.id);
+                const isCurrentAgent = agent.id === currentAgentId;
+
+                // Agent Item (Level 1)
+                const agentDiv = document.createElement('div');
+                agentDiv.className = `group flex items-center justify-between px-3 py-3 rounded-lg cursor-pointer transition-all mb-1 select-none ${isCurrentAgent ? 'bg-blue-50/50' : 'hover:bg-gray-100'}`;
+                agentDiv.onclick = () => switchAgent(agent.id);
+
+                const agentAvatar = agent.avatar || 'fa-robot';
+                const agentColor = agent.color || 'bg-blue-100 text-blue-600';
+
+                agentDiv.innerHTML = `
+                    <div class="flex items-center gap-3 overflow-hidden">
+                        <div class="flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center ${agentColor}">
+                            <i class="fa-solid ${agentAvatar} text-sm"></i>
+                        </div>
+                        <div class="font-medium text-gray-800 text-sm truncate">${agent.name}</div>
+                        <span class="text-xs text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded-full">${agent.sessions.length}</span>
+                    </div>
+                    <div onclick="event.stopPropagation(); toggleAgent('${agent.id}')" class="w-6 h-6 flex items-center justify-center text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-200/50 transition-colors">
+                        <i class="fa-solid fa-chevron-right text-xs transition-transform duration-200 ${isExpanded ? 'rotate-90' : ''}"></i>
+                    </div>
+                `;
+                listContainer.appendChild(agentDiv);
+
+                // Session List (Level 2)
+                const submenuDiv = document.createElement('div');
+                submenuDiv.className = `submenu-wrapper space-y-0.5 pl-4 mb-2 ${isExpanded ? 'submenu-visible' : 'submenu-hidden'}`;
+                
+                const sessionsToShow = filter ? filteredSessions : agent.sessions;
+                
+                if (sessionsToShow.length === 0) {
+                     submenuDiv.innerHTML = `<div class="text-xs text-gray-400 py-2 pl-8">无会话记录</div>`;
+                } else {
+                    sessionsToShow.forEach(session => {
+                        const isSessionActive = session.id === currentSessionId;
+                        const isEditing = session.id === editingSessionId;
+                        const sessDiv = document.createElement('div');
+                        sessDiv.className = `group/sess flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer transition-all ${isSessionActive ? 'bg-white shadow-sm border border-gray-100' : 'hover:bg-gray-100/80 text-gray-600'}`;
+                        
+                        if (!isEditing) {
+                            sessDiv.onclick = (e) => {
+                                e.stopPropagation();
+                                loadSession(session.id, agent.id);
+                            };
+                        }
+
+                        if (isEditing) {
+                            sessDiv.innerHTML = `
+                                <div class="flex-1 min-w-0 flex items-center gap-2" onclick="event.stopPropagation()">
+                                    <input type="text" value="${session.title}" 
+                                        class="w-full text-sm border border-blue-300 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                        id="edit-input-${session.id}"
+                                        onkeydown="handleEditKeydown(event, ${session.id}, '${agent.id}')"
+                                        onblur="saveSessionTitle(${session.id}, '${agent.id}')"
+                                        maxlength="50"
+                                    >
+                                </div>
+                            `;
+                            // Auto focus
+                            setTimeout(() => {
+                                const el = document.getElementById(`edit-input-${session.id}`);
+                                if(el) {
+                                    el.focus();
+                                    el.select();
+                                }
+                            }, 10);
+                        } else {
+                            sessDiv.innerHTML = `
+                                <div class="flex-1 min-w-0">
+                                    <h3 class="text-sm font-medium truncate ${isSessionActive ? 'text-blue-600' : 'text-gray-700'}">${session.title}</h3>
+                                    <p class="text-xs text-gray-400 truncate">${session.lastActive}</p>
+                                </div>
+                                <div class="flex items-center gap-1 opacity-0 group-hover/sess:opacity-100 transition-opacity">
+                                    <button onclick="startEditSession(${session.id}, event)" class="p-1.5 text-gray-400 hover:text-blue-500 hover:bg-blue-50 rounded transition-all" title="重命名">
+                                        <i class="fa-solid fa-pen text-xs"></i>
+                                    </button>
+                                    <button onclick="deleteSession(${session.id}, '${agent.id}', event)" class="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition-all" title="删除">
+                                        <i class="fa-solid fa-times text-xs"></i>
+                                    </button>
+                                </div>
+                            `;
+                        }
+                        submenuDiv.appendChild(sessDiv);
+                    });
+                }
+                
+                listContainer.appendChild(submenuDiv);
+            });
+        }
+
+        function renderMessages(messages) {
+            const container = document.getElementById('messages-container');
+            if (!container) return;
+            container.innerHTML = '';
+
+            if (!messages || !Array.isArray(messages)) return;
+
+            // Welcome Timestamp
+            const timeDiv = document.createElement('div');
+            timeDiv.className = 'flex justify-center mb-6';
+            timeDiv.innerHTML = '<span class="bg-gray-100 text-gray-500 text-xs px-3 py-1 rounded-full">今天</span>';
+            container.appendChild(timeDiv);
+
+            messages.forEach((msg, index) => {
+                if (!msg) return;
+                const isUser = msg.role === 'user';
+                const div = document.createElement('div');
+                div.className = `flex gap-4 ${isUser ? 'flex-row-reverse' : ''} animate-fade-in max-w-5xl mx-auto w-full group/msg`;
+                
+                // Format content (simple formatting)
+                let contentHtml;
+                const safeContent = msg.content || '';
+                
+                if (!isUser) {
+                    // Use marked for AI response
+                    try {
+                        contentHtml = `<div class="markdown-content" id="msg-content-${index}">${marked.parse(safeContent)}</div>`;
+                    } catch (e) {
+                        contentHtml = `<div class="text-red-500">Error rendering content</div>`;
+                        console.error('Markdown parse error:', e);
+                    }
+                } else {
+                    // Simple format for user
+                    contentHtml = safeContent
+                        .replace(/\n/g, '<br>')
+                        .replace(/```([\s\S]*?)```/g, '<div class="bg-gray-900 text-gray-200 p-3 rounded-lg my-2 font-mono text-xs overflow-x-auto">$1</div>');
+                }
+
+                // Get current agent avatar if assistant
+                const agent = getAgent(currentAgentId);
+                const agentAvatar = agent ? (agent.avatar || 'fa-robot') : 'fa-robot';
+                const agentColor = agent ? (agent.color || 'bg-blue-100 text-blue-600') : 'bg-blue-100 text-blue-600';
+                
+                const avatarIcon = isUser ? 'fa-user' : agentAvatar;
+                const avatarColor = isUser ? 'bg-gray-200 text-gray-600' : agentColor;
+
+                // Recommendations HTML
+                let recommendationsHtml = '';
+                if (msg.recommendations && msg.recommendations.length > 0) {
+                    recommendationsHtml = `
+                        <div class="mt-4 flex flex-col gap-2">
+                            <p class="text-xs text-gray-500 ml-1">您可能想问：</p>
+                            <div class="flex flex-wrap gap-2">
+                                ${msg.recommendations.map(rec => `
+                                    <button onclick="fillInput('${rec}')" class="text-xs bg-gray-50 hover:bg-blue-50 text-gray-600 hover:text-blue-600 border border-gray-200 hover:border-blue-200 px-3 py-1.5 rounded-full transition-all">
+                                        ${rec}
+                                    </button>
+                                `).join('')}
+                            </div>
+                        </div>
+                    `;
+                }
+
+                // Follow-ups HTML
+                let followupsHtml = '';
+                if (msg.followups && msg.followups.length > 0) {
+                    followupsHtml = `
+                        <div class="mt-3 flex flex-wrap gap-2">
+                             ${msg.followups.map(q => `
+                                <button onclick="sendMessage('${q}')" class="text-xs text-blue-600 hover:bg-blue-50 border border-blue-100 px-3 py-1.5 rounded-lg transition-all flex items-center gap-1">
+                                    <span>${q}</span>
+                                    <i class="fa-solid fa-angle-right text-[10px]"></i>
+                                </button>
+                            `).join('')}
+                        </div>
+                    `;
+                }
+
+                // Citations HTML
+                let citationsHtml = '';
+                if (!isUser && msg.citations && msg.citations.length > 0) {
+                    citationsHtml = `
+                        <div class="mt-4 pt-3 border-t border-gray-100 flex flex-col gap-2">
+                            <div class="text-xs text-gray-500 font-medium mb-1">参考文档：</div>
+                            ${msg.citations.map(doc => `
+                                <div onclick="openDocument('${doc.id}', '${doc.trackingId}')" 
+                                     class="citation-link flex items-center gap-2 p-2 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 cursor-pointer transition-colors text-xs border border-blue-100 group">
+                                    <i class="fa-solid fa-file-lines text-blue-500 group-hover:scale-110 transition-transform"></i>
+                                    <span class="font-medium">【《${doc.title}》】</span>
+                                    <i class="fa-solid fa-external-link-alt ml-auto opacity-50 text-[10px]"></i>
+                                </div>
+                            `).join('')}
+                        </div>
+                    `;
+                }
+
+                // Action Bar HTML (Assistant only)
+                let actionsHtml = '';
+                if (!isUser) {
+                    const isLiked = msg.rating === 'like';
+                    const isDisliked = msg.rating === 'dislike';
+                    
+                    actionsHtml = `
+                        <div class="mt-3 flex items-center gap-2 select-none">
+                            <div class="flex items-center gap-1">
+                                <button onclick="rateMessage(${index}, 'like')" class="w-8 h-8 flex items-center justify-center rounded-lg transition-all ${isLiked ? 'text-blue-600 bg-blue-50 animate-scale' : 'text-gray-400 hover:text-blue-600 hover:bg-blue-50'}" title="点赞">
+                                    <svg class="w-4 h-4 ${isLiked ? 'fill-current' : ''}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"></path></svg>
+                                </button>
+                                <button onclick="rateMessage(${index}, 'dislike')" class="w-8 h-8 flex items-center justify-center rounded-lg transition-all ${isDisliked ? 'text-red-600 bg-red-50 animate-scale' : 'text-gray-400 hover:text-red-600 hover:bg-red-50'}" title="点踩">
+                                    <svg class="w-4 h-4 ${isDisliked ? 'fill-current' : ''}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3zm7-13h2.67A2.31 2.31 0 0 1 22 4v7a2.31 2.31 0 0 1-2.33 2H17"></path></svg>
+                                </button>
+                            </div>
+                            
+                            <div class="w-px h-4 bg-gray-200 mx-1"></div>
+
+                            <button onclick="copyMessage(${index})" class="flex items-center gap-1.5 px-3 py-1.5 text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-all group" title="复制">
+                                <svg class="w-4 h-4 text-gray-400 group-hover:text-gray-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                                <span class="text-xs font-medium">复制</span>
+                            </button>
+                            
+                            <button onclick="regenerateMessage()" class="flex items-center gap-1.5 px-3 py-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all group" title="重新生成">
+                                <svg class="w-4 h-4 text-gray-400 group-hover:text-blue-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"></path><path d="M1 20v-6h6"></path><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+                                <span class="text-xs font-medium">重新生成</span>
+                            </button>
+                        </div>
+                    `;
+                }
+
+                div.innerHTML = `
+                    <div class="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 ${avatarColor}">
+                        <i class="fa-solid ${avatarIcon} text-sm"></i>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <div class="message-bubble px-5 py-4 rounded-2xl shadow-sm text-sm leading-7 ${
+                            isUser 
+                            ? 'bg-blue-600 text-white rounded-tr-none ml-auto' 
+                            : 'bg-white text-gray-800 border border-gray-100 rounded-tl-none'
+                        }">
+                            ${contentHtml}
+                            ${citationsHtml}
+                        </div>
+                        ${recommendationsHtml}
+                        ${followupsHtml}
+                        ${actionsHtml}
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+
+            scrollToBottom();
+        }
+
+        function openDocument(docId, trackingId) {
+            console.log(`[Tracking] Document Click: ${docId}, TrackingID: ${trackingId}`);
+            const url = `knowledge-detail.html?id=${docId}&track=${trackingId}`;
+            window.open(url, '_blank');
+        }
+
+        function sendMessage(content = null) {
+            if (isTyping) return;
+            
+            const input = document.getElementById('message-input');
+            const finalContent = content || input.value.trim();
+            if (!finalContent) return;
+
+            // Add User Message
+            const agent = getAgent(currentAgentId);
+            const session = getSession(currentAgentId, currentSessionId);
+            
+            if (!session) return;
+            
+            session.messages.push({ role: 'user', content: finalContent });
+            
+            // Update Title if it's the first user message
+            if (session.messages.length === 2) {
+                session.title = finalContent.substring(0, 15) + (finalContent.length > 15 ? '...' : '');
+            }
+            session.lastActive = '刚刚';
+            
+            saveData();
+            renderMessages(session.messages);
+            renderSessionList(document.getElementById('search-input').value);
+            
+            if (!content) {
+                input.value = '';
+                input.style.height = '52px';
+            }
+
+            // Simulate AI Response
+            isTyping = true;
+            showTypingIndicator();
+
+            setTimeout(() => {
+                removeTypingIndicator();
+                const aiResponse = { 
+                    role: 'assistant', 
+                    content: `[${agent.name}] 好的，针对您提出的 **"${finalContent}"**，我为您整理了以下分析：\n\n### 1. 核心观点\n这是一个非常具有探讨价值的话题。通常我们可以从以下几个维度来理解：\n\n- **技术可行性**：目前的方案在实施上是完全可行的。\n- **应用场景**：主要适用于企业级数据处理和高并发场景。\n\n### 2. 详细说明\n如果您关注的是效率问题，建议优先考虑**异步处理**机制。如下图所示（模拟）：\n\n\`\`\`python\n# 示例代码\ndef process_data(data):\n    return data.strip()\n\`\`\`\n\n希望这个回答对您有帮助！`,
+                    followups: ['能提供具体的代码示例吗？', '这种方案有什么潜在风险？', '帮我总结成一个表格']
+                };
+                session.messages.push(aiResponse);
+                session.lastActive = '刚刚';
+                saveData();
+                renderMessages(session.messages);
+                renderSessionList(document.getElementById('search-input').value);
+                isTyping = false;
+            }, 1000);
+        }
+
+        function showTypingIndicator() {
+            const container = document.getElementById('messages-container');
+            const div = document.createElement('div');
+            div.id = 'typing-indicator';
+            div.className = 'flex gap-4 max-w-[800px] mx-auto w-full';
+            const agent = getAgent(currentAgentId);
+            const color = agent ? (agent.color || 'bg-blue-100 text-blue-600') : 'bg-blue-100 text-blue-600';
+            
+            div.innerHTML = `
+                <div class="w-9 h-9 rounded-full ${color} flex items-center justify-center flex-shrink-0">
+                    <i class="fa-solid fa-ellipsis text-sm"></i>
+                </div>
+                <div class="bg-white p-4 rounded-2xl rounded-tl-none shadow-sm border border-gray-100 flex gap-1 items-center h-12">
+                    <div class="typing-dot w-2 h-2 bg-gray-400 rounded-full"></div>
+                    <div class="typing-dot w-2 h-2 bg-gray-400 rounded-full"></div>
+                    <div class="typing-dot w-2 h-2 bg-gray-400 rounded-full"></div>
+                </div>
+            `;
+            container.appendChild(div);
+            scrollToBottom();
+        }
+
+        function removeTypingIndicator() {
+            const el = document.getElementById('typing-indicator');
+            if (el) el.remove();
+        }
+
+        function scrollToBottom() {
+            const container = document.getElementById('messages-container');
+            if (container) container.scrollTop = container.scrollHeight;
+        }
+
+        // --- Streaming & Interaction ---
+        let isGenerating = false;
+        let streamInterval = null;
+
+        function handleSendClick() {
+            if (isGenerating) {
+                stopGeneration();
+            } else {
+                sendMessage();
+            }
+        }
+
+        function stopGeneration() {
+            if (streamInterval) {
+                clearInterval(streamInterval);
+                streamInterval = null;
+            }
+            isGenerating = false;
+            isTyping = false; // reset typing state
+            removeTypingIndicator(); // ensure indicator is gone
+            updateSendButtonState();
+        }
+
+        function updateSendButtonState() {
+             const btn = document.getElementById('send-btn');
+             if (!btn) return;
+             
+             if (isGenerating) {
+                 btn.innerHTML = '<i class="fa-solid fa-stop text-sm"></i>';
+                 btn.classList.remove('bg-blue-600', 'hover:bg-blue-700');
+                 btn.classList.add('bg-gray-800', 'hover:bg-gray-900');
+                 btn.title = "停止生成";
+             } else {
+                 btn.innerHTML = '<i class="fa-solid fa-arrow-up text-sm"></i>';
+                 btn.classList.add('bg-blue-600', 'hover:bg-blue-700');
+                 btn.classList.remove('bg-gray-800', 'hover:bg-gray-900');
+                 btn.title = "发送";
+             }
+        }
+
+        function handleFileUpload(input) {
+            if (input.files && input.files[0]) {
+                const file = input.files[0];
+                alert(`已选择文件: ${file.name} (演示功能)`);
+                // Here you would typically upload the file or add it to context
+                input.value = ''; // Reset
+            }
+        }
+
+        function sendMessage(content = null) {
+            if (isTyping && !isGenerating) return; // Allow if we are generating (to stop) but handled by handleSendClick
+            
+            const input = document.getElementById('message-input');
+            const finalContent = content || input.value.trim();
+            if (!finalContent) return;
+
+            // Add User Message
+            const agent = getAgent(currentAgentId);
+            const session = getSession(currentAgentId, currentSessionId);
+            
+            if (!session) return;
+            
+            session.messages.push({ role: 'user', content: finalContent });
+            
+            // Update Title if it's the first user message
+            if (session.messages.length === 2) {
+                session.title = finalContent.substring(0, 15) + (finalContent.length > 15 ? '...' : '');
+            }
+            session.lastActive = '刚刚';
+            
+            saveData();
+            renderMessages(session.messages);
+            renderSessionList(document.getElementById('search-input').value);
+            
+            if (!content) {
+                input.value = '';
+                input.style.height = '52px';
+            }
+
+            // Start Streaming Response
+            isTyping = true;
+            isGenerating = true;
+            updateSendButtonState();
+            
+            // 1. Add empty assistant message immediately
+            const aiResponse = { 
+                role: 'assistant', 
+                content: '',
+                recommendations: [],
+                followups: []
+            };
+            session.messages.push(aiResponse);
+            const msgIndex = session.messages.length - 1;
+            renderMessages(session.messages); // Render to show empty bubble (or spinner if we had one, but empty bubble is fine)
+
+            // 2. Prepare mock response
+            const mockResponseFull = `[${agent.name}] 好的，针对您提出的 **"${finalContent}"**，我为您整理了以下分析：\n\n### 1. 核心观点\n这是一个非常具有探讨价值的话题。通常我们可以从以下几个维度来理解：\n\n- **技术可行性**：目前的方案在实施上是完全可行的。\n- **应用场景**：主要适用于企业级数据处理和高并发场景。\n\n### 2. 详细说明\n如果您关注的是效率问题，建议优先考虑**异步处理**机制。如下图所示（模拟）：\n\n\`\`\`python\n# 示例代码\ndef process_data(data):\n    return data.strip()\n\`\`\`\n\n希望这个回答对您有帮助！`;
+            
+            let charIndex = 0;
+            
+            // 3. Stream loop
+            streamInterval = setInterval(() => {
+                if (charIndex >= mockResponseFull.length) {
+                    // Finished
+                    aiResponse.followups = ['能提供具体的代码示例吗？', '这种方案有什么潜在风险？', '帮我总结成一个表格'];
+                    aiResponse.citations = [
+                        { id: 'doc-101', title: '用户需求规格说明书', trackingId: 'track-001' },
+                        { id: 'doc-102', title: '系统架构设计', trackingId: 'track-002' }
+                    ];
+                    // Update final state
+                    saveData();
+                    renderMessages(session.messages); // Re-render to show followups/actions
+                    stopGeneration();
+                    return;
+                }
+                
+                // Append char
+                aiResponse.content += mockResponseFull[charIndex];
+                charIndex++;
+                
+                // Update DOM directly for smooth streaming
+                const contentEl = document.getElementById(`msg-content-${msgIndex}`);
+                if (contentEl) {
+                    contentEl.innerHTML = marked.parse(aiResponse.content);
+                }
+                scrollToBottom();
+                
+            }, 30); // 30ms per char
+        }
+
+        function fillInput(text) {
+            const input = document.getElementById('message-input');
+            if (input) {
+                input.value = text;
+                input.focus();
+                input.dispatchEvent(new Event('input'));
+            }
+        }
+
+        function startEditSession(sessionId, event) {
+            if (event) event.stopPropagation();
+            editingSessionId = sessionId;
+            renderSessionList(document.getElementById('search-input').value);
+        }
+
+        function handleEditKeydown(event, sessionId, agentId) {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                saveSessionTitle(sessionId, agentId);
+            } else if (event.key === 'Escape') {
+                editingSessionId = null;
+                renderSessionList(document.getElementById('search-input').value);
+            }
+        }
+
+        function saveSessionTitle(sessionId, agentId) {
+            const input = document.getElementById(`edit-input-${sessionId}`);
+            if (!input) return;
+
+            const newTitle = input.value.trim();
+            if (newTitle) {
+                const agent = getAgent(agentId);
+                const session = agent.sessions.find(s => s.id === sessionId);
+                if (session) {
+                    session.title = newTitle;
+                    saveData();
+                    // Update header if current session
+                    if (currentSessionId === sessionId) {
+                         const titleEl = document.getElementById('current-chat-title');
+                         if (titleEl) {
+                            titleEl.innerHTML = `
+                                <i class="fa-solid ${agent.avatar} text-blue-600 mr-2"></i>
+                                <span class="truncate">${session.title}</span>
+                            `;
+                         }
+                    }
+                }
+            }
+            
+            editingSessionId = null;
+            renderSessionList(document.getElementById('search-input').value);
+        }
+
+        function copyMessage(index) {
+            const agent = getAgent(currentAgentId);
+            const session = agent.sessions.find(s => s.id === currentSessionId);
+            if (!session || !session.messages[index]) return;
+
+            const content = session.messages[index].content;
+            navigator.clipboard.writeText(content).then(() => {
+                console.log('Copied to clipboard');
+            }).catch(err => {
+                console.error('Failed to copy: ', err);
+            });
+        }
+
+        // --- Dislike Logic ---
+        let currentDislikeMsgIndex = null;
+        const DISLIKE_REASONS = [
+            '内容不准确',
+            '答非所问',
+            '逻辑混乱',
+            '代码错误',
+            '重复啰嗦',
+            '其他原因'
+        ];
+        let selectedReason = null;
+
+        function openDislikeModal(index) {
+            currentDislikeMsgIndex = index;
+            selectedReason = null;
+            
+            const agent = getAgent(currentAgentId);
+            let reasons = DISLIKE_REASONS;
+
+            // Try to use configured options
+            if (agent && agent.experience && agent.experience.feedback && Array.isArray(agent.experience.feedback.options) && agent.experience.feedback.options.length > 0) {
+                 reasons = [...agent.experience.feedback.options];
+                 // If custom input is allowed, ensure '其他原因' is in the list
+                 if (agent.experience.feedback.custom && !reasons.includes('其他原因')) {
+                     reasons.push('其他原因');
+                 }
+            }
+            
+            const listEl = document.getElementById('dislike-reasons-list');
+            listEl.innerHTML = reasons.map(reason => `
+                <label class="flex items-center gap-3 p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
+                    <input type="radio" name="dislike_reason" value="${reason}" class="w-4 h-4 text-red-600 focus:ring-red-500 border-gray-300" onchange="handleReasonChange(this.value)">
+                    <span class="text-sm text-gray-700">${reason}</span>
+                </label>
+            `).join('');
+            
+            document.getElementById('dislike-other-container').classList.add('hidden');
+            document.getElementById('dislike-other-input').value = '';
+            
+            const modal = document.getElementById('dislike-modal');
+            modal.classList.remove('hidden');
+            // Trigger reflow
+            void modal.offsetWidth;
+            modal.classList.remove('opacity-0');
+            document.getElementById('dislike-modal-content').classList.remove('scale-95');
+        }
+
+        function closeDislikeModal() {
+            const modal = document.getElementById('dislike-modal');
+            modal.classList.add('opacity-0');
+            document.getElementById('dislike-modal-content').classList.add('scale-95');
+            
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                currentDislikeMsgIndex = null;
+            }, 300);
+        }
+
+        function handleReasonChange(value) {
+            selectedReason = value;
+            const otherContainer = document.getElementById('dislike-other-container');
+            if (value === '其他原因') {
+                otherContainer.classList.remove('hidden');
+                document.getElementById('dislike-other-input').focus();
+            } else {
+                otherContainer.classList.add('hidden');
+            }
+        }
+
+        function submitDislike() {
+            if (!selectedReason) {
+                alert('请选择一个原因');
+                return;
+            }
+
+            let finalReason = selectedReason;
+            if (selectedReason === '其他原因') {
+                const otherInput = document.getElementById('dislike-other-input').value.trim();
+                if (!otherInput) {
+                    alert('请输入具体原因');
+                    return;
+                }
+                finalReason = `其他: ${otherInput}`;
+            }
+
+            // Update Message
+            const agent = getAgent(currentAgentId);
+            const session = agent.sessions.find(s => s.id === currentSessionId);
+            if (session && session.messages[currentDislikeMsgIndex]) {
+                session.messages[currentDislikeMsgIndex].rating = 'dislike';
+                session.messages[currentDislikeMsgIndex].dislikeReason = finalReason;
+                saveData();
+                renderMessages(session.messages);
+            }
+
+            closeDislikeModal();
+        }
+
+        function rateMessage(index, type) {
+            const agent = getAgent(currentAgentId);
+            const session = agent.sessions.find(s => s.id === currentSessionId);
+            if (!session || !session.messages[index]) return;
+
+            const msg = session.messages[index];
+
+            // If already rated same type, toggle off
+            if (msg.rating === type) {
+                msg.rating = null;
+                msg.dislikeReason = null;
+                saveData();
+                renderMessages(session.messages);
+                return;
+            }
+
+            // If switching to like, just set it
+            if (type === 'like') {
+                msg.rating = 'like';
+                msg.dislikeReason = null;
+                saveData();
+                renderMessages(session.messages);
+            } 
+            // If switching to dislike, open modal
+            else if (type === 'dislike') {
+                openDislikeModal(index);
+            }
+        }
+
+        function regenerateMessage() {
+            const agent = getAgent(currentAgentId);
+            const session = agent.sessions.find(s => s.id === currentSessionId);
+            if (!session) return;
+            
+            isTyping = true;
+            showTypingIndicator();
+            setTimeout(() => {
+                removeTypingIndicator();
+                const aiResponse = { 
+                    role: 'assistant', 
+                    content: `[${agent.name}] 重新为您生成的回答：\n\n### 补充视角\n除了之前提到的点，我们还可以关注**成本效益**。\n\n> 💡 **提示**：在早期阶段引入自动化测试可以显著降低后期维护成本。\n\n如果您需要具体的实施计划，可以参考以下步骤...`,
+                    followups: ['制定一份实施计划', '有哪些推荐的开源工具？']
+                };
+                session.messages.push(aiResponse);
+                saveData();
+                renderMessages(session.messages);
+                isTyping = false;
+            }, 1000);
+        }
+
+        // --- UI Interactions ---
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('mobile-overlay');
+            const isClosed = sidebar.classList.contains('-translate-x-full');
+
+            if (isClosed) {
+                sidebar.classList.remove('-translate-x-full');
+                overlay.classList.remove('hidden');
+            } else {
+                sidebar.classList.add('-translate-x-full');
+                overlay.classList.add('hidden');
+            }
+        }
+    </script>
+</body>
+</html>

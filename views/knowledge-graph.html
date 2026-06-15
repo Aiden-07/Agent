@@ -14,8 +14,8 @@
     </div>
 
     <!-- Knowledge Graph List -->
-    <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-        <table class="w-full text-sm text-left">
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 dt-scroll-wrap rounded-inherit">
+        <table id="kg-data-table" class="w-full text-sm text-left">
             <thead class="bg-gray-50 text-gray-500 font-medium border-b border-gray-100">
                 <tr>
                     <th class="px-6 py-4 w-16">序号</th>
@@ -25,7 +25,7 @@
                     <th class="px-6 py-4 w-24 text-center">文档数</th>
                     <th class="px-6 py-4">创建人</th>
                     <th class="px-6 py-4">创建时间</th>
-                    <th class="px-6 py-4 text-right">操作</th>
+                    <th class="px-6 py-4 text-right dt-th-sticky-end">操作</th>
                 </tr>
             </thead>
             <tbody id="kg-list-body" class="divide-y divide-gray-100">

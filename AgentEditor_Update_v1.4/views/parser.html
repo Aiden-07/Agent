@@ -1,0 +1,432 @@
+<div id="parser-list-view" class="space-y-6">
+    <!-- Header -->
+    <div class="flex items-center justify-between">
+        <div class="flex items-center gap-4">
+            <div class="relative">
+                <i class="fa-solid fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                <input type="text" placeholder="搜索解析规则..." class="pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-64">
+            </div>
+        </div>
+        <!-- <button class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 shadow-sm">
+            <i class="fa-solid fa-plus"></i>
+            新建解析规则
+        </button> -->
+    </div>
+
+    <!-- Parser List -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        <table class="w-full text-sm text-left">
+            <thead class="bg-gray-50 text-gray-500 font-medium border-b border-gray-100">
+                <tr>
+                    <th class="px-6 py-4">解析器名称</th>
+                    <th class="px-6 py-4">源格式</th>
+                    <th class="px-6 py-4">调用次数</th>
+                    <th class="px-6 py-4">关联知识库</th>
+                    <th class="px-6 py-4 text-right">操作</th>
+                </tr>
+            </thead>
+            <tbody id="parser-list-body" class="divide-y divide-gray-100">
+                <!-- Dynamic Content -->
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Parser Detail View (Settings) -->
+<div id="parser-detail-view" class="hidden h-full flex flex-col bg-gray-50 overflow-hidden">
+    <!-- Minimal Nav -->
+    <div class="h-12 flex items-center px-6 flex-shrink-0 bg-gray-50 border-b border-gray-200 z-10">
+        <button onclick="window.history.back()" class="text-gray-500 hover:text-gray-800 transition-colors flex items-center gap-2 text-sm font-medium hover:bg-gray-200/50 px-2 py-1 rounded-lg">
+            <i class="fa-solid fa-arrow-left"></i>
+            <span>返回列表</span>
+        </button>
+    </div>
+
+    <!-- Main Content Area (Flex Row) -->
+    <div class="flex-1 flex flex-col lg:flex-row overflow-hidden">
+        <!-- Left Column: Settings (Scrollable) -->
+        <div class="flex-1 overflow-y-auto px-8 pb-8 pt-6 w-full lg:w-3/5 border-r-0 lg:border-r border-b lg:border-b-0 border-gray-200">
+            <div class="max-w-3xl space-y-6">
+                
+                <!-- Page Title & Actions -->
+                <div class="flex justify-between items-end mb-2">
+                    <div>
+                        <h1 class="text-2xl font-bold text-gray-900">解析器设置</h1>
+                        <div class="flex items-center gap-2 mt-1 text-sm text-gray-500">
+                            <span>正在配置:</span>
+                            <span id="setting-name-display" class="font-medium text-gray-700 bg-gray-200/50 px-1.5 py-0.5 rounded">加载中...</span>
+                        </div>
+                    </div>
+                    <button onclick="window.saveParserSettings()" class="px-5 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-xl hover:bg-blue-700 transition-all shadow-sm hover:shadow-md flex items-center gap-2">
+                        <i class="fa-solid fa-save"></i> 保存设置
+                    </button>
+                </div>
+
+                <!-- 1. Basic Info -->
+                <section class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                    <div class="px-6 py-4 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
+                        <h3 class="font-bold text-gray-800">基本信息</h3>
+                        <span class="text-xs text-gray-400">解析器基础属性配置</span>
+                    </div>
+                    <div class="p-6 space-y-5">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">解析器名称</label>
+                            <input type="text" id="setting-name" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm" placeholder="输入解析器名称">
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">描述</label>
+                            <textarea id="setting-description" rows="3" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm resize-none" placeholder="描述该解析器的用途..."></textarea>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-6">
+                            <!-- <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">解析器类型</label>
+                                <select id="setting-type" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm bg-gray-50 text-gray-500 cursor-not-allowed"disabled>
+                                    <option value="rule">规则解析</option>
+                                    <option value="model">模型解析</option>
+                                </select>
+                                <p class="mt-1 text-xs text-gray-500">创建后类型不可更改</p>
+                            </div> -->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">版本号</label>
+                                <input type="text" id="setting-version" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm bg-gray-50 text-gray-500" readonly>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 1.5 Parsing Strategy Settings -->
+                <section class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                    <div class="px-6 py-4 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
+                        <h3 class="font-bold text-gray-800">解析策略配置</h3>
+                        <span class="text-xs text-gray-400">配置文档解析的深度与方式</span>
+                    </div>
+                    <div class="p-6">
+                        <div class="bg-gray-50 rounded-lg border border-gray-200 overflow-hidden">
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-sm text-left">
+                                    <thead class="bg-gray-100 text-gray-500 font-medium">
+                                        <tr>
+                                            <th class="px-4 py-3 whitespace-nowrap">匹配关键字</th>
+                                            <th class="px-4 py-3 whitespace-nowrap">解析引擎</th>
+                                            <th class="px-4 py-3 text-right whitespace-nowrap">操作</th>
+                                        </tr>
+                                    </thead>
+                                <tbody id="parsing-strategy-body" class="divide-y divide-gray-200">
+                                    <tr data-id="1">
+                                        <td class="px-4 py-3">
+                                            <input type="text" value="产品说明书" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                        </td>
+                                        <td class="px-4 py-3">
+                                            <select class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                                <option value="paddle_ocr" selected>Paddle_OCR解析</option>
+                                                <option value="vl_model">VL大模型解析</option>
+                                                <option value="basic_ocr">基础OCR解析</option>
+                                            </select>
+                                        </td>
+                                        <td class="px-4 py-3 text-right">
+                                            <button onclick="window.deleteParsingStrategy(1)" class="text-red-500 hover:text-red-700 transition-colors">
+                                                <i class="fa-solid fa-trash"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    <tr data-id="2">
+                                        <td class="px-4 py-3">
+                                            <input type="text" value="产品图纸" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                        </td>
+                                        <td class="px-4 py-3">
+                                            <select class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                                <option value="paddle_ocr">Paddle_OCR解析</option>
+                                                <option value="vl_model" selected>VL大模型解析</option>
+                                                <option value="basic_ocr">基础OCR解析</option>
+                                            </select>
+                                        </td>
+                                        <td class="px-4 py-3 text-right">
+                                            <button onclick="window.deleteParsingStrategy(2)" class="text-red-500 hover:text-red-700 transition-colors">
+                                                <i class="fa-solid fa-trash"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 2. Chunking Settings -->
+                <section class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                    <div class="px-6 py-4 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
+                        <h3 class="font-bold text-gray-800">切片设置</h3>
+                        <div class="flex items-center gap-3">
+                        </div>
+                    </div>
+                    <div class="p-6 space-y-6">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">切片策略</label>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <!-- Removed Default Strategy -->
+                                <label class="relative flex items-start p-4 border rounded-xl cursor-pointer hover:bg-gray-50 transition-colors">
+                                    <div class="flex items-center h-5">
+                                        <input type="radio" name="chunk_strategy" value="custom" class="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500" onchange="window.toggleChunkSettings()">
+                                    </div>
+                                    <div class="ml-3 text-sm">
+                                        <span class="font-medium text-gray-900">按标识符切片</span>
+                                        <p class="text-gray-500 mt-1">手动配置分隔符</p>
+                                    </div>
+                                </label>
+                                <label class="relative flex items-start p-4 border rounded-xl cursor-pointer hover:bg-gray-50 transition-colors">
+                                    <div class="flex items-center h-5">
+                                        <input type="radio" name="chunk_strategy" value="parent_child" class="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500" onchange="window.toggleChunkSettings()">
+                                    </div>
+                                    <div class="ml-3 text-sm">
+                                        <span class="font-medium text-gray-900">父子切片</span>
+                                        <p class="text-gray-500 mt-1">双层级上下文关联</p>
+                                    </div>
+                                </label>
+                                <label class="relative flex items-start p-4 border rounded-xl cursor-pointer hover:bg-gray-50 transition-colors">
+                                    <div class="flex items-center h-5">
+                                        <input type="radio" name="chunk_strategy" value="title" class="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500" onchange="window.toggleChunkSettings()">
+                                    </div>
+                                    <div class="ml-3 text-sm">
+                                        <span class="font-medium text-gray-900">按标题切片</span>
+                                        <p class="text-gray-500 mt-1">基于文档结构切分</p>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Default Settings Area (Hidden/Deprecated) -->
+                        <div id="default-chunk-settings" class="space-y-5 pt-4 border-t border-gray-100 hidden">
+                             <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">切片最大长度(100-6000)</label>
+                                <div class="flex items-center gap-2">
+                                    <input type="number" id="default-max-length" min="10" max="6000" value="1000" class="w-32 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                    <span class="text-xs text-gray-500">字符 (10-6000)</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Parent-Child Settings Area -->
+                        <div id="parent_child-chunk-settings" class="space-y-6 pt-4 border-t border-gray-100 hidden">
+                            <!-- Parent Slice Settings -->
+                            <div class="space-y-4">
+                                <h4 class="text-sm font-bold text-gray-900 flex items-center gap-2">
+                                    <i class="fa-solid fa-layer-group text-blue-600"></i> 父切片设置
+                                </h4>
+                                
+                                <!-- Parent Mode Selection -->
+                                <div class="flex gap-6">
+                                    <label class="flex items-center gap-2 cursor-pointer">
+                                        <input type="radio" name="pc_parent_mode" value="identifier" class="text-blue-600 focus:ring-blue-500" onchange="window.toggleParentMode()">
+                                        <span class="text-sm text-gray-700">标识符切片模式</span>
+                                    </label>
+                                    <label class="flex items-center gap-2 cursor-pointer">
+                                        <input type="radio" name="pc_parent_mode" value="full_page" class="text-blue-600 focus:ring-blue-500" onchange="window.toggleParentMode()">
+                                        <span class="text-sm text-gray-700">整页切片模式</span>
+                                    </label>
+                                </div>
+
+                                <!-- Parent Identifier Params (Conditional) -->
+                                <div id="pc-parent-params" class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-gray-50 p-4 rounded-lg border border-gray-100">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">切片标识符</label>
+                                        <div class="identifier-group">
+                                            <select id="pc-parent-identifier-select" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent mb-2" onchange="window.toggleIdentifierInput(this, 'pc-parent-identifier-input')">
+                                                <option value="\n">换行符 (\n)</option>
+                                                <option value="\n\n">双换行符 (\n\n)</option>
+                                                <option value="。">句号 (。)</option>
+                                                <option value="；">分号 (；)</option>
+                                                <option value="custom">自定义字符...</option>
+                                            </select>
+                                            <input type="text" id="pc-parent-identifier-input" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent hidden" placeholder="请输入自定义标识符">
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">最大切片长度(100-6000)</label>
+                                        <div class="flex items-center gap-2">
+                                            <input type="number" id="pc-parent-max-length" min="100" max="6000" value="1000" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent" oninput="window.validateChildLength()">
+                                            <span class="text-xs text-gray-500 whitespace-nowrap">字符</span>
+                                        </div>
+                                        <!-- <p class="text-xs text-gray-500 mt-1">范围: 100-6000</p> -->
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Child Slice Settings -->
+                            <div class="space-y-4 border-t border-gray-100 pt-6">
+                                <h4 class="text-sm font-bold text-gray-900 flex items-center gap-2">
+                                    <i class="fa-solid fa-puzzle-piece text-green-600"></i> 子切片设置
+                                </h4>
+                                
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-gray-50 p-4 rounded-lg border border-gray-100">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">切片标识符</label>
+                                        <div class="identifier-group">
+                                            <select id="pc-child-identifier-select" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent mb-2" onchange="window.toggleIdentifierInput(this, 'pc-child-identifier-input')">
+                                                <option value="\n">换行符 (\n)</option>
+                                                <option value="\n\n">双换行符 (\n\n)</option>
+                                                <option value="。">句号 (。)</option>
+                                                <option value="；">分号 (；)</option>
+                                                <option value="custom">自定义字符...</option>
+                                            </select>
+                                            <input type="text" id="pc-child-identifier-input" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent hidden" placeholder="请输入自定义标识符">
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">分段最大长度(50-父切片长度)</label>
+                                        <div class="flex items-center gap-2">
+                                            <input type="number" id="pc-child-max-length" min="50" value="100" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent" oninput="window.validateChildLength()">
+                                            <span class="text-xs text-gray-500 whitespace-nowrap">字符</span>
+                                        </div>
+                                        <!-- <p id="pc-child-length-hint" class="text-xs text-gray-500 mt-1">范围: 50-父切片长度</p> -->
+                                        <p id="pc-child-error" class="text-xs text-red-500 mt-1 hidden"></p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Title Settings Area -->
+                        <div id="title-chunk-settings" class="space-y-5 pt-4 border-t border-gray-100 hidden">
+                             <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">切片最大长度(100-6000)</label>
+                                <div class="flex items-center gap-2">
+                                    <input type="number" id="title-max-length" value="1500" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                    <span class="text-xs text-gray-500 whitespace-nowrap">字符</span>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">标题层级选择</label>
+                                <select id="title-levels" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm">
+                                    <option value="1">1级标题 (H1)</option>
+                                    <option value="2">2级标题 (H2)</option>
+                                    <option value="3" selected>3级标题 (H3)</option>
+                                    <option value="4">4级标题 (H4)</option>
+                                    <option value="5">5级标题 (H5)</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Custom Settings Area -->
+                        <div id="custom-chunk-settings" class="space-y-5 pt-4 border-t border-gray-100 hidden">
+                            <div class="flex justify-between items-center mb-2">
+                                    <h4 class="text-sm font-medium text-gray-900">自定义参数配置</h4>
+                                    <button type="button" onclick="window.restoreDefaultChunkSettings()" class="text-xs text-blue-600 hover:text-blue-800 hover:underline">
+                                    恢复默认值
+                                </button>
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">切片标识符</label>
+                                <div class="identifier-group">
+                                    <select id="setting-separator" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm mb-2" onchange="window.toggleIdentifierInput(this, 'setting-separator-input')">
+                                        <option value="\n">换行符 (\n)</option>
+                                        <option value="\n\n">双换行符 (\n\n)</option>
+                                        <option value="。">句号 (。)</option>
+                                        <option value="；">分号 (；)</option>
+                                        <option value="custom">自定义字符...</option>
+                                    </select>
+                                    <input type="text" id="setting-separator-input" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm hidden" placeholder="请输入自定义标识符">
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-6">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">
+                                        切片最大长度(100-6000)
+                                        <i class="fa-regular fa-circle-question text-gray-400 ml-1" title="单个切片允许的最大字符数"></i>
+                                    </label>
+                                    <div class="flex items-center gap-2">
+                                        <input type="number" id="setting-max-length" min="100" max="2000" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm">
+                                        <span class="text-xs text-gray-500 whitespace-nowrap">字符</span>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">
+                                        切片重叠长度
+                                        <i class="fa-regular fa-circle-question text-gray-400 ml-1" title="相邻切片之间的重叠字符数"></i>
+                                    </label>
+                                    <div class="flex items-center gap-2">
+                                        <input type="number" id="setting-overlap" min="0" max="500" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm">
+                                        <span class="text-xs text-gray-500 whitespace-nowrap">字符</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 3. Embedding Settings -->
+                <section class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                    <div class="px-6 py-4 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
+                        <h3 class="font-bold text-gray-800">向量化设置（Embedding）</h3>
+                    </div>
+                    <div class="p-6 space-y-5">
+                        <!-- Embedding Model -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Embedding 模型</label>
+                            <select id="parser-embedding-model" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                <option value="Qwen3-Embedding-8B">Qwen3-Embedding-8B</option>
+                                <option value="Qwen3-Embedding-4B">Qwen3-Embedding-4B</option>
+                                <option value="Qwen3-Embedding-0.6B">Qwen3-Embedding-0.6B</option>
+                            </select>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 4. Retrieval Settings -->
+                <section class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                    <div class="px-6 py-4 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
+                        <h3 class="font-bold text-gray-800">检索设置</h3>
+                    </div>
+                    <div class="p-6">
+                        <div id="parser-retrieval-config" class="space-y-5"></div>
+                    </div>
+                </section>
+            </div>
+        </div>
+
+        <!-- Right Column: Preview Module -->
+        <div class="w-full lg:w-2/5 bg-white flex flex-col h-1/3 lg:h-full border-l-0 lg:border-l border-gray-200">
+            <!-- Header -->
+            <div class="p-4 border-b border-gray-200 bg-gray-50">
+                <h3 class="text-sm font-bold text-gray-800 mb-3 flex items-center gap-2">
+                    <i class="fa-solid fa-eye text-blue-500"></i> 解析效果预览
+                </h3>
+                <div class="flex gap-2">
+                    <div class="relative flex-1">
+                        <input type="text" id="article-search" list="article-list" placeholder="搜索并选择文档..." 
+                               class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white">
+                        <datalist id="article-list">
+                            <!-- Dynamic Options -->
+                        </datalist>
+                    </div>
+                    <button onclick="window.runPreview()" class="px-4 py-2 bg-white border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors shadow-sm whitespace-nowrap">
+                        解析
+                    </button>
+                </div>
+            </div>
+
+            <!-- Content Area -->
+            <div id="preview-content-area" class="flex-1 overflow-y-auto p-4 bg-gray-50/50">
+                <!-- Placeholder State -->
+                <div id="preview-placeholder" class="h-full flex flex-col items-center justify-center text-gray-400 space-y-3">
+                    <i class="fa-regular fa-file-lines text-4xl opacity-50"></i>
+                    <p class="text-sm">请选择文章并点击预览查看解析结果</p>
+                </div>
+
+                <!-- Loading State -->
+                <div id="preview-loading" class="hidden h-full flex flex-col items-center justify-center text-blue-600 space-y-3">
+                    <i class="fa-solid fa-circle-notch fa-spin text-2xl"></i>
+                    <p class="text-sm font-medium">正在解析中...</p>
+                </div>
+
+                <!-- Result State -->
+                <div id="preview-results" class="hidden space-y-4">
+                    <!-- Dynamic Chunks -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,156 @@
+<div class="space-y-6 h-full flex flex-col">
+    <!-- Header with Stats (Removed) -->
+    
+    <!-- Toolbar -->
+    <div class="flex items-center justify-between">
+        <div class="flex items-center gap-4">
+            <div class="relative group">
+                <i class="fa-solid fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 group-focus-within:text-blue-500 transition-colors"></i>
+                <input type="text" id="agent-search-input" placeholder="搜索智能体名称/ID..." class="pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent w-72 transition-all shadow-sm">
+            </div>
+            <select id="agent-status-filter" class="px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-600 bg-white shadow-sm cursor-pointer hover:border-gray-300 transition-colors">
+                <option value="all">所有状态</option>
+                <option value="running">运行中</option>
+                <option value="stopped">已停止</option>
+            </select>
+        </div>
+        <button onclick="openModal('create-agent-modal')" class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg text-sm font-medium transition-all shadow-md hover:shadow-lg flex items-center gap-2 transform active:scale-95">
+            <i class="fa-solid fa-plus"></i>
+            新建智能体
+        </button>
+    </div>
+
+    <!-- Agent List (Scrollable) -->
+    <div class="flex-1 bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden flex flex-col">
+        <div class="overflow-x-auto flex-1" id="agent-list-container">
+            <table class="w-full text-sm text-left">
+                <thead class="bg-gray-50 text-gray-500 font-medium border-b border-gray-100 sticky top-0 z-10">
+                    <tr>
+                        <th class="px-6 py-4">智能体名称</th>
+                        <th class="px-6 py-4">运行状态</th>
+                        <th class="px-6 py-4">模型</th>
+                        <th class="px-6 py-4">关联知识库</th>
+                        <th class="px-6 py-4">创建人</th>
+                        <th class="px-6 py-4">创建时间</th>
+                        <th class="px-6 py-4">最后更新时间</th>
+                        <th class="px-6 py-4 text-right">操作</th>
+                    </tr>
+                </thead>
+                <tbody id="agent-list-body" class="divide-y divide-gray-100">
+                    <!-- Dynamic Content will be injected here via JS -->
+                </tbody>
+            </table>
+            <!-- Infinite Scroll Loader -->
+            <div id="agent-list-loader" class="hidden py-4 text-center text-gray-400">
+                <i class="fa-solid fa-spinner fa-spin mr-2"></i> 加载更多...
+            </div>
+            <!-- Empty State -->
+            <div id="agent-list-empty" class="hidden flex flex-col items-center justify-center h-96 text-gray-400">
+                <div class="w-20 h-20 bg-blue-50 text-blue-500 rounded-full flex items-center justify-center mb-6 text-3xl shadow-sm">
+                    <i class="fa-solid fa-robot"></i>
+                </div>
+                <h3 class="text-lg font-medium text-gray-900 mb-2">暂无智能体数据</h3>
+                <p class="text-sm text-gray-500 mb-8 max-w-sm text-center">您可以创建一个新的智能体来开始使用，或者等待系统加载默认模板。</p>
+                <button onclick="openModal('create-agent-modal')" class="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg shadow-sm transition-colors flex items-center gap-2">
+                    <i class="fa-solid fa-plus"></i>
+                    立即创建智能体
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Create Agent Modal -->
+<div id="create-agent-modal" class="fixed inset-0 bg-gray-900/50 hidden z-50 flex items-center justify-center backdrop-blur-sm">
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg transform scale-95 transition-transform duration-200" id="create-agent-modal-content">
+        <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+            <h3 class="text-lg font-semibold text-gray-900">新建智能体</h3>
+            <button onclick="closeModal('create-agent-modal')" class="text-gray-400 hover:text-gray-600 transition-colors">
+                <i class="fa-solid fa-times"></i>
+            </button>
+        </div>
+        <div class="p-6 space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">智能体名称 <span class="text-red-500">*</span></label>
+                <input type="text" id="new-agent-name" class="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="例如：客服助手 Alpha">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">基础模型</label>
+                <select id="new-agent-model" class="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+                    <option value="gpt-4o">GPT-4o</option>
+                    <option value="claude-3-5-sonnet">Claude 3.5 Sonnet</option>
+                    <option value="gpt-4-turbo">GPT-4 Turbo</option>
+                    <option value="deepseek-v2">DeepSeek V2</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">功能描述</label>
+                <textarea id="new-agent-desc" rows="3" class="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="简单描述该智能体的用途..."></textarea>
+            </div>
+        </div>
+        <div class="px-6 py-4 bg-gray-50 rounded-b-xl flex justify-end gap-3 border-t border-gray-100">
+            <button onclick="closeModal('create-agent-modal')" class="px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">取消</button>
+            <button onclick="createNewAgent()" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm transition-colors">确认创建</button>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div id="delete-confirm-modal" class="fixed inset-0 bg-gray-900/50 hidden z-50 flex items-center justify-center backdrop-blur-sm">
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-sm p-6 text-center">
+        <div class="w-12 h-12 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4 text-xl">
+            <i class="fa-solid fa-triangle-exclamation"></i>
+        </div>
+        <h3 class="text-lg font-semibold text-gray-900 mb-2">确认删除？</h3>
+        <p class="text-sm text-gray-500 mb-6">此操作无法撤销，智能体 <span id="delete-agent-name" class="font-bold text-gray-800"></span> 将被永久删除。</p>
+        <div class="flex gap-3 justify-center">
+            <button onclick="closeModal('delete-confirm-modal')" class="px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg transition-colors w-24">取消</button>
+            <button id="confirm-delete-btn" class="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg shadow-sm transition-colors w-24">删除</button>
+        </div>
+    </div>
+</div>
+
+<!-- Stop Confirmation Modal -->
+<div id="stop-confirm-modal" class="fixed inset-0 bg-gray-900/50 hidden z-50 flex items-center justify-center backdrop-blur-sm">
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-md p-6 mx-4">
+        <div class="flex items-center gap-4 mb-4">
+            <div class="w-12 h-12 bg-red-100 text-red-600 rounded-full flex-shrink-0 flex items-center justify-center text-xl">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+            </div>
+            <div>
+                <h3 class="text-lg font-semibold text-gray-900">确认关闭智能体</h3>
+                <p class="text-sm text-gray-500">此操作将立即停止智能体服务。</p>
+            </div>
+        </div>
+        
+        <div class="bg-yellow-50 border border-yellow-100 rounded-lg p-4 mb-6">
+            <p class="text-sm font-medium text-yellow-800 mb-2">关闭智能体将导致以下功能不可用：</p>
+            <ul class="text-sm text-yellow-700 space-y-1 list-disc list-inside ml-1">
+                <li>所有关联的自动化任务将停止执行</li>
+                <li>对外提供的 API 接口将无法访问</li>
+                <li>实时监控数据采集将中断</li>
+            </ul>
+        </div>
+
+        <div class="flex gap-3 justify-end">
+            <button onclick="closeModal('stop-confirm-modal')" class="px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">取消</button>
+            <button onclick="confirmStopAgent()" class="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg shadow-sm transition-colors">确认关闭</button>
+        </div>
+    </div>
+</div>
+
+<!-- Permission Config Modal (Moved to Global) -->
+
+
+<script>
+    // Initialize Agent Page Logic immediately when loaded
+    if (typeof initAgentPage === 'function') {
+        initAgentPage();
+    } else {
+        // Fallback if utils.js hasn't loaded this function yet (should be loaded in index.html)
+        // We will define specific logic here or ensure utils.js is updated.
+        // Ideally, we'll put the heavy logic in utils.js or a specific agent.js to keep views clean.
+        // For this prototype, I will trigger a custom event or call a global init function.
+        document.dispatchEvent(new Event('view-agent-loaded'));
+    }
+</script>

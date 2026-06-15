@@ -517,6 +517,7 @@ window.renderParserList = function() {
     if (!tbody) return;
 
     tbody.innerHTML = '';
+    const esc = window.escapeHtml || function (s) { return String(s == null ? '' : s); };
 
     window.parserData.forEach(item => {
         const tr = document.createElement('tr');
@@ -525,22 +526,20 @@ window.renderParserList = function() {
         const formattedCallCount = item.callCount.toLocaleString() + '次';
 
         tr.innerHTML = `
-            <td class="px-6 py-4">
-                <div class="flex items-center gap-3">
-                    <div class="w-8 h-8 rounded-lg ${item.iconBg} ${item.iconColor} flex items-center justify-center">
+            <td class="px-6 py-4 min-w-0">
+                <div class="flex items-center gap-3 min-w-0">
+                    <div class="w-8 h-8 rounded-lg ${item.iconBg} ${item.iconColor} flex items-center justify-center flex-shrink-0">
                         <i class="fa-solid ${item.icon}"></i>
                     </div>
-                    <span class="font-medium text-gray-900">${item.name}</span>
+                    <span class="font-medium text-gray-900 dt-cell-ellipsis min-w-0 flex-1" title="${esc(item.name)}">${esc(item.name)}</span>
                 </div>
             </td>
-            <td class="px-6 py-4">${item.sourceFormat}</td>
-            <td class="px-6 py-4 text-gray-600 font-medium">${formattedCallCount}</td>
-            <td class="px-6 py-4">
-                 <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700">
-                    ${item.knowledgeBase}
-                </span>
+            <td class="px-6 py-4 whitespace-nowrap"><span class="dt-cell-ellipsis" title="${esc(item.sourceFormat)}">${esc(item.sourceFormat)}</span></td>
+            <td class="px-6 py-4 text-gray-600 font-medium whitespace-nowrap">${formattedCallCount}</td>
+            <td class="px-6 py-4 min-w-0">
+                 <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700 max-w-full dt-cell-ellipsis" title="${esc(item.knowledgeBase)}">${esc(item.knowledgeBase)}</span>
             </td>
-            <td class="px-6 py-4 text-right">
+            <td class="px-6 py-4 text-right whitespace-nowrap min-w-[72px]">
                 <button onclick="window.openParserActions(event, '${item.id}')" class="p-1.5 text-gray-400 hover:text-gray-600 transition-colors rounded hover:bg-gray-100">
                     <i class="fa-solid fa-ellipsis"></i>
                 </button>
@@ -548,12 +547,13 @@ window.renderParserList = function() {
         `;
         tbody.appendChild(tr);
     });
+    if (window.syncDataTable) window.syncDataTable('parser-data-table', { storageKey: 'dt-colwidths-parser' });
 };
 
 window.openParserActions = function(event, id) {
     const actions = [
         {
-            label: '设置',
+            label: '编辑',
             icon: 'fa-solid fa-cog',
             onClick: () => {
                 // 跳转至解析器设置界面 (即带 ID 的详情页)

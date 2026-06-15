@@ -1,0 +1,157 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>Template Selection Unit Tests</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Mock font awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* Mock CSS Variables */
+        :root {
+            --color-selected-bg: #eff6ff;
+            --color-selected-border: #2563eb;
+        }
+    </style>
+</head>
+<body>
+    <div id="test-container" class="p-8">
+        <h1 class="text-2xl font-bold mb-4">Template Selection Tests</h1>
+        <div id="test-results" class="space-y-2 mb-8"></div>
+        
+        <!-- Mock Template List Container -->
+        <div id="template-list-general" class="grid grid-cols-3 gap-4"></div>
+    </div>
+
+    <script>
+        // --- Mocks ---
+        window.showToast = (msg) => console.log('Toast:', msg);
+        window.selectedTemplateId = null;
+        window.onTemplateSelect = null; // Mock callback
+
+        // --- Functions Under Test (Copied from js/knowledge.js for isolation) ---
+        window.renderTemplateList = function(type, items, deletable = false) {
+            const container = document.getElementById(`template-list-${type}`);
+            if (!container) return;
+
+            container.innerHTML = items.map(item => `
+                <div 
+                    class="template-card relative group cursor-pointer outline-none rounded-xl" 
+                    role="button" 
+                    tabindex="0" 
+                    aria-selected="${window.selectedTemplateId === item.id}"
+                    data-id="${item.id}"
+                    onkeydown="if(event.key === 'Enter' || event.key === ' ') { event.preventDefault(); handleTemplateClick('${item.id}', '${type}'); }"
+                    onclick="handleTemplateClick('${item.id}', '${type}')">
+                    
+                    <div class="flex items-center gap-4 p-4 rounded-xl border border-gray-200 bg-white shadow-sm hover:shadow-md transition-all duration-200 h-full ${window.selectedTemplateId === item.id ? 'border-blue-600 ring-2 ring-blue-600 bg-blue-50' : 'hover:border-blue-300 hover:bg-blue-50/30'}">
+                        <div class="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors ${window.selectedTemplateId === item.id ? 'bg-blue-100 text-blue-600' : 'bg-blue-50 text-blue-600 group-hover:bg-blue-100'}">
+                            <i class="fa-solid ${item.icon} text-lg"></i>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <h4 class="text-sm font-bold text-gray-900 truncate">${item.name}</h4>
+                        </div>
+                        <div class="absolute top-2 right-2 w-2 h-2 rounded-full bg-blue-600 transition-opacity duration-200 ${window.selectedTemplateId === item.id ? 'opacity-100' : 'opacity-0'}"></div>
+                    </div>
+                </div>
+            `).join('');
+        };
+
+        window.handleTemplateClick = function(id, type) {
+            // Update State
+            window.selectedTemplateId = id;
+            
+            // Trigger Callback
+            if (typeof window.onTemplateSelect === 'function') {
+                window.onTemplateSelect({ element: document.querySelector(`[data-id="${id}"]`), selected: true });
+            }
+            
+            // Update UI
+            const allCards = document.querySelectorAll('.template-card');
+            allCards.forEach(card => {
+                const isSelected = card.getAttribute('data-id') === id;
+                const innerDiv = card.firstElementChild;
+                const iconDiv = innerDiv.querySelector('div');
+                const indicator = innerDiv.querySelector('.absolute');
+                
+                card.setAttribute('aria-selected', isSelected);
+                
+                if (isSelected) {
+                    innerDiv.classList.remove('hover:border-blue-300', 'hover:bg-blue-50/30');
+                    innerDiv.classList.add('border-blue-600', 'ring-2', 'ring-blue-600', 'bg-blue-50');
+                    iconDiv.classList.remove('bg-blue-50', 'group-hover:bg-blue-100');
+                    iconDiv.classList.add('bg-blue-100');
+                    if(indicator) { indicator.classList.remove('opacity-0'); indicator.classList.add('opacity-100'); }
+                } else {
+                    innerDiv.classList.add('hover:border-blue-300', 'hover:bg-blue-50/30');
+                    innerDiv.classList.remove('border-blue-600', 'ring-2', 'ring-blue-600', 'bg-blue-50');
+                    iconDiv.classList.add('bg-blue-50', 'group-hover:bg-blue-100');
+                    iconDiv.classList.remove('bg-blue-100');
+                    if(indicator) { indicator.classList.add('opacity-0'); indicator.classList.remove('opacity-100'); }
+                }
+            });
+        };
+
+        // --- Test Runner ---
+        const resultsEl = document.getElementById('test-results');
+        function assert(desc, condition) {
+            const div = document.createElement('div');
+            div.className = condition ? 'text-green-600 bg-green-50 p-2 rounded' : 'text-red-600 bg-red-50 p-2 rounded font-bold';
+            div.innerHTML = `<i class="fa-solid ${condition ? 'fa-check' : 'fa-times'} mr-2"></i> ${desc}`;
+            resultsEl.appendChild(div);
+            if (!condition) console.error(`FAILED: ${desc}`);
+        }
+
+        const mockItems = [
+            { id: 't1', name: 'Template 1', icon: 'fa-book' },
+            { id: 't2', name: 'Template 2', icon: 'fa-file' }
+        ];
+
+        async function runTests() {
+            // Setup
+            renderTemplateList('general', mockItems);
+            const card1 = document.querySelector('[data-id="t1"]');
+            const card2 = document.querySelector('[data-id="t2"]');
+
+            // Test 1: Initial State
+            assert('Card 1 should not be selected initially', card1.getAttribute('aria-selected') === 'false');
+            assert('Card 1 should have tabindex="0"', card1.getAttribute('tabindex') === '0');
+            assert('Card 1 should have role="button"', card1.getAttribute('role') === 'button');
+
+            // Test 2: Click Selection (State & Visuals)
+            card1.click();
+            assert('Card 1 should be selected after click', card1.getAttribute('aria-selected') === 'true');
+            assert('Window state should update', window.selectedTemplateId === 't1');
+            assert('Card 1 should have blue border class', card1.firstElementChild.classList.contains('border-blue-600'));
+            
+            // Test 3: Selection Switch
+            card2.click();
+            assert('Card 1 should be deselected', card1.getAttribute('aria-selected') === 'false');
+            assert('Card 2 should be selected', card2.getAttribute('aria-selected') === 'true');
+            assert('Window state should update to t2', window.selectedTemplateId === 't2');
+
+            // Test 4: Keyboard Accessibility (Enter)
+            let callbackCalled = false;
+            window.onTemplateSelect = (e) => {
+                callbackCalled = true;
+                assert('Callback element should be Card 1', e.element === card1);
+            };
+            
+            // Dispatch 'Enter' keydown on Card 1
+            const enterEvent = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true });
+            card1.dispatchEvent(enterEvent);
+            
+            assert('Card 1 should be selected after Enter key', card1.getAttribute('aria-selected') === 'true');
+            assert('Callback should be triggered', callbackCalled);
+
+            // Test 5: Keyboard Accessibility (Space)
+            const spaceEvent = new KeyboardEvent('keydown', { key: ' ', bubbles: true });
+            card2.dispatchEvent(spaceEvent);
+            assert('Card 2 should be selected after Space key', card2.getAttribute('aria-selected') === 'true');
+        }
+
+        setTimeout(runTests, 100);
+    </script>
+</body>
+</html>

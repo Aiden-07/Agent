@@ -1,5 +1,135 @@
 // Orchestrator Management Logic
 
+// --- DSL Export/Import Logic ---
+window.toggleDslMenu = function() {
+    const menu = document.getElementById('dsl-dropdown-menu');
+    if (!menu) return;
+    
+    const isHidden = menu.classList.contains('hidden');
+    if (isHidden) {
+        menu.classList.remove('hidden');
+        // trigger animation frame for transition
+        requestAnimationFrame(() => {
+            menu.classList.remove('opacity-0', 'scale-95');
+            menu.classList.add('opacity-100', 'scale-100');
+        });
+    } else {
+        menu.classList.remove('opacity-100', 'scale-100');
+        menu.classList.add('opacity-0', 'scale-95');
+        setTimeout(() => {
+            menu.classList.add('hidden');
+        }, 150); // match transition duration
+    }
+};
+
+// Close menu when clicking outside
+document.addEventListener('click', (event) => {
+    const button = document.getElementById('dsl-menu-button');
+    const menu = document.getElementById('dsl-dropdown-menu');
+    if (button && menu && !button.contains(event.target) && !menu.contains(event.target)) {
+        menu.classList.remove('opacity-100', 'scale-100');
+        menu.classList.add('opacity-0', 'scale-95');
+        setTimeout(() => {
+            menu.classList.add('hidden');
+        }, 150);
+    }
+});
+
+window.handleDslAction = function(action, event) {
+    event.preventDefault();
+    window.toggleDslMenu(); // close menu
+    
+    if (action === 'export') {
+        // Show loading state toast
+        if (window.showToast) window.showToast('正在生成 DSL 文件...', 'info');
+        
+        setTimeout(() => {
+            try {
+                // Mock DSL data based on current UI state or dummy data
+                const dslData = {
+                    version: "1.0",
+                    orchestrator: {
+                        name: "当前编排流",
+                        nodes: [
+                            { id: "node_1", type: "input", position: { x: 100, y: 100 } },
+                            { id: "node_2", type: "agent", position: { x: 300, y: 100 } }
+                        ],
+                        edges: [
+                            { source: "node_1", target: "node_2" }
+                        ]
+                    }
+                };
+                
+                const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(dslData, null, 2));
+                const downloadAnchorNode = document.createElement('a');
+                downloadAnchorNode.setAttribute("href", dataStr);
+                downloadAnchorNode.setAttribute("download", "orchestrator_dsl.json");
+                document.body.appendChild(downloadAnchorNode); // required for firefox
+                downloadAnchorNode.click();
+                downloadAnchorNode.remove();
+                
+                if (window.showToast) window.showToast('DSL 导出成功', 'success');
+            } catch (error) {
+                console.error("Export failed:", error);
+                if (window.showToast) window.showToast('导出失败: ' + error.message, 'error');
+            }
+        }, 500); // Mock generation delay
+        
+    } else if (action === 'import') {
+        // Trigger file input
+        const fileInput = document.getElementById('dsl-file-input');
+        if (fileInput) {
+            fileInput.click();
+        }
+    }
+};
+
+window.processDslImport = function(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    
+    // Validate file type
+    const validExtensions = ['.json', '.yaml', '.yml'];
+    const fileExt = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
+    
+    if (!validExtensions.includes(fileExt)) {
+        if (window.showToast) window.showToast('只支持导入 .json 或 .yaml 格式的 DSL 文件', 'error');
+        event.target.value = ''; // Reset input
+        return;
+    }
+    
+    if (window.showToast) window.showToast('正在解析并导入 DSL...', 'info');
+    
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            // Simply validate it's parseable (if JSON)
+            if (fileExt === '.json') {
+                JSON.parse(e.target.result);
+            }
+            // Mock processing delay
+            setTimeout(() => {
+                if (window.showToast) window.showToast('DSL 导入成功，画布已更新', 'success');
+                // Here you would typically re-render the canvas based on parsed data
+            }, 800);
+            
+        } catch (error) {
+            console.error("Import parsing failed:", error);
+            if (window.showToast) window.showToast('文件解析失败，请检查 DSL 格式是否正确', 'error');
+        } finally {
+            event.target.value = ''; // Reset input so same file can be selected again
+        }
+    };
+    
+    reader.onerror = function() {
+        if (window.showToast) window.showToast('读取文件发生错误', 'error');
+        event.target.value = '';
+    };
+    
+    reader.readAsText(file);
+};
+// --- End DSL Logic ---
+
 window.orchestratorData = [];
 const ORCH_NAMES = [
     '订单处理流程', '每日日报汇总', '客户投诉自动分类', '新员工入职指引', 
@@ -76,6 +206,20 @@ function generateMockOrchestrators(count) {
     return data.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
 }
 
+function formatAgentsCell(agents) {
+    const esc = window.escapeHtml || function (s) { return String(s == null ? '' : s); };
+    if (!agents || agents.length === 0) {
+        return '<span class="text-gray-400 text-xs whitespace-nowrap">无关联智能体</span>';
+    }
+    if (typeof agents === 'string') {
+        const t = esc(agents);
+        return `<span class="dt-cell-ellipsis text-gray-600 text-sm" title="${t}">${t}</span>`;
+    }
+    const title = agents.map(function (a) { return a.name; }).join('、');
+    const t = esc(title);
+    return `<span class="dt-cell-ellipsis text-gray-600 text-sm" title="${t}">${t}</span>`;
+}
+
 function renderOrchestratorList() {
     const tbody = document.getElementById('orchestrator-list-body');
     if (!tbody) return;
@@ -93,8 +237,11 @@ function renderOrchestratorList() {
                 </td>
             </tr>
         `;
+        if (window.syncDataTable) window.syncDataTable('orchestrator-data-table', { storageKey: 'dt-colwidths-orchestrator' });
         return;
     }
+
+    const esc = window.escapeHtml || function (s) { return String(s == null ? '' : s); };
 
     window.orchestratorData.forEach((item) => {
         const tr = document.createElement('tr');
@@ -107,59 +254,63 @@ function renderOrchestratorList() {
         const statusLabel = isActive ? '已启用' : '已停用';
 
         tr.innerHTML = `
-            <td class="px-6 py-4">
-                <div class="flex items-center gap-3">
-                    <div class="w-8 h-8 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center">
+            <td class="px-6 py-4 min-w-0">
+                <div class="flex items-center gap-3 min-w-0">
+                    <div class="w-8 h-8 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center flex-shrink-0">
                         <i class="fa-solid fa-diagram-project"></i>
                     </div>
-                    <div>
-                        <button type="button" class="font-medium text-gray-900 text-left cursor-pointer hover:text-blue-600" onclick="window.editOrchestrator && window.editOrchestrator('${item.id}')">
-                            ${item.name}
+                    <div class="min-w-0 flex-1">
+                        <button type="button" class="font-medium text-gray-900 text-left cursor-pointer hover:text-blue-600 dt-cell-ellipsis w-full" title="${esc(item.description)}" onclick="window.editOrchestrator && window.editOrchestrator('${item.id}')">
+                            ${esc(item.name)}
                         </button>
-                        <div class="text-xs text-gray-500 truncate max-w-[150px]" title="${item.description}">${item.description}</div>
                     </div>
                 </div>
             </td>
-            <td class="px-6 py-4">
-                ${renderAgentTags(item.agents)}
-            </td>
-            <td class="px-6 py-4">
+            <td class="px-6 py-4 min-w-0 text-sm">${formatAgentsCell(item.agents)}</td>
+            <td class="px-6 py-4 whitespace-nowrap">
                 <div class="flex items-center cursor-pointer" onclick="window.toggleOrchestratorStatus('${item.id}', event)">
                     <div class="${toggleBg} relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none">
                         <span class="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${toggleDot}"></span>
                     </div>
-                    <span class="ml-2 text-xs text-gray-500 select-none min-w-[36px]">${statusLabel}</span>
+                    <span class="ml-2 text-xs text-gray-500 select-none whitespace-nowrap">${statusLabel}</span>
                 </div>
             </td>
-            <td class="px-6 py-4 text-sm text-gray-600">${item.nodeCount}</td>
-            <td class="px-6 py-4 text-sm text-gray-600">${item.creator}</td>
-            <td class="px-6 py-4 text-xs text-gray-500">${item.createdAt}</td>
-            <td class="px-6 py-4 text-xs text-gray-500">${item.updatedAt}</td>
-            <td class="px-6 py-4 text-right">
-                <button onclick="window.openOrchActions(event, '${item.id}')" class="p-1.5 text-gray-400 hover:text-gray-600 transition-colors rounded hover:bg-gray-100">
-                    <i class="fa-solid fa-ellipsis"></i>
-                </button>
+            <td class="px-6 py-4 text-sm text-gray-600 whitespace-nowrap">${item.nodeCount}</td>
+            <td class="px-6 py-4 text-sm text-gray-600 whitespace-nowrap"><span class="dt-cell-ellipsis" title="${esc(item.creator)}">${esc(item.creator)}</span></td>
+            <td class="px-6 py-4 text-xs text-gray-500 whitespace-nowrap">${esc(String(item.createdAt).replace(/\s+/g, ' '))}</td>
+            <td class="px-6 py-4 text-xs text-gray-500 whitespace-nowrap">${esc(String(item.updatedAt).replace(/\s+/g, ' '))}</td>
+            <td class="px-6 py-4 text-right min-w-[120px] action-td">
             </td>
         `;
         tbody.appendChild(tr);
-    });
-}
 
-window.openOrchActions = function(event, id) {
-    window.showActionMenu(event, [
-        {
-            label: '编辑',
-            icon: 'fa-solid fa-pen',
-            onClick: () => editOrchestrator(id)
-        },
-        {
-            label: '删除',
-            icon: 'fa-solid fa-trash',
-            className: 'text-red-600 hover:bg-red-50',
-            iconClass: 'text-red-500',
-            onClick: () => deleteOrchestrator(id)
+        // Add inline actions
+        const actionsTd = tr.querySelector('.action-td');
+        const orchName = item.name;
+        const actions = [
+            {
+                label: '配置权限',
+                onClick: () => {
+                    if (window.navigateToPermissionConfig) {
+                        window.navigateToPermissionConfig(item.id, 'orchestrator', orchName);
+                    } else {
+                        console.error('navigateToPermissionConfig is not defined');
+                    }
+                }
+            },
+            {
+                label: '删除',
+                className: 'text-red-600 hover:text-red-800',
+                onClick: () => deleteOrchestrator(item.id)
+            }
+        ];
+        
+        if (window.createInlineActions) {
+            const actionContainer = window.createInlineActions(actions);
+            actionsTd.appendChild(actionContainer);
         }
-    ]);
+    });
+    if (window.syncDataTable) window.syncDataTable('orchestrator-data-table', { storageKey: 'dt-colwidths-orchestrator' });
 }
 
 function renderAgentTags(agents) {

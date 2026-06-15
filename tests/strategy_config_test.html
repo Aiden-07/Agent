@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>Strategy Config Test</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-gray-100 h-screen">
+    <div id="main-content-area" class="h-full"></div>
+
+    <script>
+        // Mock switchView
+        window.switchView = function(viewName) {
+            console.log('Switching to view:', viewName);
+            if (viewName === 'knowledge') {
+                document.getElementById('main-content-area').innerHTML = '<h1>Knowledge View Restored</h1>';
+            }
+        };
+
+        // Mock localStorage
+        const localStorageMock = {
+            store: {},
+            getItem: function(key) { return this.store[key] || null; },
+            setItem: function(key, value) { this.store[key] = value.toString(); },
+            removeItem: function(key) { delete this.store[key]; }
+        };
+        Object.defineProperty(window, 'localStorage', { value: localStorageMock });
+
+        // Load the strategy config view content manually for testing
+        const viewContent = `
+<div class="flex flex-col h-full bg-white relative animate-fade-in">
+    <!-- Header with Back Button and Title -->
+    <div class="flex items-center px-6 py-4 border-b border-gray-200 flex-shrink-0">
+        <button onclick="goBackToKnowledgeList()" class="mr-4 text-gray-500 hover:text-gray-700 transition-colors p-1 rounded-full hover:bg-gray-100" aria-label="返回">
+            <i class="fa-solid fa-arrow-left text-lg"></i>
+        </button>
+        <h1 class="text-xl font-semibold text-gray-800">策略配置</h1>
+    </div>
+
+    <!-- Dual Tab Navigation -->
+    <div class="flex items-center px-6 border-b border-gray-200 bg-gray-50/50 flex-shrink-0">
+        <button id="tab-file-type" onclick="switchStrategyTab('file-type')" class="px-6 py-3 text-sm font-medium text-blue-600 border-b-2 border-blue-600 focus:outline-none transition-colors">
+            按文件类型
+        </button>
+        <button id="tab-template" onclick="switchStrategyTab('template')" class="px-6 py-3 text-sm font-medium text-gray-500 border-b-2 border-transparent hover:text-gray-700 hover:border-gray-300 focus:outline-none transition-colors">
+            按模版
+        </button>
+    </div>
+
+    <!-- Content Area -->
+    <div id="strategy-content-area" class="flex-1 overflow-y-auto p-6 relative">
+        <!-- Content for 'By File Type' -->
+        <div id="content-file-type" class="h-full w-full bg-red-100">
+            File Type Content
+        </div>
+        
+        <!-- Content for 'By Template' -->
+        <div id="content-template" class="hidden h-full w-full bg-blue-100">
+            Template Content
+        </div>
+    </div>
+</div>
+        `;
+        document.getElementById('main-content-area').innerHTML = viewContent;
+
+        // Add the JS logic
+        window.switchStrategyTab = function(tabName) {
+            const tabFile = document.getElementById('tab-file-type');
+            const tabTemplate = document.getElementById('tab-template');
+            const contentFile = document.getElementById('content-file-type');
+            const contentTemplate = document.getElementById('content-template');
+            
+            if (!tabFile || !tabTemplate || !contentFile || !contentTemplate) return;
+            
+            if (tabName === 'file-type') {
+                tabFile.classList.add('text-blue-600', 'border-blue-600');
+                tabFile.classList.remove('text-gray-500', 'border-transparent');
+                
+                tabTemplate.classList.remove('text-blue-600', 'border-blue-600');
+                tabTemplate.classList.add('text-gray-500', 'border-transparent');
+                
+                contentFile.classList.remove('hidden');
+                contentTemplate.classList.add('hidden');
+            } else {
+                tabTemplate.classList.add('text-blue-600', 'border-blue-600');
+                tabTemplate.classList.remove('text-gray-500', 'border-transparent');
+                
+                tabFile.classList.remove('text-blue-600', 'border-blue-600');
+                tabFile.classList.add('text-gray-500', 'border-transparent');
+                
+                contentTemplate.classList.remove('hidden');
+                contentFile.classList.add('hidden');
+            }
+            console.log('Switched to tab:', tabName);
+        };
+
+        window.goBackToKnowledgeList = function() {
+            // Mock state saving
+            localStorage.setItem('restoreKbListState', JSON.stringify({ test: true }));
+            switchView('knowledge');
+        };
+
+        // Auto-run tests
+        setTimeout(() => {
+            console.log('Testing Tab Switch...');
+            switchStrategyTab('template');
+            const templateContent = document.getElementById('content-template');
+            if (!templateContent.classList.contains('hidden')) {
+                console.log('PASS: Template tab visible');
+            } else {
+                console.error('FAIL: Template tab hidden');
+            }
+
+            switchStrategyTab('file-type');
+            const fileContent = document.getElementById('content-file-type');
+            if (!fileContent.classList.contains('hidden')) {
+                console.log('PASS: File tab visible');
+            } else {
+                console.error('FAIL: File tab hidden');
+            }
+
+            console.log('Testing Back Navigation...');
+            goBackToKnowledgeList();
+            if (localStorage.getItem('restoreKbListState')) {
+                console.log('PASS: State saved');
+            } else {
+                console.error('FAIL: State not saved');
+            }
+        }, 1000);
+    </script>
+</body>
+</html>

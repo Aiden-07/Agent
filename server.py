@@ -3,7 +3,7 @@ import socketserver
 import os
 import sys
 
-PORT = 8000
+PORT = int(os.environ.get("PORT", 8000))
 if getattr(sys, 'frozen', False):
     # If the application is run as a bundle, the PyInstaller bootloader
     # extends the sys module by a flag frozen=True and sets the app 

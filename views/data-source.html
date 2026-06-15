@@ -1,0 +1,203 @@
+<div class="flex min-h-full flex-col gap-6 animate-fade-in" id="data-source-page">
+    <div class="flex flex-none flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <div>
+            <h2 class="text-lg font-semibold text-gray-900">数据源管理</h2>
+            <p class="mt-1 text-sm text-gray-500">统一管理数据库连接，供工作流中的数据库查询节点调用。</p>
+        </div>
+        <button type="button" onclick="openDataSourceModal()" class="inline-flex min-h-[40px] items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+            <i class="fa-solid fa-plus" aria-hidden="true"></i>
+            新建数据源
+        </button>
+    </div>
+
+    <div class="flex min-h-[420px] flex-1 flex-col overflow-hidden rounded-lg border border-gray-100 bg-white shadow-sm">
+        <div class="flex flex-none flex-col gap-3 border-b border-gray-100 bg-gray-50 px-5 py-4 lg:flex-row lg:items-center lg:justify-between">
+            <div class="flex flex-1 flex-col gap-3 md:flex-row md:items-center">
+                <label class="relative block w-full md:max-w-sm">
+                    <span class="sr-only">搜索数据源</span>
+                    <i class="fa-solid fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" aria-hidden="true"></i>
+                    <input id="ds-search-input" type="search" oninput="filterDataSources()" placeholder="搜索名称、库名、Host..." class="w-full rounded-lg border border-gray-200 bg-white py-2 pl-10 pr-3 text-sm text-gray-700 shadow-sm transition-colors placeholder:text-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </label>
+                <label class="sr-only" for="ds-status-filter">状态</label>
+                <select id="ds-status-filter" onchange="filterDataSources()" class="min-h-[40px] rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <option value="all">全部状态</option>
+                    <option value="enabled">启用</option>
+                    <option value="disabled">停用</option>
+                </select>
+                <label class="sr-only" for="ds-type-filter">数据库类型</label>
+                <select id="ds-type-filter" onchange="filterDataSources()" class="min-h-[40px] rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <option value="all">全部类型</option>
+                    <option value="mysql">MySQL</option>
+                    <option value="postgresql">PostgreSQL</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="dt-scroll-wrap dt-scroll-fill rounded-inherit">
+            <table id="data-source-table" class="w-full text-left text-sm">
+                <thead class="sticky top-0 z-10 border-b border-gray-100 bg-gray-50 text-xs font-medium uppercase tracking-wider text-gray-500">
+                    <tr>
+                        <th class="px-5 py-3">数据源名称</th>
+                        <th class="px-5 py-3">数据库类型</th>
+                        <th class="px-5 py-3">状态</th>
+                        <th class="px-5 py-3">连接状态</th>
+                        <th class="px-5 py-3">创建人</th>
+                        <th class="px-5 py-3">创建时间</th>
+                        <th class="px-5 py-3">最近测试时间</th>
+                        <th class="px-5 py-3 text-right">操作</th>
+                    </tr>
+                </thead>
+                <tbody id="data-source-list-body" class="divide-y divide-gray-100 bg-white">
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div id="data-source-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-gray-900/50 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="ds-modal-title">
+        <div class="flex max-h-[92vh] w-full max-w-4xl flex-col overflow-hidden rounded-xl bg-white shadow-2xl">
+            <div class="flex items-center justify-between border-b border-gray-100 bg-gray-50 px-6 py-4">
+                <div>
+                    <h3 id="ds-modal-title" class="text-lg font-semibold text-gray-900">新建数据源</h3>
+                    <p class="mt-1 text-xs text-gray-500">保存前必须完成连接测试，密码保存后不会明文展示。</p>
+                </div>
+                <button type="button" onclick="closeDataSourceModal()" class="flex h-9 w-9 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500" aria-label="关闭">
+                    <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+                </button>
+            </div>
+
+            <form id="data-source-form" class="flex-1 overflow-y-auto px-6 py-5" onsubmit="event.preventDefault(); saveDataSourceFromModal();">
+                <input type="hidden" id="ds-id">
+                <div class="grid gap-6 lg:grid-cols-[1fr,1fr]">
+                    <section class="space-y-4">
+                        <div class="flex items-center gap-2 border-b border-gray-100 pb-2">
+                            <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
+                                <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
+                            </div>
+                            <div>
+                                <h4 class="text-sm font-semibold text-gray-900">基础信息</h4>
+                                <p class="text-xs text-gray-500">用于列表展示和识别数据源。</p>
+                            </div>
+                        </div>
+                        <div>
+                            <label for="ds-name" class="mb-1 block text-sm font-medium text-gray-700">数据源名称 <span class="text-red-500">*</span></label>
+                            <input id="ds-name" type="text" maxlength="50" class="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="例如：销售业务库">
+                            <p class="mt-1 hidden text-xs text-red-500" id="ds-name-error"></p>
+                        </div>
+                        <div>
+                            <label for="ds-desc" class="mb-1 block text-sm font-medium text-gray-700">数据源描述</label>
+                            <textarea id="ds-desc" rows="4" maxlength="200" class="h-[116px] w-full resize-none rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="说明数据源用途，例如销售报表查询、经营分析等"></textarea>
+                        </div>
+                        <div>
+                            <label for="ds-type" class="mb-1 block text-sm font-medium text-gray-700">数据库类型 <span class="text-red-500">*</span></label>
+                            <select id="ds-type" onchange="invalidateDataSourceTest()" class="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="mysql">MySQL</option>
+                                <option value="postgresql">PostgreSQL</option>
+                            </select>
+                        </div>
+                    </section>
+
+                    <section class="space-y-4">
+                        <div class="flex items-center gap-2 border-b border-gray-100 pb-2">
+                            <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600">
+                                <i class="fa-solid fa-database" aria-hidden="true"></i>
+                            </div>
+                            <div>
+                                <h4 class="text-sm font-semibold text-gray-900">连接信息</h4>
+                                <p class="text-xs text-gray-500">本原型仅模拟连接测试，不会真实连库。</p>
+                            </div>
+                        </div>
+                        <div class="grid gap-4 sm:grid-cols-[1fr,110px]">
+                            <div>
+                                <label for="ds-host" class="mb-1 block text-sm font-medium text-gray-700">Host <span class="text-red-500">*</span></label>
+                                <input id="ds-host" type="text" oninput="invalidateDataSourceTest()" class="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="db.example.com">
+                                <p class="mt-1 hidden text-xs text-red-500" id="ds-host-error"></p>
+                            </div>
+                            <div>
+                                <label for="ds-port" class="mb-1 block text-sm font-medium text-gray-700">Port <span class="text-red-500">*</span></label>
+                                <input id="ds-port" type="number" min="1" max="65535" oninput="invalidateDataSourceTest()" class="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="3306">
+                                <p class="mt-1 hidden text-xs text-red-500" id="ds-port-error"></p>
+                            </div>
+                        </div>
+                        <div>
+                            <label for="ds-database" class="mb-1 block text-sm font-medium text-gray-700">Database <span class="text-red-500">*</span></label>
+                            <input id="ds-database" type="text" oninput="invalidateDataSourceTest()" class="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="sales_dw">
+                            <p class="mt-1 hidden text-xs text-red-500" id="ds-database-error"></p>
+                        </div>
+                        <div>
+                            <label for="ds-username" class="mb-1 block text-sm font-medium text-gray-700">Username <span class="text-red-500">*</span></label>
+                            <input id="ds-username" type="text" autocomplete="off" oninput="invalidateDataSourceTest()" class="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="readonly_user">
+                            <p class="mt-1 hidden text-xs text-red-500" id="ds-username-error"></p>
+                        </div>
+                        <div>
+                            <label for="ds-password" class="mb-1 block text-sm font-medium text-gray-700">Password <span class="text-red-500">*</span></label>
+                            <div class="relative">
+                                <input id="ds-password" type="password" autocomplete="new-password" oninput="invalidateDataSourceTest()" class="w-full rounded-lg border border-gray-200 px-3 py-2 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="编辑时留空表示沿用原密码">
+                                <button type="button" onclick="toggleDataSourcePassword()" class="absolute right-2 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded text-gray-400 hover:bg-gray-50 hover:text-gray-600" aria-label="切换密码可见性">
+                                    <i class="fa-regular fa-eye" id="ds-password-eye" aria-hidden="true"></i>
+                                </button>
+                            </div>
+                            <p class="mt-1 hidden text-xs text-red-500" id="ds-password-error"></p>
+                        </div>
+                    </section>
+                </div>
+
+                <div id="ds-test-result" class="mt-5 hidden rounded-lg border px-4 py-3 text-sm"></div>
+            </form>
+
+            <div class="flex flex-col gap-3 border-t border-gray-100 bg-white px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
+                <button type="button" onclick="testDataSourceFromModal()" id="ds-test-btn" class="inline-flex min-h-[40px] items-center justify-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-medium text-blue-700 transition-colors hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <i class="fa-solid fa-plug-circle-bolt" aria-hidden="true"></i>
+                    测试连接
+                </button>
+                <div class="flex justify-end gap-3">
+                    <button type="button" onclick="closeDataSourceModal()" class="min-h-[40px] rounded-lg px-4 py-2 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500">取消</button>
+                    <button type="button" onclick="saveDataSourceFromModal()" id="ds-save-btn" class="inline-flex min-h-[40px] items-center justify-center gap-2 rounded-lg bg-blue-600 px-5 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+                        <i class="fa-solid fa-save" aria-hidden="true"></i>
+                        保存
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="data-source-impact-modal" class="fixed inset-0 z-[60] hidden items-center justify-center bg-gray-900/50 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="ds-impact-title">
+        <div class="w-full max-w-lg rounded-xl bg-white p-6 shadow-2xl">
+            <div class="flex items-start gap-3">
+                <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-orange-100 text-orange-600">
+                    <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
+                </div>
+                <div class="min-w-0">
+                    <h3 id="ds-impact-title" class="text-lg font-semibold text-gray-900">确认操作</h3>
+                    <p id="ds-impact-message" class="mt-1 text-sm text-gray-600"></p>
+                </div>
+            </div>
+            <div id="ds-impact-reference-list" class="mt-5 max-h-48 overflow-y-auto rounded-lg border border-gray-100 bg-gray-50 p-3 text-sm text-gray-600"></div>
+            <div class="mt-6 flex justify-end gap-3">
+                <button type="button" onclick="closeDataSourceImpactModal()" class="rounded-lg px-4 py-2 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500">取消</button>
+                <button type="button" onclick="confirmDataSourceImpactAction()" id="ds-impact-confirm" class="rounded-lg bg-orange-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-orange-500">确认</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="data-source-detail-drawer" class="fixed inset-y-0 right-0 z-[55] hidden w-full max-w-2xl border-l border-gray-200 bg-white shadow-2xl" role="dialog" aria-modal="true" aria-labelledby="ds-detail-title">
+        <div class="flex h-full flex-col">
+            <div class="border-b border-gray-100 bg-gray-50 px-6 py-4">
+                <div class="flex items-start justify-between gap-4">
+                    <div class="min-w-0">
+                        <h3 id="ds-detail-title" class="truncate text-lg font-semibold text-gray-900">数据源详情</h3>
+                        <p id="ds-detail-subtitle" class="mt-1 text-xs text-gray-500"></p>
+                    </div>
+                    <button type="button" onclick="closeDataSourceDetailDrawer()" class="flex h-9 w-9 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500" aria-label="关闭详情">
+                        <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+                    </button>
+                </div>
+                <div class="mt-4 flex gap-2 overflow-x-auto" id="ds-detail-tabs">
+                    <button type="button" data-tab="basic" onclick="switchDataSourceDetailTab('basic')" class="ds-detail-tab rounded-lg px-3 py-1.5 text-sm font-medium">基本信息</button>
+                    <button type="button" data-tab="references" onclick="switchDataSourceDetailTab('references')" class="ds-detail-tab rounded-lg px-3 py-1.5 text-sm font-medium">引用关系</button>
+                    <button type="button" data-tab="logs" onclick="switchDataSourceDetailTab('logs')" class="ds-detail-tab rounded-lg px-3 py-1.5 text-sm font-medium">查询日志</button>
+                </div>
+            </div>
+            <div id="ds-detail-content" class="flex-1 overflow-y-auto p-6"></div>
+        </div>
+    </div>
+</div>
