@@ -8,6 +8,7 @@ const routes = {
     'settings-logs': { title: '系统日志', file: 'views/settings-logs.html' },
     'model-config': { title: '模型服务商', file: 'views/model-config.html' },
     'model-list': { title: '模型列表', file: 'views/model-list.html' },
+    'profile': { title: '个人中心', file: 'views/profile.html' },
     'user-mgmt': { title: '用户管理', file: 'views/user-mgmt.html' },
     'role-mgmt': { title: '角色管理', file: 'views/role-mgmt.html' },
     'agent': { title: '智能体管理', file: 'views/agent.html' },
@@ -192,6 +193,10 @@ async function loadView(viewName, params = null) {
             if (typeof window.initMonitoringDateRange === 'function') {
                 window.initMonitoringDateRange();
             }
+        }
+
+        if (viewName === 'profile' && typeof window.initProfilePage === 'function') {
+            window.initProfilePage();
         }
 
     } catch (error) {
