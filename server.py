@@ -38,6 +38,25 @@ class ThreadingServer(socketserver.ThreadingTCPServer):
         return super().handle_error(request, client_address)
 
 if __name__ == "__main__":
+    # Kill any existing process on the target port before starting
+    import subprocess
+    import signal
+    try:
+        result = subprocess.run(
+            ["lsof", "-tiTCP", str(PORT), "-sTCP:LISTEN"],
+            capture_output=True, text=True, timeout=5
+        )
+        if result.stdout.strip():
+            pids = result.stdout.strip().split()
+            for pid in pids:
+                try:
+                    os.kill(int(pid), signal.SIGKILL)
+                    print(f"Killed existing process on port {PORT}: PID {pid}")
+                except (OSError, ValueError):
+                    pass
+    except Exception:
+        pass  # lsof not available or other error, proceed anyway
+
     with ThreadingServer(("", PORT), SimpleHandler) as httpd:
         print(f"Serving at port {PORT}")
         try:

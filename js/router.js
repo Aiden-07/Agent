@@ -11,6 +11,7 @@ const routes = {
     'profile': { title: '个人中心', file: 'views/profile.html' },
     'user-mgmt': { title: '用户管理', file: 'views/user-mgmt.html' },
     'role-mgmt': { title: '角色管理', file: 'views/role-mgmt.html' },
+    'user-profile': { title: '个人中心', file: 'views/user-profile.html' },
     'agent': { title: '智能体管理', file: 'views/agent.html' },
     'orchestrator': { title: '工作流', file: 'views/orchestrator.html' },
     'orchestrator-editor': { title: '工作流编辑', file: 'views/orchestrator-editor.html', fullscreen: true },
@@ -124,6 +125,9 @@ async function loadView(viewName, params = null) {
             // Execute view-specific scripts if available
             if (viewName === 'settings-logs' && window.renderSystemLogs) {
                 window.renderSystemLogs();
+            }
+            if (viewName === 'user-profile' && window.initProfilePage) {
+                window.initProfilePage();
             }
         }
         
