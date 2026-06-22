@@ -1,129 +1,148 @@
-<div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden animate-fade-in h-full flex flex-col">
-    
-    <!-- Collapsible Filter Area -->
-    <div class="px-6 py-4 border-b border-gray-100 bg-white transition-all duration-300 relative" id="user-filter-area">
-        <div class="flex items-start justify-between gap-4">
-            <!-- Filters Container -->
-            <div class="flex-1 flex flex-col gap-4">
-                <!-- Row 1: Always visible -->
-                <div class="flex items-center gap-4 flex-wrap">
-                    <div class="relative w-72 flex-shrink-0">
-                        <i class="fa-solid fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
-                        <input id="user-search-input" type="text" placeholder="搜索姓名、手机号、邮箱..." class="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm bg-white shadow-sm transition-shadow">
-                    </div>
-                    
-                    <div class="flex items-center gap-2.5 flex-shrink-0">
-                        <span class="text-sm font-medium text-gray-500 whitespace-nowrap">角色</span>
-                        <select id="user-role-filter" class="border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm text-gray-700 bg-white shadow-sm cursor-pointer min-w-[140px]">
-                            <option value="所有角色">所有角色</option>
-                            <option value="管理员">管理员</option>
-                            <option value="开发者">开发者</option>
-                            <option value="普通用户">普通用户</option>
-                        </select>
-                    </div>
-
-                    <!-- Status Filter -->
-                    <div class="flex items-center gap-2.5 flex-shrink-0 filter-advanced hidden">
-                        <span class="text-sm font-medium text-gray-500 whitespace-nowrap">状态</span>
-                        <select id="user-status-filter" class="border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm text-gray-700 bg-white shadow-sm cursor-pointer min-w-[140px]">
-                            <option value="所有状态">所有状态</option>
-                            <option value="normal">正常</option>
-                            <option value="locked">锁定</option>
-                            <option value="resigned">离职</option>
-                        </select>
-                    </div>
+<div class="h-full min-h-0 bg-white border border-gray-100 rounded-xl shadow-sm overflow-hidden animate-fade-in flex">
+    <style>
+        #batch-actions-dropdown:not([open]) #batch-actions-menu {
+            display: none;
+        }
+        .org-toggle-caret {
+            width: 0;
+            height: 0;
+            border-top: 4px solid transparent;
+            border-bottom: 4px solid transparent;
+            border-left: 5px solid currentColor;
+            display: inline-block;
+            transition: transform 0.15s ease;
+        }
+        .org-toggle-caret-expanded {
+            transform: rotate(90deg);
+        }
+    </style>
+    <!-- Organization Sidebar -->
+    <aside class="w-72 flex-shrink-0 border-r border-gray-100 bg-gray-50/70 flex flex-col min-h-0">
+        <div class="p-4 border-b border-gray-100 bg-white">
+            <div class="flex items-center justify-between gap-3 mb-3">
+                <div>
+                    <h2 class="text-base font-semibold text-gray-900">用户管理</h2>
                 </div>
-
-                <!-- Row 2: Advanced Filters -->
-                <div class="flex items-center gap-4 flex-wrap filter-advanced hidden">
-                    <div class="flex items-center gap-2.5 flex-shrink-0">
-                        <span class="text-sm font-medium text-gray-500 whitespace-nowrap">部门</span>
-                        <select id="user-dept-filter" class="border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm text-gray-700 bg-white shadow-sm cursor-pointer min-w-[140px]">
-                            <option value="所有部门">所有部门</option>
-                            <option value="产品部">产品部</option>
-                            <option value="研发部">研发部</option>
-                            <option value="运营部">运营部</option>
-                            <option value="客服部">客服部</option>
-                            <option value="设计部">设计部</option>
-                            <option value="测试部">测试部</option>
-                            <option value="运维部">运维部</option>
-                        </select>
-                    </div>
-
-                    <div class="flex items-center gap-2.5 flex-shrink-0">
-                        <span class="text-sm font-medium text-gray-500 whitespace-nowrap">加入时间</span>
-                        <div class="relative w-64">
-                            <i class="fa-regular fa-calendar absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 z-10"></i>
-                            <input id="user-date-filter" type="text" placeholder="开始时间 - 结束时间" class="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm bg-white shadow-sm cursor-pointer flatpickr-input" readonly="readonly">
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Action Buttons -->
-            <div class="flex items-start gap-3 flex-shrink-0">
-                <button onclick="executeUserSearch()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors shadow-sm">
-                    查询
-                </button>
-                <button onclick="resetUserSearch()" class="bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 hover:text-gray-800 px-4 py-2 rounded-lg text-sm font-medium transition-colors shadow-sm">
-                    重置
-                </button>
-                <button onclick="toggleUserFilters()" id="toggle-filter-btn" class="text-blue-600 hover:text-blue-700 px-2 py-2 text-sm font-medium transition-colors flex items-center bg-transparent border-none outline-none">
-                    <span>展开筛选</span><i class="fa-solid fa-chevron-down ml-1 text-xs"></i>
-                </button>
             </div>
         </div>
-    </div>
 
-    <!-- Separator / Gutter -->
-    <div class="h-4 bg-gray-100 border-b border-gray-200"></div>
-
-    <!-- Top Action Area -->
-    <div class="px-6 py-4 border-b border-gray-100 flex justify-end items-center bg-white" style="height: 60px;">
-        <div class="flex items-center gap-3">
-            <button onclick="openAddUserModal()" class="bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white px-4 py-2 rounded-lg text-sm font-medium transition-all shadow-sm flex items-center">
-                <i class="fa-solid fa-plus mr-2"></i>新增用户
+        <div class="px-3 py-3 border-b border-gray-100 bg-white">
+            <button type="button" onclick="openDepartmentModal()" class="w-full px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm text-gray-700 hover:bg-gray-50 hover:border-gray-300 transition-colors">
+                <i class="fa-solid fa-plus mr-1.5"></i>添加子部门
             </button>
         </div>
-    </div>
-    
-    <!-- Filter/Search Bar Removed -->
 
-    <!-- Table Container (Flex Grow + Scroll) -->
-    <div class="flex-1 overflow-y-auto min-h-0">
-        <div class="dt-scroll-wrap min-w-0">
-        <table id="user-data-table" class="w-full text-left border-collapse">
-            <thead class="bg-gray-50 sticky top-0 z-10 shadow-sm">
-                <tr class="text-gray-500 text-xs uppercase tracking-wider">
-                    <th class="px-6 py-3 font-medium">姓名</th>
-                    <th class="px-6 py-3 font-medium">手机号</th>
-                    <th class="px-6 py-3 font-medium">邮箱</th>
-                    <th class="px-6 py-3 font-medium">部门</th>
-                    <th class="px-6 py-3 font-medium">角色</th>
-                    <th class="px-6 py-3 font-medium">状态</th>
-                    <th class="px-6 py-3 font-medium text-right dt-th-sticky-end">操作</th>
-                </tr>
-            </thead>
-            <tbody id="user-table-body" class="divide-y divide-gray-100 text-sm bg-white">
-                <!-- Rows will be populated by JS -->
-            </tbody>
-        </table>
+        <div id="org-tree" class="flex-1 overflow-y-auto p-3 space-y-1 min-h-0">
+            <!-- Organization tree rendered by JS -->
         </div>
-    </div>
+    </aside>
+
+    <!-- Member Workspace -->
+    <section class="flex-1 min-w-0 flex flex-col bg-white">
+        <div class="px-6 py-4 border-b border-gray-100 bg-white">
+            <div class="flex items-start justify-between gap-4">
+                <div class="min-w-0">
+                    <div class="flex items-center gap-2">
+                        <h1 id="current-org-title" class="text-lg font-semibold text-gray-900 truncate">全部成员</h1>
+                        <span id="current-org-count" class="text-xs px-2 py-0.5 rounded-full bg-blue-50 text-blue-600 font-medium">0人</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-4 flex items-center justify-between gap-4 flex-wrap">
+                <div class="flex items-center gap-3 flex-wrap">
+                    <div class="relative w-64">
+                        <i class="fa-solid fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+                        <input id="org-search-input" type="text" placeholder="搜索成员、部门、角色" class="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent shadow-sm">
+                    </div>
+                    <select id="user-role-filter" class="border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm text-gray-700 bg-white shadow-sm cursor-pointer min-w-[120px]">
+                        <option value="所有角色">所有角色</option>
+                        <option value="管理员">管理员</option>
+                        <option value="主管理员">主管理员</option>
+                        <option value="开发者">开发者</option>
+                        <option value="普通用户">普通用户（无登录权限）</option>
+                    </select>
+                    <select id="user-status-filter" class="border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm text-gray-700 bg-white shadow-sm cursor-pointer min-w-[120px]">
+                        <option value="所有状态">所有状态</option>
+                        <option value="normal">正常</option>
+                        <option value="locked">锁定</option>
+                        <option value="resigned">离职</option>
+                    </select>
+                </div>
+
+                <div class="flex items-center gap-3 flex-wrap justify-end">
+                    <button id="sync-org-button" type="button" onclick="syncOrganizationFromThirdParty()" class="bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 hover:border-gray-300 px-4 py-2 rounded-lg text-sm font-medium transition-all shadow-sm flex items-center">
+                        <i class="fa-solid fa-rotate mr-2 text-blue-500"></i>同步
+                    </button>
+                    <button onclick="openAddUserModal()" class="bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white px-4 py-2 rounded-lg text-sm font-medium transition-all shadow-sm flex items-center">
+                        <i class="fa-solid fa-user-plus mr-2"></i>添加成员
+                    </button>
+                    <details id="batch-actions-dropdown" class="relative">
+                        <summary class="list-none bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 px-4 py-2 rounded-lg text-sm font-medium transition-colors shadow-sm flex items-center cursor-pointer">
+                            批量管理
+                            <span id="batch-selected-count" class="hidden ml-2 text-xs px-1.5 py-0.5 rounded-full bg-blue-50 text-blue-600">0</span>
+                            <i class="fa-solid fa-chevron-down ml-2 text-xs text-gray-400"></i>
+                        </summary>
+                        <div id="batch-actions-menu" class="absolute left-0 top-full mt-2 w-40 bg-white border border-gray-100 rounded-lg shadow-lg z-20 py-1">
+                            <button type="button" onclick="batchUpdateUserStatus('locked')" class="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50">
+                                <i class="fa-solid fa-ban mr-2 text-orange-500"></i>批量停用
+                            </button>
+                            <button type="button" onclick="batchUpdateUserStatus('normal')" class="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50">
+                                <i class="fa-solid fa-circle-check mr-2 text-green-500"></i>批量启用
+                            </button>
+                            <button type="button" onclick="batchDeleteUsers()" class="w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50">
+                                <i class="fa-solid fa-trash mr-2"></i>批量删除
+                            </button>
+                            <div class="my-1 border-t border-gray-100"></div>
+                            <button type="button" onclick="openBatchImportModal()" class="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50">
+                                <i class="fa-solid fa-file-arrow-up mr-2 text-blue-500"></i>批量导入
+                            </button>
+                            <button type="button" onclick="batchExportUsers()" class="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50">
+                                <i class="fa-solid fa-file-arrow-down mr-2 text-blue-500"></i>批量导出
+                            </button>
+                        </div>
+                    </details>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex-1 overflow-y-auto min-h-0">
+            <div class="dt-scroll-wrap min-w-0">
+                <table id="user-data-table" class="w-full text-left border-collapse">
+                    <thead class="bg-gray-50 sticky top-0 z-10 shadow-sm">
+                        <tr class="text-gray-500 text-xs uppercase tracking-wider">
+                            <th class="px-4 py-3 font-medium w-10"><input id="select-all-users" type="checkbox" class="w-4 h-4 text-blue-600 border-gray-300 rounded"></th>
+                            <th class="px-4 py-3 font-medium">姓名</th>
+                            <th class="px-4 py-3 font-medium">角色</th>
+                            <th class="px-4 py-3 font-medium">账号状态</th>
+                            <th class="px-4 py-3 font-medium">所属部门</th>
+                            <th class="px-4 py-3 font-medium">职位</th>
+                            <th class="px-4 py-3 font-medium">工号</th>
+                            <th class="px-4 py-3 font-medium">手机号</th>
+                            <th class="px-4 py-3 font-medium">邮箱</th>
+                            <th class="px-4 py-3 font-medium text-right dt-th-sticky-end">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="user-table-body" class="divide-y divide-gray-100 text-sm bg-white">
+                        <!-- Rows will be populated by JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
 </div>
 
 <!-- User Modal (Add/Edit) -->
 <div id="user-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center backdrop-blur-sm">
-    <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg mx-4 overflow-hidden animate-fade-in-up">
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl mx-4 overflow-hidden animate-fade-in-up">
         <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
-            <h3 id="user-modal-title" class="font-semibold text-gray-800 text-lg">新增用户</h3>
+            <h3 id="user-modal-title" class="font-semibold text-gray-800 text-lg">新增成员</h3>
             <button onclick="closeModal('user-modal')" class="text-gray-400 hover:text-gray-600 transition-colors">
                 <i class="fa-solid fa-times text-xl"></i>
             </button>
         </div>
-        
-        <form id="user-form" onsubmit="event.preventDefault(); saveUser();" class="p-6 space-y-5 max-h-[70vh] overflow-y-auto">
-            <!-- Name -->
+
+        <form id="user-form" onsubmit="event.preventDefault(); saveUser();" class="p-6 space-y-5 max-h-[72vh] overflow-y-auto">
             <div class="grid grid-cols-2 gap-4">
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">姓名 <span class="text-red-500">*</span></label>
@@ -131,23 +150,25 @@
                     <p id="user-name-error" class="text-red-500 text-xs mt-1 hidden error-msg"></p>
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">部门 <span class="text-red-500">*</span></label>
-                    <input id="user-department" type="text" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all" placeholder="例如：研发部">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">所属部门 <span class="text-red-500">*</span></label>
+                    <select id="user-department" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white transition-all"></select>
                     <p id="user-department-error" class="text-red-500 text-xs mt-1 hidden error-msg"></p>
                 </div>
             </div>
 
-            <!-- Contact Info Group (ADD MODE: Combined) -->
-            <div id="user-contact-add-group" class="bg-blue-50 p-4 rounded-lg border border-blue-100">
-                <label class="block text-sm font-medium text-gray-700 mb-1">账号 <span class="text-red-500">*</span></label>
-                <input id="user-combined-contact" type="text" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white" placeholder="请输入手机号或邮箱">
-                <p class="text-xs text-gray-500 mt-1">请输入手机号或邮箱作为登录账号</p>
-                <p id="user-combined-contact-error" class="text-red-500 text-xs mt-1 hidden error-msg"></p>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">职位</label>
+                    <input id="user-title" type="text" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all" placeholder="例如：产品经理">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">工号</label>
+                    <input id="user-employee-no" type="text" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all" placeholder="自动或手动填写">
+                </div>
             </div>
 
-            <!-- Contact Info Group (EDIT MODE: Split) -->
             <div id="user-contact-edit-group" class="hidden space-y-4 bg-gray-50 p-4 rounded-lg border border-gray-100">
-                 <div class="space-y-4">
+                <div class="grid grid-cols-2 gap-4">
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">手机号</label>
                         <input id="user-phone" type="text" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white" placeholder="11位手机号">
@@ -158,35 +179,38 @@
                         <input id="user-email" type="email" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white" placeholder="example@company.com">
                         <p id="user-email-error" class="text-red-500 text-xs mt-1 hidden error-msg"></p>
                     </div>
-                 </div>
-            </div>
-
-            <!-- Role -->
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">角色 <span class="text-red-500">*</span></label>
-                <div class="bg-white border border-gray-300 rounded-lg p-4">
-                    <div id="role-checkbox-group" class="grid grid-cols-3 gap-4">
-                        <label class="inline-flex items-center cursor-pointer hover:bg-gray-50 rounded p-1 -ml-1 transition-colors">
-                            <input type="checkbox" name="user-role" value="普通用户" class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
-                            <span class="ml-2 text-sm text-gray-700">普通用户</span>
-                        </label>
-                        <label class="inline-flex items-center cursor-pointer hover:bg-gray-50 rounded p-1 -ml-1 transition-colors">
-                            <input type="checkbox" name="user-role" value="开发者" class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
-                            <span class="ml-2 text-sm text-gray-700">开发者</span>
-                        </label>
-                        <label class="inline-flex items-center cursor-pointer hover:bg-gray-50 rounded p-1 -ml-1 transition-colors">
-                            <input type="checkbox" name="user-role" value="管理员" class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
-                            <span class="ml-2 text-sm text-gray-700">管理员</span>
-                        </label>
-                    </div>
-                </div>
-                <div class="flex justify-between items-center mt-1">
-                    <p id="user-role-error" class="text-red-500 text-xs hidden error-msg"></p>
-                    <span id="role-selected-count" class="text-xs text-gray-500 ml-auto">已选: 0</span>
                 </div>
             </div>
 
-            <!-- Password (Only for Add) -->
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">角色 <span class="text-red-500">*</span></label>
+                    <select id="user-role" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white transition-all">
+                        <option value="">请选择角色</option>
+                        <option value="普通用户">普通用户（无登录权限）</option>
+                        <option value="开发者">开发者</option>
+                        <option value="管理员">管理员</option>
+                        <option value="主管理员">主管理员</option>
+                    </select>
+                    <p id="user-role-error" class="text-red-500 text-xs mt-1 hidden error-msg"></p>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">账号状态</label>
+                    <select id="user-status" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white transition-all">
+                        <option value="normal">正常</option>
+                        <option value="locked">锁定</option>
+                        <option value="resigned">离职</option>
+                    </select>
+                </div>
+            </div>
+
+            <div id="user-contact-add-group" class="bg-blue-50 p-4 rounded-lg border border-blue-100">
+                <label class="block text-sm font-medium text-gray-700 mb-1">登录账号 <span class="text-red-500">*</span></label>
+                <input id="user-combined-contact" type="text" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white" placeholder="请输入手机号或邮箱">
+                <p class="text-xs text-gray-500 mt-1">请输入手机号或邮箱作为登录账号</p>
+                <p id="user-combined-contact-error" class="text-red-500 text-xs mt-1 hidden error-msg"></p>
+            </div>
+
             <div id="user-password-field">
                 <label class="block text-sm font-medium text-gray-700 mb-1">初始密码 <span class="text-red-500">*</span></label>
                 <input id="user-password" type="password" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="至少8位，包含字母和数字">
@@ -197,6 +221,78 @@
         <div class="px-6 py-4 bg-gray-50 flex justify-end gap-3 border-t border-gray-100">
             <button type="button" onclick="closeModal('user-modal')" class="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg text-sm font-medium transition-colors">取消</button>
             <button type="button" onclick="saveUser()" class="px-6 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm">保存</button>
+        </div>
+    </div>
+</div>
+
+<!-- Batch Import Modal -->
+<div id="batch-import-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center backdrop-blur-sm">
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-xl mx-4 overflow-hidden animate-fade-in-up">
+        <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+            <div>
+                <h3 class="font-semibold text-gray-800 text-lg">批量导入成员</h3>
+                <p class="text-xs text-gray-500 mt-1">下载模板后填写成员信息，再上传文件完成导入</p>
+            </div>
+            <button onclick="closeModal('batch-import-modal')" class="text-gray-400 hover:text-gray-600 transition-colors">
+                <i class="fa-solid fa-times text-xl"></i>
+            </button>
+        </div>
+
+        <div class="p-6 space-y-5">
+            <div class="border border-gray-100 rounded-lg p-4 flex items-center justify-between gap-4">
+                <div class="min-w-0">
+                    <p class="text-sm font-medium text-gray-900">成员导入模板</p>
+                    <p class="text-xs text-gray-500 mt-1">包含姓名、账号、所属部门、角色、职位、工号等字段</p>
+                </div>
+                <button type="button" onclick="downloadUserImportTemplate()" class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm whitespace-nowrap">
+                    <i class="fa-solid fa-download mr-1.5"></i>模板下载
+                </button>
+            </div>
+
+            <label for="batch-import-file" class="block border-2 border-dashed border-gray-200 rounded-lg p-6 text-center cursor-pointer hover:border-blue-300 hover:bg-blue-50/40 transition-colors">
+                <i class="fa-solid fa-cloud-arrow-up text-2xl text-blue-500"></i>
+                <p class="text-sm font-medium text-gray-800 mt-3">上传成员文件</p>
+                <p class="text-xs text-gray-500 mt-1">支持 CSV、XLS、XLSX 文件</p>
+                <input id="batch-import-file" type="file" accept=".csv,.xls,.xlsx" class="hidden" onchange="handleBatchImportFileChange(this)">
+            </label>
+
+            <p class="text-xs text-gray-500 -mt-2">
+                备注：批量导入人员默认角色为“普通用户”，没有登陆后台的权限。
+            </p>
+
+            <div id="batch-import-file-info" class="hidden bg-gray-50 border border-gray-100 rounded-lg px-4 py-3 text-sm text-gray-700"></div>
+        </div>
+
+        <div class="px-6 py-4 bg-gray-50 flex justify-end gap-3 border-t border-gray-100">
+            <button type="button" onclick="closeModal('batch-import-modal')" class="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg text-sm font-medium transition-colors">取消</button>
+            <button type="button" onclick="confirmBatchImport()" class="px-6 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm">开始导入</button>
+        </div>
+    </div>
+</div>
+
+<!-- Department Modal -->
+<div id="department-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center backdrop-blur-sm">
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-md mx-4 overflow-hidden animate-fade-in-up">
+        <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+            <h3 id="department-modal-title" class="font-semibold text-gray-800 text-lg">添加子部门</h3>
+            <button onclick="closeModal('department-modal')" class="text-gray-400 hover:text-gray-600 transition-colors">
+                <i class="fa-solid fa-times text-xl"></i>
+            </button>
+        </div>
+        <form id="department-form" onsubmit="event.preventDefault(); saveDepartment();" class="p-6 space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">上级部门</label>
+                <select id="department-parent" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"></select>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">部门名称 <span class="text-red-500">*</span></label>
+                <input id="department-name" type="text" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="请输入部门名称">
+                <p id="department-name-error" class="text-red-500 text-xs mt-1 hidden error-msg"></p>
+            </div>
+        </form>
+        <div class="px-6 py-4 bg-gray-50 flex justify-end gap-3 border-t border-gray-100">
+            <button type="button" onclick="closeModal('department-modal')" class="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg text-sm font-medium transition-colors">取消</button>
+            <button type="button" onclick="saveDepartment()" class="px-6 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm">保存</button>
         </div>
     </div>
 </div>

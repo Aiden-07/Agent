@@ -36,3 +36,49 @@
 .fa-circle-notch::before { content: "◌"; }
 .fa-circle-check::before { content: "✓"; }
 .fa-circle-xmark::before { content: "×"; }
+.fa-arrow-up::before { content: "↑"; }
+.fa-arrow-right-from-bracket::before { content: "↪"; }
+.fa-angle-right::before,
+.fa-chevron-right::before { content: "›"; }
+.fa-bars::before { content: "☰"; }
+.fa-bolt::before { content: "⚡"; }
+.fa-brain::before { content: "脑"; font-size: 0.72em; }
+.fa-building::before { content: "▦"; }
+.fa-chart-line::before { content: "⌁"; }
+.fa-check::before { content: "✓"; }
+.fa-code::before,
+.fa-file-code::before { content: "</>"; font-size: 0.62em; }
+.fa-cog::before,
+.fa-gear::before { content: "⚙"; }
+.fa-comment-dots::before { content: "…"; }
+.fa-database::before { content: "▣"; }
+.fa-ellipsis::before { content: "…"; }
+.fa-external-link-alt::before { content: "↗"; }
+.fa-inbox::before { content: "▤"; }
+.fa-language::before { content: "译"; font-size: 0.82em; }
+.fa-layer-group::before { content: "▧"; }
+.fa-lightbulb::before { content: "◉"; }
+.fa-paperclip::before { content: "⌕"; }
+.fa-pen::before,
+.fa-pen-nib::before { content: "✎"; }
+.fa-plane::before { content: "➤"; }
+.fa-plus::before { content: "+"; }
+.fa-project-diagram::before { content: "⌬"; }
+.fa-puzzle-piece::before { content: "▨"; }
+.fa-rotate-left::before { content: "↶"; }
+.fa-scale-balanced::before { content: "⚖"; }
+.fa-search::before { content: "⌕"; }
+.fa-server::before { content: "▤"; }
+.fa-shield-halved::before,
+.fa-user-shield::before { content: "◇"; }
+.fa-spin::before,
+.fa-spinner::before { content: "◌"; }
+.fa-stop::before { content: "■"; }
+.fa-trash::before { content: "×"; }
+.fa-user::before { content: "人"; font-size: 0.82em; }
+.fa-user-plus::before { content: "人+"; font-size: 0.62em; }
+.fa-users-cog::before,
+.fa-users-slash::before { content: "群"; font-size: 0.72em; }
+.fa-vial::before { content: "▱"; }
+.fa-wand-magic-sparkles::before { content: "✦"; }
+.fa-sliders::before { content: "≡"; }
