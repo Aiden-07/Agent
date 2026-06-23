@@ -70,7 +70,8 @@ class EnterpriseAssistantSDK {
       const first = {
         id: `conv-${agentId}-0`,
         title: '今天气氛很好',
-        messages: []
+        messages: [],
+        createdAt: Date.now()
       };
       this.state.conversations.set(agentId, [first]);
       this.state.activeConvId = first.id;
@@ -78,7 +79,7 @@ class EnterpriseAssistantSDK {
     }
     const convs = this.state.conversations.get(agentId) || [];
     if (!convs.length) {
-      const first = { id: `conv-${agentId}-0`, title: '新对话', messages: [] };
+      const first = { id: `conv-${agentId}-0`, title: '新对话', messages: [], createdAt: Date.now() };
       this.state.conversations.set(agentId, [first]);
       this.state.activeConvId = first.id;
       return;
@@ -95,7 +96,8 @@ class EnterpriseAssistantSDK {
     const conv = {
       id: `conv-${aId}-${Date.now()}-${Math.random().toString(16).slice(2)}`,
       title,
-      messages: []
+      messages: [],
+      createdAt: Date.now()
     };
     convs.unshift(conv);
     this.state.conversations.set(aId, convs);
@@ -555,6 +557,18 @@ class EnterpriseAssistantSDK {
         overflow:hidden;
         text-overflow:ellipsis;
       }
+      /* 选中态下显示 meta（创建时间 + 转人工） */
+      .eas-history-item.active .eas-history-meta{ display:block; }
+      .eas-history-meta .eas-meta-tag{
+        display:inline-block;
+        padding: 0 4px;
+        border-radius: 3px;
+        background:#fef3c7;
+        color:#92400e;
+        font-size: 10px;
+        font-weight: 600;
+        margin-left: 6px;
+      }
       .eas-history-item.has-search-hit{
         align-items:flex-start;
       }
@@ -568,6 +582,60 @@ class EnterpriseAssistantSDK {
         padding: 0 2px;
         font-weight: 700;
       }
+
+      /* 人工 badge（未选中态下固定在右侧） */
+      .eas-history-badge{
+        display:none;
+        flex: 0 0 auto;
+        font-size: 10px;
+        font-weight: 700;
+        color:#d97706;
+        background:#fef3c7;
+        padding: 2px 5px;
+        border-radius: 4px;
+        white-space:nowrap;
+        line-height: 1.4;
+        margin-left: auto;
+        transition: opacity .12s ease;
+      }
+      .eas-history-item.has-transfer .eas-history-badge{ display:block; }
+      .eas-history-item.active .eas-history-badge{ display:none !important; }
+      .eas-history-item:hover .eas-history-badge{ opacity: 0; }
+
+      /* 更多操作弹窗 */
+      .eas-history-popup{
+        display:none;
+        position: fixed;
+        background: white;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        box-shadow: 0 4px 16px rgba(0,0,0,.1);
+        z-index: 11000;
+        min-width: 130px;
+        padding: 4px 0;
+        animation: fadeInDown .15s ease-out forwards;
+      }
+      .eas-history-popup.show{ display:block; }
+      .eas-history-popup-item{
+        display:flex;
+        align-items:center;
+        gap: 8px;
+        padding: 7px 12px;
+        font-size: 12px;
+        color:#334155;
+        cursor:pointer;
+        border: none;
+        background: transparent;
+        width: 100%;
+        text-align: left;
+        transition: background .1s ease;
+      }
+      .eas-history-popup-item:hover{ background:#f1f5f9; }
+      .eas-history-popup-item.eas-popup-danger{ color:#ef4444; }
+      .eas-history-popup-item.eas-popup-danger:hover{ background:#fef2f2; }
+
+      /* 历史项容器需要 relative 定位 */
+      .eas-history-item{ position: relative; }
 
       /* 右侧略浅同色系底：比左侧更浅 */
       .eas-right{ flex:1; min-width:0; display:flex; flex-direction:column; background:#f8fafc; position: relative; overflow: visible; }
@@ -1832,6 +1900,12 @@ class EnterpriseAssistantSDK {
     });
   }
 
+  _hasZhuanRenGong(conv) {
+    if (!conv || !Array.isArray(conv.messages)) return false;
+    // 检查用户消息中是否包含「转人工」字样
+    return conv.messages.some(m => m && m.role === 'user' && String(m.text || '').includes('转人工'));
+  }
+
   _renderHistory() {
     const list = this.shell.querySelector('[data-eas="historyList"]');
     if (!list) return;
@@ -1841,6 +1915,8 @@ class EnterpriseAssistantSDK {
 
     const q = this.state.historyQuery.trim().toLowerCase();
     const convs = this._getActiveConversations();
+    const self = this;
+
     const escapeHtml = (value) => String(value ?? '')
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
@@ -1888,23 +1964,42 @@ class EnterpriseAssistantSDK {
       const end = Math.min(hit.length, hitIndex + q.length + 24);
       return `${start > 0 ? '...' : ''}${hit.slice(start, end)}${end < hit.length ? '...' : ''}`;
     };
+    const formatTime = (ts) => {
+      if (!ts) return '';
+      const d = new Date(ts);
+      const pad = n => String(n).padStart(2, '0');
+      return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    };
     const filtered = !q ? convs : convs.filter(c => {
       if ((c.title || '').toLowerCase().includes(q)) return true;
       return (c.messages || []).some(m => getMessageText(m).toLowerCase().includes(q));
     });
 
+    // 全局关闭所有弹窗
+    const closeAllPopups = () => {
+      list.querySelectorAll('.eas-history-popup.show').forEach(p => p.classList.remove('show'));
+    };
+
+    // 点击外部关闭弹窗
+    const onClickOutside = (e) => {
+      if (!e.target.closest('.eas-history-popup') && !e.target.closest('[data-action="more"]')) {
+        closeAllPopups();
+      }
+    };
+    document.removeEventListener('click', onClickOutside);
+    document.addEventListener('click', onClickOutside);
+
     list.innerHTML = '';
     filtered.forEach(conv => {
       const item = document.createElement('div');
-      
-      // 判断是否需要高亮该会话：
-      // 当 activeConvId 有值时，判断该 conv 是否等于 activeConvId，且不是刚初始化的新对话（有真实内容才高亮）
+
       const hasContent = (conv.messages && conv.messages.length > 0) || conv.title !== '新对话';
       const isActive = (conv.id === this.state.activeConvId) && hasContent;
-      
+      const hasTransfer = self._hasZhuanRenGong(conv);
       const searchSnippet = getSearchSnippet(conv);
-      item.className = `eas-history-item ${isActive ? 'active' : ''} ${!hasContent ? 'is-new-conv' : ''} ${searchSnippet ? 'has-search-hit' : ''}`;
-      
+
+      item.className = `eas-history-item ${isActive ? 'active' : ''} ${!hasContent ? 'is-new-conv' : ''} ${searchSnippet ? 'has-search-hit' : ''} ${hasTransfer ? 'has-transfer' : ''}`;
+
       const last = (conv.messages || []).slice(-1)[0];
       const lastPreview = last
         ? (last.type === 'reply'
@@ -1912,41 +2007,87 @@ class EnterpriseAssistantSDK {
           : (last.type === 'trace' ? '思考中...' : (last.text ? String(last.text) : '')))
         : '';
       const titleText = conv.title || '未命名会话';
-      const metaText = searchSnippet || (lastPreview ? lastPreview.slice(0, 28) : '暂无消息');
-      const metaTitle = searchSnippet || lastPreview || '暂无消息';
+
+      // 选中态：显示创建时间 + 转人工标签
+      let metaHtml;
+      if (isActive) {
+        const timeStr = conv.createdAt ? formatTime(conv.createdAt) : '';
+        const transferTag = hasTransfer ? ' <span class="eas-meta-tag">已转人工</span>' : '';
+        metaHtml = `<div class="eas-history-meta" title="创建时间：${escapeHtml(timeStr)}">${escapeHtml(timeStr)}${transferTag}</div>`;
+      } else {
+        const metaText = searchSnippet || (lastPreview ? lastPreview.slice(0, 28) : '暂无消息');
+        const metaTitle = searchSnippet || lastPreview || '暂无消息';
+        metaHtml = `<div class="eas-history-meta" title="${escapeHtml(metaTitle)}">${renderHighlighted(metaText)}</div>`;
+      }
+
+      // 弹窗菜单
+      const popupItems = [];
+      if (hasTransfer) {
+        popupItems.push(`<button type="button" class="eas-history-popup-item" data-action="view-doc"><i class="fa-regular fa-file-lines" style="width:14px;text-align:center;"></i> 查看单据</button>`);
+      }
+      popupItems.push(`<button type="button" class="eas-history-popup-item" data-action="rename"><i class="fa-regular fa-pen-to-square" style="width:14px;text-align:center;"></i> 重命名</button>`);
+      popupItems.push(`<button type="button" class="eas-history-popup-item eas-popup-danger" data-action="delete"><i class="fa-regular fa-trash-can" style="width:14px;text-align:center;"></i> 删除</button>`);
+
       item.innerHTML = `
         <div class="eas-history-item-inner">
           <div class="eas-history-icon"><i class="${activeAgentIcon}"></i></div>
           <div class="eas-history-text" style="min-width:0; flex:1;">
             <div class="eas-history-title" title="${escapeHtml(titleText)}">${escapeHtml(titleText)}</div>
-            <div class="eas-history-meta" title="${escapeHtml(metaTitle)}">${renderHighlighted(metaText)}</div>
+            ${metaHtml}
           </div>
+          <span class="eas-history-badge">人工</span>
           <div class="eas-history-actions">
-            <button type="button" class="eas-history-action" data-action="rename" title="重命名">
-              <i class="fa-regular fa-pen-to-square"></i>
-            </button>
-            <button type="button" class="eas-history-action" data-action="delete" title="删除">
-              <i class="fa-regular fa-trash-can"></i>
+            <button type="button" class="eas-history-action" data-action="more" title="更多操作">
+              <i class="fa-solid fa-ellipsis"></i>
             </button>
           </div>
         </div>
+        <div class="eas-history-popup">
+          ${popupItems.join('')}
+        </div>
       `;
 
-      item.querySelectorAll('[data-action]').forEach(btn => {
+      // 更多操作按钮 → 切换弹窗
+      const moreBtn = item.querySelector('[data-action="more"]');
+      const popupEl = item.querySelector('.eas-history-popup');
+      if (moreBtn && popupEl) {
+        moreBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const wasShown = popupEl.classList.contains('show');
+          closeAllPopups();
+          if (!wasShown) {
+            // 计算弹窗位置（fixed定位，基于按钮位置）
+            const btnRect = moreBtn.getBoundingClientRect();
+            popupEl.style.top = (btnRect.bottom + 4) + 'px';
+            popupEl.style.right = (window.innerWidth - btnRect.right) + 'px';
+            popupEl.classList.add('show');
+          }
+        });
+      }
+
+      // 弹窗内按钮事件
+      item.querySelectorAll('.eas-history-popup-item').forEach(btn => {
         btn.addEventListener('click', (e) => {
           e.stopPropagation();
+          closeAllPopups();
           const action = btn.getAttribute('data-action');
-          const agentId = this.state.activeAgentId;
-          const convsAll = this.state.conversations.get(agentId) || [];
+          const agentId = self.state.activeAgentId;
+          const convsAll = self.state.conversations.get(agentId) || [];
           const idx = convsAll.findIndex(c => c.id === conv.id);
           if (idx < 0) return;
+
+          if (action === 'view-doc') {
+            // 查看转人工单据
+            alert(`查看单据：会话「${conv.title || '未命名'}」已转人工处理。`);
+            return;
+          }
 
           if (action === 'rename') {
             const next = prompt('请输入新的会话名称', conv.title || '');
             if (next == null) return;
             convsAll[idx].title = String(next).trim() || '未命名会话';
-            this.state.conversations.set(agentId, convsAll);
-            this._renderHistory();
+            self.state.conversations.set(agentId, convsAll);
+            self._renderHistory();
             return;
           }
 
@@ -1954,21 +2095,25 @@ class EnterpriseAssistantSDK {
             const ok = confirm('确认删除该会话？');
             if (!ok) return;
             const removed = convsAll.splice(idx, 1);
-            this.state.conversations.set(agentId, convsAll);
+            self.state.conversations.set(agentId, convsAll);
 
-            if (removed[0] && removed[0].id === this.state.activeConvId) {
-              if (!convsAll.length) this._createNewConversation({ agentId, title: '新对话' });
-              else this.state.activeConvId = convsAll[0].id;
-              this._render();
+            if (removed[0] && removed[0].id === self.state.activeConvId) {
+              if (!convsAll.length) self._createNewConversation({ agentId, title: '新对话' });
+              else self.state.activeConvId = convsAll[0].id;
+              self._render();
             } else {
-              this._renderHistory();
+              self._renderHistory();
             }
           }
         });
       });
-      item.addEventListener('click', () => {
-        this.state.activeConvId = conv.id;
-        this._renderChat();
+
+      item.addEventListener('click', (e) => {
+        // 如果点击的是弹窗内容，不触发选中
+        if (e.target.closest('.eas-history-popup')) return;
+        self.state.activeConvId = conv.id;
+        self._renderHistory();
+        self._renderChat();
       });
       list.appendChild(item);
     });
