@@ -441,6 +441,7 @@ function setupInputListeners() {
     if (nameInput) {
         nameInput.addEventListener('input', (e) => {
             document.getElementById('orch-name-count').textContent = e.target.value.length;
+            updateOrchAvatarByName(e.target.value);
         });
     }
     
@@ -460,6 +461,78 @@ window.openCreateOrchestratorModal = function() {
     document.getElementById('orch-desc-input').value = '';
     document.getElementById('orch-name-count').textContent = '0';
     document.getElementById('orch-desc-count').textContent = '0';
+    resetOrchAvatar();
+}
+
+// 当前头像数据（Base64 字符串），新建时为空即使用默认头像
+let currentOrchAvatar = '';
+
+// 根据工作流名称更新默认头像：有名称显示首字符，无名称显示默认图标
+// 若用户已上传自定义图片，则不覆盖图片预览
+function updateOrchAvatarByName(name) {
+    // 已上传自定义图片时，优先显示图片，不处理名称头像
+    if (currentOrchAvatar) return;
+
+    const iconEl = document.getElementById('orch-avatar-icon');
+    const textEl = document.getElementById('orch-avatar-text');
+    const firstChar = name.trim().charAt(0);
+
+    if (firstChar) {
+        if (iconEl) iconEl.classList.add('hidden');
+        if (textEl) {
+            textEl.textContent = firstChar.toUpperCase();
+            textEl.classList.remove('hidden');
+        }
+    } else {
+        if (textEl) {
+            textEl.textContent = '';
+            textEl.classList.add('hidden');
+        }
+        if (iconEl) iconEl.classList.remove('hidden');
+    }
+}
+
+// 重置头像为默认状态
+function resetOrchAvatar() {
+    currentOrchAvatar = '';
+    const preview = document.getElementById('orch-avatar-preview');
+    const defaultEl = document.getElementById('orch-avatar-default');
+    const input = document.getElementById('orch-avatar-input');
+    const nameInput = document.getElementById('orch-name-input');
+    if (preview) {
+        preview.src = '';
+        preview.classList.add('hidden');
+    }
+    if (defaultEl) defaultEl.classList.remove('hidden');
+    if (input) input.value = '';
+    // 根据当前名称重置默认头像显示
+    updateOrchAvatarByName(nameInput ? nameInput.value : '');
+}
+
+// 处理头像上传：读取用户选择的图片并预览
+window.handleOrchAvatarUpload = function(event) {
+    const file = event.target.files && event.target.files[0];
+    if (!file) return;
+
+    // 简单的图片类型校验
+    if (!file.type.startsWith('image/')) {
+        alert('请选择图片文件');
+        event.target.value = '';
+        return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        currentOrchAvatar = e.target.result;
+        const preview = document.getElementById('orch-avatar-preview');
+        const defaultEl = document.getElementById('orch-avatar-default');
+        if (preview) {
+            preview.src = currentOrchAvatar;
+            preview.classList.remove('hidden');
+        }
+        if (defaultEl) defaultEl.classList.add('hidden');
+    };
+    reader.readAsDataURL(file);
 }
 
 window.closeCreateOrchestratorModal = function() {
@@ -488,7 +561,8 @@ window.submitCreateOrchestrator = function() {
         creator: 'Current User',
         createdAt: new Date().toLocaleString(),
         updatedAt: new Date().toLocaleString(),
-        trigger: 'Manual'
+        trigger: 'Manual',
+        avatar: currentOrchAvatar || ''
     };
     
     window.orchestratorData.unshift(newOrch);

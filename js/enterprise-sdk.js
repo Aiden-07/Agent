@@ -1043,6 +1043,15 @@ class EnterpriseAssistantSDK {
         border-color: rgba(59,130,246,.45);
         box-shadow: 0 18px 40px rgba(15,23,42,.08), 0 0 0 4px rgba(59,130,246,.12);
       }
+      .eas-welcome-textarea-wrap{
+        position: relative;
+      }
+      .eas-welcome-emoji-btn{
+        position: absolute;
+        left: 2px;
+        bottom: 6px;
+        z-index: 2;
+      }
       .eas-welcome-textarea{
         width: 100%;
         border: none;
@@ -1053,8 +1062,9 @@ class EnterpriseAssistantSDK {
         min-height: 44px;
         color:#0f172a;
         background: transparent;
-        /* 为右下角发送按钮预留空间 */
+        /* 为左右两侧按钮预留空间 */
         padding-right: 44px;
+        padding-left: 40px;
         padding-bottom: 28px;
       }
       .eas-welcome-toolbar{
@@ -1323,8 +1333,8 @@ class EnterpriseAssistantSDK {
         resize:none;
         border: 1px solid #e5e7eb;
         border-radius: 12px;
-        /* 预留右下角按钮空间 */
-        padding: 10px 52px 10px 12px;
+        /* 预留左右两侧按钮空间 */
+        padding: 10px 52px 10px 52px;
         font-size: 13px;
         outline:none;
         min-height: 42px;
@@ -1354,6 +1364,90 @@ class EnterpriseAssistantSDK {
       }
       .eas-inputbar button:not(:disabled):hover{ filter: brightness(1.06); transform: translateY(-1px); }
       .eas-inputbar button:not(:disabled):active{ transform: translateY(0); }
+
+      /* 表情按钮 */
+      .eas-emoji-btn{
+        position: absolute;
+        left: 22px;
+        bottom: 22px;
+        width: 36px; height: 36px;
+        border-radius: 8px;
+        border: 1px solid transparent;
+        background: transparent;
+        color: #94a3b8;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 2;
+        transition: color .12s ease, background .12s ease, border-color .12s ease;
+      }
+      .eas-emoji-btn:hover{
+        color: #64748b;
+        background: #f1f5f9;
+        border-color: #e2e8f0;
+      }
+      .eas-emoji-btn i{ font-size: 18px; }
+
+      /* 表情选择器 —— fixed 定位避免被父容器 overflow:hidden 裁剪 */
+      .eas-emoji-picker{
+        position: fixed;
+        width: 284px;
+        background: #fff;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        box-shadow: 0 12px 40px rgba(15,23,42,.14);
+        z-index: 11000;
+        overflow: hidden;
+        display: none;
+        flex-direction: column;
+      }
+      .eas-emoji-picker-categories{
+        display: flex;
+        gap: 2px;
+        padding: 8px 8px 4px;
+        border-bottom: 1px solid #f1f5f9;
+        flex-shrink: 0;
+      }
+      .eas-emoji-picker-cat{
+        width: 32px; height: 32px;
+        border-radius: 8px;
+        border: none;
+        background: transparent;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 14px;
+        transition: background .12s ease;
+      }
+      .eas-emoji-picker-cat:hover{ background: #f1f5f9; }
+      .eas-emoji-picker-cat.active{ background: #eff6ff; }
+      .eas-emoji-picker-grid{
+        overflow-y: auto;
+        max-height: 240px;
+        padding: 8px;
+        display: grid;
+        grid-template-columns: repeat(6, 1fr);
+        gap: 4px;
+      }
+      .eas-emoji-picker-item{
+        aspect-ratio: 1;
+        border-radius: 8px;
+        border: none;
+        background: transparent;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 20px;
+        transition: background .12s ease, transform .12s ease;
+      }
+      .eas-emoji-picker-item:hover{
+        background: #f1f5f9;
+        transform: scale(1.18);
+      }
+      .eas-emoji-picker-item:active{ transform: scale(.95); }
     `;
     document.head.appendChild(style);
   }
@@ -1389,6 +1483,7 @@ class EnterpriseAssistantSDK {
         <div class="eas-header">
           <div class="eas-header-left"></div>
           <div class="eas-header-actions">
+            <button class="eas-hbtn" data-eas="openNewWindow" aria-label="在新窗口打开" title="在新窗口打开"><i class="fa-solid fa-arrow-up-right-from-square"></i></button>
             <button class="eas-hbtn" data-eas="fullscreen" aria-label="全屏"><i class="fa-solid fa-expand"></i></button>
             <button class="eas-hbtn" data-eas="close" aria-label="关闭"><i class="fa-solid fa-xmark"></i></button>
           </div>
@@ -1430,6 +1525,9 @@ class EnterpriseAssistantSDK {
             <div class="eas-chat" data-eas="chat"></div>
             <div class="eas-inputbar">
               <textarea data-eas="composer" placeholder="请输入输入您的提问..."></textarea>
+              <button class="eas-emoji-btn" data-eas="emoji" type="button" aria-label="表情" title="插入表情">
+                <i class="fa-regular fa-face-smile"></i>
+              </button>
               <button data-eas="send" type="button" aria-label="发送">
                 <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
                   <path d="M12 19V5m0 0 7 7m-7-7-7 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"></path>
@@ -1463,6 +1561,14 @@ class EnterpriseAssistantSDK {
           fsBtn.setAttribute('aria-label', '全屏');
           fsBtn.innerHTML = '<i class="fa-solid fa-expand"></i>';
         }
+      });
+    }
+
+    // Open in new window button
+    const newWinBtn = this.shell.querySelector('[data-eas="openNewWindow"]');
+    if (newWinBtn) {
+      newWinBtn.addEventListener('click', () => {
+        this._openInNewWindow();
       });
     }
 
@@ -1596,6 +1702,205 @@ class EnterpriseAssistantSDK {
       this._sendFromComposer();
       updateSendBtn();
     });
+
+    // Emoji picker — shared picker for both normal inputbar and welcome view
+    this._initEmojiPicker();
+  }
+
+  _initEmojiPicker() {
+    // Shared emoji data
+    const EMOJI_DATA = [
+      { cat: '表情', icon: '😊', items: ['😀','😃','😄','😁','😅','🤣','😂','🙂','😊','😇','😍','🤩','😘','😗','😚','😋','😛','😜','🤪','😝','🤑','🤗','🤭','🤫','🤔','🤐','🤨','😐','😑','😶','😏','😒','🙄','😬','🤥','😌','😔','😪','🤤','😴','😷','🤒','🤕','🤢','🤮','🤧','😵','🤯','🥴','🥺','😢','😭','😤','😠','😡','🤬','😈','👿','💀','☠️','💩','🤡','👹','👺'] },
+      { cat: '手势', icon: '👍', items: ['👍','👎','👌','✌️','🤞','🤟','🤘','🤙','👋','🤚','🖐️','✋','🖖','👏','🙌','🤝','🙏','✍️','💪','🦾','🦵','🦿','👈','👉','👆','👇','🖕','☝️','🤏','👐','🤲'] },
+      { cat: '爱心', icon: '❤️', items: ['❤️','🧡','💛','💚','💙','💜','🖤','🤍','🤎','💔','❣️','💕','💞','💓','💗','💖','💘','💝','💟','♥️'] },
+      { cat: '物品', icon: '💡', items: ['💡','🔦','💻','🖥️','⌨️','🖱️','🖨️','📱','📞','☎️','📟','📺','📻','🎙️','🎚️','🎛️','⏰','🕰️','⌚','📡','🔋','🔌','💰','💎','💵','💴','💶','💷','💸','🪙','🏷️','🔖','📌','📍','✂️','🖊️','🖋️','✒️','🖌️','🖍️','📝','✏️','🔍','🔎'] },
+      { cat: '符号', icon: '✅', items: ['✅','❌','❓','❗','‼️','⁉️','➕','➖','➗','✖️','♾️','💲','➰','➿','〰️','©️','®️','™️','🔴','🟠','🟡','🟢','🔵','🟣','⚫','⚪','🟤','🔺','🔻','🔸','🔹','🔶','🔷','🔘','🔲','🔳','◼️','◻️','◾','◽','▪️','▫️'] },
+      { cat: '办公', icon: '📊', items: ['📊','📈','📉','📋','📌','📎','🖇️','📏','📐','✂️','🗂️','📁','📂','🗄️','📅','📆','🗑️','🖼️','🏷️','📦','📭','📬','📫','📪','📩','📨','📧','✉️','📜','📃','📄','📑','🧾','💰','💳','💼','🛒','📢','📣','🔔','🔕','🎵','🎶'] },
+    ];
+
+    // Create shared picker element at shell level (fixed positioning avoids clipping)
+    const picker = document.createElement('div');
+    picker.className = 'eas-emoji-picker';
+    picker.setAttribute('data-eas', 'sharedEmojiPicker');
+    this.shell.appendChild(picker);
+
+    let activeCat = 0;
+    let currentTextarea = null;
+    let currentBtn = null;
+
+    const buildContent = (catIndex) => {
+      let html = '<div class="eas-emoji-picker-categories">';
+      EMOJI_DATA.forEach((c, i) => {
+        html += `<button class="eas-emoji-picker-cat${i === catIndex ? ' active' : ''}" data-eas="emojiCat" data-index="${i}" title="${c.cat}">${c.icon}</button>`;
+      });
+      html += '</div>';
+      html += '<div class="eas-emoji-picker-grid">';
+      EMOJI_DATA[catIndex].items.forEach(e => {
+        html += `<button class="eas-emoji-picker-item" data-eas="emojiItem" data-emoji="${e}">${e}</button>`;
+      });
+      html += '</div>';
+      return html;
+    };
+
+    const render = (catIndex) => {
+      picker.innerHTML = buildContent(catIndex);
+      picker.querySelectorAll('[data-eas="emojiCat"]').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          activeCat = parseInt(btn.dataset.index);
+          render(activeCat);
+        });
+      });
+      picker.querySelectorAll('[data-eas="emojiItem"]').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          if (currentTextarea) {
+            this._insertEmojiAtCursor(currentTextarea, btn.dataset.emoji);
+            currentTextarea.focus();
+          }
+        });
+      });
+    };
+
+    const positionPicker = (btn) => {
+      const rect = btn.getBoundingClientRect();
+      const pickerH = 300; // estimated max height
+      const spaceAbove = rect.top;
+      const spaceBelow = window.innerHeight - rect.bottom;
+
+      // Prefer above the button, fallback to below
+      if (spaceAbove > pickerH + 8) {
+        picker.style.bottom = 'auto';
+        picker.style.top = (rect.top - pickerH - 8) + 'px';
+      } else {
+        picker.style.top = 'auto';
+        picker.style.bottom = (window.innerHeight - rect.top + 8) + 'px';
+      }
+      // Align left edge with button, clamp to viewport
+      let left = rect.left;
+      if (left + 284 > window.innerWidth - 8) left = window.innerWidth - 284 - 8;
+      if (left < 8) left = 8;
+      picker.style.left = left + 'px';
+    };
+
+    const open = (btn, textarea) => {
+      currentBtn = btn;
+      currentTextarea = textarea;
+      positionPicker(btn);
+      picker.style.display = 'flex';
+      render(activeCat);
+    };
+
+    const close = () => {
+      picker.style.display = 'none';
+      currentBtn = null;
+    };
+
+    const toggle = (btn, textarea) => {
+      if (picker.style.display === 'flex' && currentBtn === btn) {
+        close();
+      } else {
+        open(btn, textarea);
+      }
+    };
+
+    // Close on outside click
+    document.addEventListener('click', (e) => {
+      if (picker.style.display === 'flex') {
+        if (!picker.contains(e.target) && e.target !== currentBtn && (currentBtn && !currentBtn.contains(e.target))) {
+          close();
+        }
+      }
+    });
+
+    // Reposition on scroll/resize
+    window.addEventListener('scroll', () => {
+      if (picker.style.display === 'flex' && currentBtn) positionPicker(currentBtn);
+    }, { passive: true });
+    window.addEventListener('resize', () => {
+      if (picker.style.display === 'flex' && currentBtn) positionPicker(currentBtn);
+    }, { passive: true });
+
+    // ---- Register normal inputbar emoji button ----
+    const normalBtn = this.shell.querySelector('[data-eas="emoji"]');
+    const normalComposer = this.shell.querySelector('[data-eas="composer"]');
+    if (normalBtn && normalComposer) {
+      normalBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        toggle(normalBtn, normalComposer);
+      });
+    }
+
+    // Expose so welcome view can register its emoji button later
+    this._registerEmojiButton = (btn, textarea) => {
+      if (!btn || !textarea) return;
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        toggle(btn, textarea);
+      });
+    };
+  }
+
+  _insertEmojiAtCursor(textarea, emoji) {
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const before = textarea.value.substring(0, start);
+    const after = textarea.value.substring(end);
+    textarea.value = before + emoji + after;
+    // Set cursor position after inserted emoji
+    const newPos = start + emoji.length;
+    textarea.selectionStart = textarea.selectionEnd = newPos;
+    // Trigger input event so send button state updates
+    textarea.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+
+  _openInNewWindow() {
+    // Build agent/session data in chat-preview.html compatible format
+    const agentsForPreview = [];
+    this.config.agents.forEach(cfgAgent => {
+      const convs = this.state.conversations.get(cfgAgent.id) || [];
+      const sessions = convs.map(conv => ({
+        id: conv.id,
+        title: conv.title || '新对话',
+        lastActive: conv.createdAt ? new Date(conv.createdAt).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }) : '',
+        messages: (conv.messages || []).map(m => ({
+          role: m.role === 'ai' ? 'assistant' : m.role,
+          content: m.text || (m.reply && typeof m.reply === 'object' ? (m.reply.summary || m.reply.text || JSON.stringify(m.reply)) : String(m.text || ''))
+        }))
+      }));
+
+      // Default visual assignment
+      const visuals = [
+        { avatar: 'fa-robot', color: 'bg-blue-100 text-blue-600' },
+        { avatar: 'fa-shield-halved', color: 'bg-purple-100 text-purple-600' },
+        { avatar: 'fa-pen-nib', color: 'bg-green-100 text-green-600' },
+        { avatar: 'fa-code', color: 'bg-amber-100 text-amber-600' },
+        { avatar: 'fa-chart-line', color: 'bg-rose-100 text-rose-600' },
+        { avatar: 'fa-globe', color: 'bg-cyan-100 text-cyan-600' },
+      ];
+      const visIdx = agentsForPreview.length % visuals.length;
+
+      agentsForPreview.push({
+        id: cfgAgent.id,
+        name: cfgAgent.name,
+        avatar: cfgAgent.icon ? cfgAgent.icon.replace('fa-solid ', '').replace('fa-regular ', '').replace('fa-brands ', '') : visuals[visIdx].avatar,
+        color: visuals[visIdx].color,
+        sessions
+      });
+    });
+
+    // Save current state to localStorage for chat-preview.html to pick up
+    const activeAgent = this._getActiveAgent();
+    const activeConv = this._getActiveConversation();
+    localStorage.setItem('agentsData', JSON.stringify(agentsForPreview));
+    localStorage.setItem('vagent_chat_data', JSON.stringify(agentsForPreview));
+    localStorage.setItem('vagent_chat_state', JSON.stringify({
+      agentId: this.state.activeAgentId,
+      sessionId: this.state.activeConvId
+    }));
+
+    // Open chat-preview.html in a new browser tab
+    window.open('views/chat-preview.html', '_blank');
   }
 
   _restoreFabPosition() {
@@ -2153,7 +2458,12 @@ class EnterpriseAssistantSDK {
           <div class="eas-welcome-input">
             ${allowWelcomeFiles ? `<input type="file" data-eas="welcomeFileInput" style="display:none" multiple />` : ''}
             ${allowWelcomeFiles ? `<div class="eas-welcome-files" data-eas="welcomeFiles" style="display:none"></div>` : ''}
-            <textarea class="eas-welcome-textarea" data-eas="welcomeInput" placeholder="${welcomePlaceholder}"></textarea>
+            <div class="eas-welcome-textarea-wrap">
+              <textarea class="eas-welcome-textarea" data-eas="welcomeInput" placeholder="${welcomePlaceholder}"></textarea>
+              <button class="eas-emoji-btn eas-welcome-emoji-btn" data-eas="welcomeEmoji" type="button" aria-label="表情" title="插入表情">
+                <i class="fa-regular fa-face-smile"></i>
+              </button>
+            </div>
             <div class="eas-welcome-toolbar">
               ${showWelcomeTools ? `
                 <div class="eas-welcome-tools-left">
@@ -2196,6 +2506,12 @@ class EnterpriseAssistantSDK {
       const filesWrap = chat.querySelector('[data-eas="welcomeFiles"]');
       const autoEl = chat.querySelector('[data-eas="welcomeAuto"]');
       const langEl = chat.querySelector('[data-eas="welcomeLang"]');
+      const welcomeEmojiBtn = chat.querySelector('[data-eas="welcomeEmoji"]');
+
+      // Register welcome emoji button with the shared picker
+      if (welcomeEmojiBtn && inputEl && this._registerEmojiButton) {
+        this._registerEmojiButton(welcomeEmojiBtn, inputEl);
+      }
 
       let attachments = [];
       const updateWelcomeSendBtn = () => {

@@ -56,6 +56,31 @@
                     <textarea id="orch-desc-input" maxlength="200" rows="4" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none" placeholder="请输入描述（200字以内）"></textarea>
                     <div class="text-xs text-gray-400 text-right mt-1"><span id="orch-desc-count">0</span>/200</div>
                 </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">应用头像</label>
+                    <div class="flex items-center gap-4">
+                        <div id="orch-avatar-container" onclick="document.getElementById('orch-avatar-input').click()" class="relative group cursor-pointer w-20 h-20 rounded-xl overflow-hidden bg-gray-100 border border-gray-200 flex items-center justify-center transition-colors hover:border-blue-400">
+                            <!-- Default Avatar -->
+                            <div id="orch-avatar-default" class="w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-50 to-blue-100 text-blue-500">
+                                <i id="orch-avatar-icon" class="fa-solid fa-robot text-3xl"></i>
+                                <span id="orch-avatar-text" class="text-2xl font-semibold hidden"></span>
+                            </div>
+                            <!-- Preview Image -->
+                            <img id="orch-avatar-preview" src="" alt="头像" class="absolute inset-0 w-full h-full object-cover hidden">
+                            <!-- Upload Overlay (shown on hover) -->
+                            <div id="orch-avatar-overlay" class="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-1 text-white">
+                                <i class="fa-solid fa-camera text-base"></i>
+                                <span class="text-xs">上传</span>
+                            </div>
+                        </div>
+                        <input type="file" id="orch-avatar-input" accept="image/*" class="hidden" onchange="handleOrchAvatarUpload(event)">
+                        <div class="flex flex-col gap-1">
+                            <p class="text-xs text-gray-500">点击上传应用头像</p>
+                            <p class="text-xs text-gray-400">支持 JPG、PNG 格式，建议 200×200</p>
+                        </div>
+                    </div>
+                </div>
             </div>
             
             <div class="mt-8 flex justify-end gap-3">

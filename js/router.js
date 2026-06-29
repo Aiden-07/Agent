@@ -269,6 +269,10 @@ function updateNavState(viewName) {
         // Extract view name from "switchView('dashboard')"
         const match = onclickAttr.match(/switchView\('([^']+)'\)/);
         if (match && match[1] === viewName) {
+            // 排除 Skill 菜单：Skill 也调用 switchView('components')，但不应高亮
+            const parentLi = link.closest('li');
+            if (parentLi && parentLi.id === 'nav-skill') return;
+            
             // Active State
             link.classList.remove('text-gray-600', 'hover:text-blue-600', 'hover:bg-gray-50');
             link.classList.add('text-blue-600', 'bg-blue-50');

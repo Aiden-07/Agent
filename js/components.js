@@ -238,34 +238,74 @@ window.renderComponentsList = function() {
             <td class="px-6 py-4 text-sm text-gray-600 font-mono whitespace-nowrap"><span class="dt-cell-ellipsis" title="${verT}">${verT}</span></td>
             <td class="px-6 py-4 whitespace-nowrap"><span class="px-2 py-1 rounded-full text-xs font-medium ${statusClass}">${statusText}</span></td>
             <td class="px-6 py-4 text-right min-w-[120px] action-td">
+                <div class="comp-actions-wrap" style="position:relative;display:inline-block;">
+                    <button class="comp-more-btn text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg w-7 h-7 flex items-center justify-center transition-colors" title="更多操作">
+                        <i class="fa-solid fa-ellipsis"></i>
+                    </button>
+                    <div class="comp-actions-popup" style="display:none;position:fixed;background:white;border:1px solid #e2e8f0;border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,.1);z-index:11000;min-width:130px;padding:4px 0;animation:fadeInDown .15s ease-out forwards;">
+                        <button class="comp-popup-item" data-action="view" style="display:flex;align-items:center;gap:8px;padding:7px 12px;font-size:12px;color:#334155;cursor:pointer;border:none;background:transparent;width:100%;text-align:left;transition:background .1s ease;"><i class="fa-regular fa-eye" style="width:14px;text-align:center;"></i> 查看原应用</button>
+                        <button class="comp-popup-item" data-action="edit" style="display:flex;align-items:center;gap:8px;padding:7px 12px;font-size:12px;color:#334155;cursor:pointer;border:none;background:transparent;width:100%;text-align:left;transition:background .1s ease;"><i class="fa-regular fa-pen-to-square" style="width:14px;text-align:center;"></i> 编辑</button>
+                        <button class="comp-popup-item" data-action="delete" style="display:flex;align-items:center;gap:8px;padding:7px 12px;font-size:12px;color:#ef4444;cursor:pointer;border:none;background:transparent;width:100%;text-align:left;transition:background .1s ease;"><i class="fa-regular fa-trash-can" style="width:14px;text-align:center;"></i> 删除</button>
+                    </div>
+                </div>
             </td>
         `;
         tbody.appendChild(tr);
 
-        // Add inline actions
-        const actionsTd = tr.querySelector('.action-td');
-        const actions = [
-            {
-                label: '编辑',
-                onClick: () => alert('编辑组件: ' + item.id)
-            },
-            {
-                label: '删除',
-                className: 'text-red-600 hover:text-red-800',
-                onClick: () => {
-                    if(window.deleteComponent) {
-                        window.deleteComponent(item.id);
-                    } else {
-                        alert('删除组件: ' + item.id);
-                    }
-                }
+        // Add popup behavior
+        const wrap = tr.querySelector('.comp-actions-wrap');
+        const moreBtn = wrap.querySelector('.comp-more-btn');
+        const popup = wrap.querySelector('.comp-actions-popup');
+
+        const closeAllCompPopups = () => {
+            document.querySelectorAll('.comp-actions-popup').forEach(p => p.style.display = 'none');
+        };
+
+        moreBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const wasShown = popup.style.display === 'block';
+            closeAllCompPopups();
+            if (!wasShown) {
+                const btnRect = moreBtn.getBoundingClientRect();
+                popup.style.top = (btnRect.bottom + 4) + 'px';
+                popup.style.right = (window.innerWidth - btnRect.right) + 'px';
+                popup.style.display = 'block';
             }
-        ];
-        
-        if (window.createInlineActions) {
-            const actionContainer = window.createInlineActions(actions);
-            actionsTd.appendChild(actionContainer);
-        }
+        });
+
+        // Click outside to close
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.comp-actions-wrap')) {
+                closeAllCompPopups();
+            }
+        });
+
+        // Popup item hover styles
+        popup.querySelectorAll('.comp-popup-item').forEach(btn => {
+            btn.addEventListener('mouseenter', () => { btn.style.background = '#f1f5f9'; });
+            btn.addEventListener('mouseleave', () => { btn.style.background = 'transparent'; });
+        });
+
+        // Popup item actions
+        popup.querySelector('[data-action="view"]').addEventListener('click', (e) => {
+            e.stopPropagation();
+            closeAllCompPopups();
+            alert('查看原应用: ' + item.id);
+        });
+        popup.querySelector('[data-action="edit"]').addEventListener('click', (e) => {
+            e.stopPropagation();
+            closeAllCompPopups();
+            alert('编辑组件: ' + item.id);
+        });
+        popup.querySelector('[data-action="delete"]').addEventListener('click', (e) => {
+            e.stopPropagation();
+            closeAllCompPopups();
+            if (window.deleteComponent) {
+                window.deleteComponent(item.id);
+            } else {
+                alert('删除组件: ' + item.id);
+            }
+        });
     });
 
     if (window.syncDataTable) {
