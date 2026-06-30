@@ -16,10 +16,10 @@
 
         <!-- 头像设置 -->
         <div class="flex items-center gap-6 pb-6 mb-6 border-b border-gray-100">
-            <div class="relative w-24 h-24 rounded-full overflow-hidden flex-shrink-0 bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-3xl font-semibold shadow-sm group cursor-pointer" id="avatarPreview" onclick="document.getElementById('avatarInput').click()">
+            <div class="relative w-24 h-24 rounded-full overflow-hidden flex-shrink-0 bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-3xl font-semibold shadow-sm group cursor-pointer" id="avatarPreview" onclick="openProfileAvatarPreview()">
                 <span id="avatarText">P</span>
                 <div class="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                    <i class="fa-solid fa-camera text-white text-xl"></i>
+                    <i class="fa-solid fa-magnifying-glass-plus text-white text-xl"></i>
                 </div>
             </div>
             <div class="flex flex-col gap-2">
@@ -41,7 +41,7 @@
         <div>
             <label class="block text-sm font-medium text-gray-700 mb-2">用户名 <span class="text-red-500">*</span></label>
             <div class="flex gap-3 items-center">
-                <input type="text" id="profileUsername" value="Product Manager" placeholder="请输入用户名" disabled class="flex-1 px-4 py-2.5 border border-gray-200 rounded-lg text-sm text-gray-700 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent focus:bg-white transition-all disabled:cursor-not-allowed disabled:opacity-70">
+                <input type="text" id="profileUsername" value="Product Manager" placeholder="请输入用户名" maxlength="30" disabled class="flex-1 px-4 py-2.5 border border-gray-200 rounded-lg text-sm text-gray-700 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent focus:bg-white transition-all disabled:cursor-not-allowed disabled:opacity-70">
                 <button id="usernameBtn" onclick="toggleProfileUsernameEdit()" class="px-4 py-2.5 border border-blue-600 text-blue-600 hover:bg-blue-50 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 flex-shrink-0">
                     <i class="fa-regular fa-pen-to-square"></i>
                     <span id="usernameBtnText">编辑</span>
@@ -62,7 +62,7 @@
         <div>
             <label class="block text-sm font-medium text-gray-700 mb-2">电子邮箱</label>
             <div class="flex gap-3 items-center">
-                <input type="email" id="profileEmail" value="pm@vagent.ai" placeholder="请输入电子邮箱" disabled class="flex-1 px-4 py-2.5 border border-gray-200 rounded-lg text-sm text-gray-700 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent focus:bg-white transition-all disabled:cursor-not-allowed disabled:opacity-70">
+                <input type="email" id="profileEmail" value="pm@vagent.ai" placeholder="请输入电子邮箱" maxlength="254" disabled class="flex-1 px-4 py-2.5 border border-gray-200 rounded-lg text-sm text-gray-700 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent focus:bg-white transition-all disabled:cursor-not-allowed disabled:opacity-70">
                 <button id="emailBtn" onclick="toggleProfileEmailEdit()" class="px-4 py-2.5 border border-blue-600 text-blue-600 hover:bg-blue-50 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 flex-shrink-0">
                     <i class="fa-regular fa-pen-to-square"></i>
                     <span id="emailBtnText">编辑</span>
@@ -104,7 +104,7 @@
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-2">原始密码 <span class="text-red-500">*</span></label>
                 <div class="relative">
-                    <input type="password" id="oldPassword" placeholder="请输入当前密码" class="w-full px-4 py-2.5 pr-11 border border-gray-200 rounded-lg text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    <input type="password" id="oldPassword" placeholder="请输入当前密码" maxlength="30" class="w-full px-4 py-2.5 pr-11 border border-gray-200 rounded-lg text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
                     <button type="button" class="absolute right-2 top-1/2 transform -translate-y-1/2 w-8 h-8 flex items-center justify-center text-gray-400 hover:text-gray-600 rounded transition-colors" onclick="toggleProfilePasswordVisibility('oldPassword', this)">
                         <i class="fa-regular fa-eye"></i>
                     </button>
@@ -113,7 +113,7 @@
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-2">新密码 <span class="text-red-500">*</span></label>
                 <div class="relative">
-                    <input type="password" id="modalNewPassword" placeholder="请输入新密码" oninput="checkProfilePasswordStrength(this.value)" class="w-full px-4 py-2.5 pr-11 border border-gray-200 rounded-lg text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    <input type="password" id="modalNewPassword" placeholder="请输入新密码" maxlength="30" oninput="checkProfilePasswordStrength(this.value)" class="w-full px-4 py-2.5 pr-11 border border-gray-200 rounded-lg text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
                     <button type="button" class="absolute right-2 top-1/2 transform -translate-y-1/2 w-8 h-8 flex items-center justify-center text-gray-400 hover:text-gray-600 rounded transition-colors" onclick="toggleProfilePasswordVisibility('modalNewPassword', this)">
                         <i class="fa-regular fa-eye"></i>
                     </button>
@@ -125,13 +125,13 @@
                         <div id="modal-seg3" class="h-1 flex-1 rounded bg-gray-200 transition-colors"></div>
                     </div>
                     <div id="modalStrengthText" class="text-xs text-gray-400 mt-1.5">密码强度：请输入密码</div>
-                    <div class="text-[11px] text-gray-400 mt-1">推荐使用：字母 + 数字 + 特殊符号组合</div>
+                    <div class="text-[11px] text-gray-400 mt-1">推荐使用：至少为字母+数字+特殊符号中的两种</div>
                 </div>
             </div>
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-2">重复新密码 <span class="text-red-500">*</span></label>
                 <div class="relative">
-                    <input type="password" id="confirmPassword" placeholder="请再次输入新密码" class="w-full px-4 py-2.5 pr-11 border border-gray-200 rounded-lg text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    <input type="password" id="confirmPassword" placeholder="请再次输入新密码" maxlength="30" class="w-full px-4 py-2.5 pr-11 border border-gray-200 rounded-lg text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
                     <button type="button" class="absolute right-2 top-1/2 transform -translate-y-1/2 w-8 h-8 flex items-center justify-center text-gray-400 hover:text-gray-600 rounded transition-colors" onclick="toggleProfilePasswordVisibility('confirmPassword', this)">
                         <i class="fa-regular fa-eye"></i>
                     </button>
@@ -144,6 +144,20 @@
                 <i class="fa-solid fa-floppy-disk"></i>
                 确认修改
             </button>
+        </div>
+    </div>
+</div>
+
+<!-- ============ 头像大图预览弹窗 ============ -->
+<div id="profileAvatarModal" class="fixed inset-0 bg-gray-900/60 hidden z-50 flex items-center justify-center backdrop-blur-sm" onclick="if(event.target===this) closeProfileAvatarPreview()">
+    <div class="bg-white rounded-2xl shadow-2xl p-8 transform scale-95 transition-transform duration-200" onclick="event.stopPropagation()">
+        <div class="flex items-center justify-between mb-6">
+            <h3 class="text-base font-semibold text-gray-900">头像预览</h3>
+            <button onclick="closeProfileAvatarPreview()" class="text-gray-400 hover:text-gray-600 transition-colors">
+                <i class="fa-solid fa-times text-lg"></i>
+            </button>
+        </div>
+        <div class="w-48 h-48 rounded-full overflow-hidden flex items-center justify-center bg-gradient-to-br from-blue-500 to-purple-600 text-white text-6xl font-semibold shadow-lg" id="profileAvatarBigPreview">
         </div>
     </div>
 </div>

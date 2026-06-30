@@ -43,6 +43,32 @@ window.removeAvatar = function() {
     showToast('头像已删除', 'success');
 };
 
+// ============ 头像大图预览 ============
+window.openProfileAvatarPreview = function() {
+    const modal = document.getElementById('profileAvatarModal');
+    const bigPreview = document.getElementById('profileAvatarBigPreview');
+    if (!modal || !bigPreview) return;
+
+    // 克隆当前头像预览内容到大图弹窗
+    const source = document.getElementById('avatarPreview');
+    if (source) {
+        const sourceImg = source.querySelector('img');
+        const sourceText = document.getElementById('avatarText');
+        if (sourceImg) {
+            bigPreview.innerHTML = `<img src="${sourceImg.src}" alt="头像" class="w-full h-full object-cover">`;
+        } else if (sourceText) {
+            bigPreview.innerHTML = `<span>${sourceText.textContent}</span>`;
+        }
+    }
+
+    modal.classList.remove('hidden');
+};
+
+window.closeProfileAvatarPreview = function() {
+    const modal = document.getElementById('profileAvatarModal');
+    if (modal) modal.classList.add('hidden');
+};
+
 // ============ 用户名编辑 ============
 window.isProfileUsernameEditing = false;
 
@@ -217,7 +243,7 @@ window.checkProfilePasswordStrength = function(password) {
     if (/[^a-zA-Z0-9]/.test(password)) typeCount++;
 
     const levels = [
-        { color: 'bg-red-400', label: '密码强度：低', labelColor: 'text-red-500' },
+        { color: 'bg-red-400', label: '密码强度：低，密码强度至少中级', labelColor: 'text-red-500' },
         { color: 'bg-yellow-400', label: '密码强度：中', labelColor: 'text-yellow-600' },
         { color: 'bg-green-500', label: '密码强度：高', labelColor: 'text-green-600' }
     ];
@@ -245,6 +271,14 @@ window.submitProfilePasswordChange = function() {
     }
     if (newPwd.length < 8) {
         showToast('新密码长度至少8位', 'error');
+        return;
+    }
+    var typeCount = 0;
+    if (/[a-zA-Z]/.test(newPwd)) typeCount++;
+    if (/\d/.test(newPwd)) typeCount++;
+    if (/[^a-zA-Z0-9]/.test(newPwd)) typeCount++;
+    if (typeCount < 2) {
+        showToast('密码强度至少为中级', 'error');
         return;
     }
     if (newPwd !== confirmPwd) {
