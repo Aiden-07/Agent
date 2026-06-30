@@ -277,8 +277,8 @@ window.submitProfilePasswordChange = function() {
     if (/[a-zA-Z]/.test(newPwd)) typeCount++;
     if (/\d/.test(newPwd)) typeCount++;
     if (/[^a-zA-Z0-9]/.test(newPwd)) typeCount++;
-    if (typeCount < 2) {
-        showToast('密码强度至少为中级', 'error');
+    if (typeCount < 3) {
+        showToast('密码必须包含字母+数字+特殊符号', 'error');
         return;
     }
     if (newPwd !== confirmPwd) {
